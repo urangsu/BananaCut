@@ -702,22 +702,22 @@ export default function RemovePage() {
 
   // Theme Classes
   const panelClass = `border rounded-2xl p-6 backdrop-blur-xl transition-colors ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`;
-  const inputClass = `w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none transition-all ${isDark ? 'bg-black/40 border-white/10 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 text-white' : 'bg-gray-50 border-gray-200 focus:border-black focus:ring-1 focus:ring-black text-gray-900'}`;
+  const inputClass = `w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none transition-all ${isDark ? 'bg-black/40 border-white/10 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 text-white' : 'bg-gray-50 border-gray-200 focus:border-black focus:ring-1 focus:ring-black text-gray-900'}`;
   const labelClass = `block text-sm mb-1.5 ${isDark ? 'text-white/60' : 'text-gray-600 font-medium'}`;
   const descClass = `text-xs mt-1 ${isDark ? 'text-white/40' : 'text-gray-500'}`;
-  const badgeClass = `text-xs font-mono px-2 py-0.5 rounded ${isDark ? 'text-purple-400 bg-purple-400/10' : 'text-white bg-black'}`;
-  const accentIconClass = `w-5 h-5 ${isDark ? 'text-purple-400' : 'text-black'}`;
+  const badgeClass = `text-xs font-mono px-2 py-0.5 rounded ${isDark ? 'text-blue-400 bg-blue-400/10' : 'text-white bg-black'}`;
+  const accentIconClass = `w-5 h-5 ${isDark ? 'text-blue-400' : 'text-black'}`;
   const dropzoneClass = `relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl transition-all ${
     isDragging 
-      ? (isDark ? 'border-purple-500 bg-purple-500/10' : 'border-black bg-gray-100') 
+      ? (isDark ? 'border-blue-500 bg-blue-500/10' : 'border-black bg-gray-100') 
       : (isDark ? 'border-white/20 hover:bg-white/5 hover:border-white/40' : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400')
   }`;
   const segmentBgClass = `border rounded-xl p-3 space-y-3 relative group transition-colors ${isDark ? 'bg-black/20 border-white/5' : 'bg-gray-50 border-gray-200'}`;
-  const segmentInputClass = `flex-1 border rounded-lg px-3 py-2 text-xs focus:outline-none transition-all ${isDark ? 'bg-black/40 border-white/10 focus:border-purple-500/50 text-white' : 'bg-white border-gray-200 focus:border-black text-gray-900'}`;
+  const segmentInputClass = `flex-1 border rounded-lg px-3 py-2 text-xs focus:outline-none transition-all ${isDark ? 'bg-black/40 border-white/10 focus:border-blue-500/50 text-white' : 'bg-white border-gray-200 focus:border-black text-gray-900'}`;
   const segmentLabelClass = `block text-[10px] mb-1 uppercase tracking-tighter ${isDark ? 'text-white/40' : 'text-gray-500 font-bold'}`;
   const primaryBtnClass = `w-full font-medium py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:shadow-none ${
     isDark 
-      ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-white/10 disabled:to-white/10 disabled:text-white/40 text-white shadow-lg shadow-purple-500/20' 
+      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-white/10 disabled:to-white/10 disabled:text-white/40 text-white shadow-lg shadow-blue-500/20' 
       : 'bg-black hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 text-white shadow-lg shadow-black/10'
   }`;
   const previewBgClass = `relative border-2 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center transition-colors ${isDark ? 'bg-black/40 border-white/5' : 'bg-gray-100 border-gray-200'}`;
@@ -762,7 +762,7 @@ export default function RemovePage() {
                   />
                   <label htmlFor="file-upload-mobile" className={`cursor-pointer flex flex-col items-center gap-2 ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
                     {isExtracting ? (
-                      <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-purple-400' : 'text-gray-600'}`} />
+                      <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-gray-600'}`} />
                     ) : (
                       <Upload className={`w-8 h-8 ${isDark ? 'text-white/60' : 'text-gray-400'}`} strokeWidth={1.5} />
                     )}
@@ -807,7 +807,7 @@ export default function RemovePage() {
             )}
             
             {isExtracting && (
-              <div className={`mt-4 flex items-center gap-3 p-3 rounded-lg text-sm ${isDark ? 'text-purple-400 bg-purple-500/10' : 'text-black bg-gray-100'}`}>
+              <div className={`mt-4 flex items-center gap-3 p-3 rounded-lg text-sm ${isDark ? 'text-blue-400 bg-blue-500/10' : 'text-black bg-gray-100'}`}>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Extracting frames at {fps}fps...
               </div>
@@ -833,7 +833,7 @@ export default function RemovePage() {
                   title="Exclusion Brush (제외 브러쉬)"
                   className={`p-2 rounded-lg transition-all border ${
                     isBrushActive && activeTool === 'brush'
-                      ? (isDark ? 'bg-purple-500 border-purple-400 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]' : 'bg-black border-black text-white')
+                      ? (isDark ? 'bg-blue-500 border-blue-400 text-white shadow-[0_0_10px_rgba(59,130,246,0.4)]' : 'bg-black border-black text-white')
                       : (isDark ? 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50')
                   }`}
                 >
@@ -862,7 +862,7 @@ export default function RemovePage() {
             
             <div className="space-y-6">
               {isBrushActive && (
-                <div className={`p-4 rounded-xl border mb-4 animate-in fade-in slide-in-from-top-2 duration-200 ${isDark ? 'bg-purple-500/5 border-purple-500/20' : 'bg-purple-50 border-purple-100'}`}>
+                <div className={`p-4 rounded-xl border mb-4 animate-in fade-in slide-in-from-top-2 duration-200 ${isDark ? 'bg-blue-500/5 border-blue-500/20' : 'bg-gray-50 border-gray-200'}`}>
                   <div className="flex justify-between items-center mb-2">
                     <label className={labelClass}>
                       {activeTool === 'brush' ? 'Brush Size' : 'Eraser Size'} 
@@ -876,7 +876,7 @@ export default function RemovePage() {
                     max="100" 
                     value={brushSize}
                     onChange={(e) => setBrushSize(Number(e.target.value))}
-                    className={`w-full ${isDark ? 'accent-purple-500' : 'accent-black'}`}
+                    className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
                   />
                   <p className="text-[10px] mt-2 opacity-60 leading-tight">
                     Paint on the preview to <strong>exclude</strong> areas from chroma key.<br/>
@@ -909,7 +909,7 @@ export default function RemovePage() {
                       }}
                       className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-colors border ${
                         chromaKeyColor === color 
-                          ? (isDark ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-indigo-50 border-indigo-200 text-indigo-700')
+                          ? (isDark ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.3)]' : 'bg-blue-50 border-blue-200 text-blue-700')
                           : (isDark ? 'bg-[#2A2A2A] border-[#3A3A3A] text-gray-400 hover:bg-[#333333]' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50')
                       }`}
                     >
@@ -953,7 +953,7 @@ export default function RemovePage() {
                   step="1"
                   value={tolerance}
                   onChange={(e) => setTolerance(Number(e.target.value))}
-                  className={`w-full ${isDark ? 'accent-purple-500' : 'accent-black'}`}
+                  className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
                 />
                 <p className={descClass}>
                   {chromaKeyColor === 'Green' 
@@ -974,7 +974,7 @@ export default function RemovePage() {
                   step="1"
                   value={softness}
                   onChange={(e) => setSoftness(Number(e.target.value))}
-                  className={`w-full ${isDark ? 'accent-purple-500' : 'accent-black'}`}
+                  className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
                 />
                 <p className={descClass}>
                   <span className="block">Smooth out the edges.</span>
@@ -994,7 +994,7 @@ export default function RemovePage() {
                   step="1"
                   value={enclosedTolerance}
                   onChange={(e) => setEnclosedTolerance(Number(e.target.value))}
-                  className={`w-full ${isDark ? 'accent-purple-500' : 'accent-black'}`}
+                  className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
                 />
                 <p className={descClass}>
                   <span className="block">Removes isolated colors between objects.</span>
@@ -1015,7 +1015,7 @@ export default function RemovePage() {
                   value={fps}
                   onChange={(e) => handleFpsChange(Number(e.target.value))}
                   disabled={isExtracting || (videoFile?.type.startsWith('image/') ?? false)}
-                  className={`w-full ${isDark ? 'accent-purple-500' : 'accent-black'}`}
+                  className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
                 />
               </div>
             </div>
@@ -1056,7 +1056,7 @@ export default function RemovePage() {
                       onClick={() => applyPreset(preset.id)}
                       className={`group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all ${
                         selectedPreset === preset.id
-                          ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600')
+                          ? (isDark ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100')
                           : (isDark ? 'hover:bg-white/5 text-white/70' : 'hover:bg-gray-100 text-gray-700')
                       }`}
                     >
@@ -1114,7 +1114,7 @@ export default function RemovePage() {
                             onClick={() => setShowMiddleNameDropdown(showMiddleNameDropdown === idx ? null : idx)}
                             className={`px-2 rounded-lg border transition-all ${
                               showMiddleNameDropdown === idx 
-                                ? (isDark ? 'bg-purple-500/20 border-purple-500/50' : 'bg-gray-200 border-gray-400') 
+                                ? (isDark ? 'bg-blue-500/20 border-blue-500/50' : 'bg-gray-200 border-gray-400') 
                                 : (isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50')
                             }`}
                           >
@@ -1133,7 +1133,7 @@ export default function RemovePage() {
                                 }}
                                 className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-1 transition-colors border-b last:border-0 ${isDark ? 'hover:bg-white/10 border-white/5' : 'hover:bg-gray-50 border-gray-100'}`}
                               >
-                                <span className={`font-mono text-[10px] ${isDark ? 'text-purple-300' : 'text-gray-800'}`}>{opt.id}</span>
+                                <span className={`font-mono text-[10px] ${isDark ? 'text-blue-300' : 'text-gray-800'}`}>{opt.id}</span>
                                 <span className={`text-[9px] uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>{opt.desc}</span>
                               </li>
                             ))}

@@ -767,8 +767,8 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                   <button 
                     onClick={handleFillAll}
                     disabled={isProcessing}
-                    className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl border transition-all backdrop-blur-md ${
-                      theme === 'dark' ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20' : 'bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100'
+                    className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl border transition-all ${
+                      theme === 'dark' ? 'bg-white/5 border-white/10 text-white/60 hover:bg-yellow-500/20 hover:border-yellow-500/30 hover:text-yellow-400' : 'bg-white border-gray-200 text-gray-500 hover:bg-yellow-50 hover:border-yellow-200 hover:text-yellow-700'
                     }`}
                   >
                     <PaintBucket className="w-3.5 h-3.5" strokeWidth={1} />
@@ -822,10 +822,10 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
               </div>
 
               {activeTool === 'brush' && (
-                <div>
-                  <div className="flex justify-between items-center mb-1.5">
+                <div className={`p-4 rounded-xl border mb-4 animate-in fade-in slide-in-from-top-2 duration-200 ${theme === 'dark' ? 'bg-blue-500/5 border-blue-500/20' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className="flex justify-between items-center mb-2">
                     <label className={`block text-[10px] ${textMuted} uppercase tracking-tighter`}>Brush Size</label>
-                    <span className="text-xs font-mono text-blue-500">{brushSize}px</span>
+                    <span className={`text-xs font-mono font-bold ${theme === 'dark' ? 'text-blue-400' : 'text-black'}`}>{brushSize}px</span>
                   </div>
                   <input 
                     type="range" 
@@ -833,7 +833,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                     max="100" 
                     value={brushSize}
                     onChange={(e) => setBrushSize(Number(e.target.value))}
-                    className="w-full accent-blue-500"
+                    className={`w-full ${theme === 'dark' ? 'accent-blue-500' : 'accent-black'}`}
                   />
                 </div>
               )}

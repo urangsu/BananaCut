@@ -1,20 +1,139 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 import { useTheme } from '../ThemeContext';
 import { Scissors, Wand2, Download, Smartphone } from 'lucide-react';
 import { Modal } from '../components/Modal';
 
+function ScratchOverlay({ isDark, lang, onReveal }: { isDark: boolean, lang: string, onReveal: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [hasStarted, setHasStarted] = useState(false);
+  const isDrawing = useRef(false);
+  const lastPos = useRef<{x: number, y: number} | null>(null);
+
+  const hintText = lang === 'KR' ? '문질러서 확인해보세요!' : lang === 'EN' ? 'Erase to Reveal the Magic' : 'こすって魔法を確認してみてください！';
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    const initCanvas = () => {
+      if (hasStarted) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      ctx.fillStyle = isDark ? '#121212' : '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    };
+
+    initCanvas();
+    window.addEventListener('resize', initCanvas);
+    return () => window.removeEventListener('resize', initCanvas);
+  }, [isDark, hasStarted]);
+
+  const getPos = (e: React.PointerEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    isDrawing.current = true;
+    if (!hasStarted) setHasStarted(true);
+    lastPos.current = getPos(e);
+    draw(e);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDrawing.current) return;
+    draw(e);
+  };
+
+  const handlePointerUp = () => {
+    isDrawing.current = false;
+    lastPos.current = null;
+    checkReveal();
+  };
+
+  const draw = (e: React.PointerEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !lastPos.current) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const currentPos = getPos(e);
+
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.min(window.innerWidth * 0.15, 120);
+
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current.x, lastPos.current.y);
+    ctx.lineTo(currentPos.x, currentPos.y);
+    ctx.stroke();
+
+    lastPos.current = currentPos;
+  };
+
+  const checkReveal = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const stride = 10;
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    let erased = 0;
+    let total = 0;
+
+    for (let i = 3; i < data.length; i += 4 * stride) {
+      total++;
+      if (data[i] === 0) erased++;
+    }
+
+    if (erased / total > 0.30) {
+      onReveal();
+    }
+  };
+
+  return (
+    <div className="absolute inset-0 touch-none">
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full cursor-crosshair"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+      />
+      <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-500 ${hasStarted ? 'opacity-0' : 'opacity-100'}`}>
+        <p className={`text-2xl md:text-4xl font-bold tracking-tight animate-pulse ${isDark ? 'text-white' : 'text-black'}`}>
+          {hintText}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const navigate = useNavigate();
   const { isDark } = useTheme();
   const [lang, setLang] = useState<'KR' | 'EN' | 'JP'>('KR');
   const [showGetApp, setShowGetApp] = useState(false);
+  const [isRevealed, setIsRevealed] = useState(false);
+  const [isRemoved, setIsRemoved] = useState(false);
 
   return (
     <div className={`min-h-screen flex flex-col ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
       {/* Header */}
-      <header className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+      <header className={`relative z-50 flex items-center justify-between p-6 border-b ${isDark ? 'bg-[#121212] border-white/10' : 'bg-white border-gray-200'}`}>
         <div className="flex flex-col">
           <div className="text-2xl font-bold tracking-tighter">BananaCut</div>
           <div className={`text-[10px] font-medium tracking-widest uppercase mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>By. Dalgrac Studio</div>
@@ -61,7 +180,16 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto">
+      {!isRemoved && (
+        <div 
+          className={`fixed inset-0 z-40 transition-opacity duration-1000 ${isRevealed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          onTransitionEnd={() => isRevealed && setIsRemoved(true)}
+        >
+          <ScratchOverlay isDark={isDark} lang={lang} onReveal={() => setIsRevealed(true)} />
+        </div>
+      )}
+
+      <main className={`flex-1 ${!isRevealed ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         <div className="max-w-6xl mx-auto px-6 py-16 lg:py-24 space-y-24">
           
           {/* Hero Section */}
@@ -81,9 +209,9 @@ export default function LandingPage() {
             </p>
             <button 
               onClick={() => navigate('/remove')}
-              className="px-10 py-4 rounded-full text-lg font-bold transition-all bg-black text-white hover:bg-gray-800 hover:scale-105 shadow-xl"
+              className="px-10 py-4 rounded-full text-lg font-bold transition-all bg-black text-white hover:bg-gray-800 hover:scale-105 shadow-xl uppercase tracking-tight"
             >
-              GET APP
+              START REMOVING
             </button>
           </section>
 
