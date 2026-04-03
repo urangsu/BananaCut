@@ -11,7 +11,7 @@ function ScratchOverlay({ isDark, lang, onReveal }: { isDark: boolean, lang: str
   const isDrawing = useRef(false);
   const lastPos = useRef<{x: number, y: number} | null>(null);
 
-  const hintText = lang === 'KR' ? '문질러서 확인해보세요!' : lang === 'EN' ? 'Erase to Reveal the Magic' : 'こすって魔法を確認してみてください！';
+  const hintText = lang === 'KR' ? '가로로 문질러서 확인해보세요!' : lang === 'EN' ? 'Erase to Reveal the Magic' : 'こすって魔法を確認してみてください！';
 
   useEffect(() => {
     const canvas = canvasRef.current;
