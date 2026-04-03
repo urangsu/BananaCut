@@ -29,7 +29,7 @@ const MIDDLE_NAME_OPTIONS = [
 
 export default function RemovePage() {
   const { isDark } = useTheme();
-  const { ffmpeg, isLoaded } = useFFmpeg();
+  const { ffmpeg, isLoaded, error: ffmpegError, retry: retryFFmpeg } = useFFmpeg();
   const { 
     frames, setFrames, 
     videoFile, setVideoFile, 
@@ -482,7 +482,10 @@ export default function RemovePage() {
   };
 
   const extractFrames = async (file: File, targetFps: number) => {
-    if (!ffmpeg) return;
+    if (!ffmpeg) {
+      console.warn("FFmpeg not loaded yet.");
+      return;
+    }
     
     setIsExtracting(true);
     setFrames([]);
@@ -490,34 +493,61 @@ export default function RemovePage() {
     setExclusionMasks(new Map());
     
     try {
+      console.log("Starting frame extraction for:", file.name);
       await ffmpeg.writeFile('input.mp4', await fetchFile(file));
       setImgDims(null); // Reset dimensions for new file
       
+      // Dynamic limits based on device
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+      const maxRes = isMobile ? 720 : 1080;
+      const maxFramesLimit = isMobile ? 500 : 1500;
+      
+      console.log(`Running FFmpeg command with scaling (Max ${maxRes}p, Device: ${isMobile ? 'Mobile' : 'Desktop'})...`);
+      
       await ffmpeg.exec([
         '-i', 'input.mp4',
-        '-vf', `fps=${targetFps}`,
+        '-vf', `fps=${targetFps},scale='min(iw,${maxRes === 1080 ? 1920 : 1280}):min(ih,${maxRes})':force_original_aspect_ratio=decrease`,
         'frame_%04d.png'
       ]);
       
+      console.log("Reading file list...");
       const fileList = await ffmpeg.listDir('/');
       const frameFiles = fileList.filter(f => f.name.startsWith('frame_') && f.name.endsWith('.png'));
       frameFiles.sort((a, b) => a.name.localeCompare(b.name));
       
+      if (frameFiles.length === 0) {
+        throw new Error("No frames extracted. Check video format.");
+      }
+
+      // Safety check for memory
+      if (frameFiles.length > maxFramesLimit) {
+        console.warn(`Too many frames extracted, limiting to ${maxFramesLimit} for stability.`);
+        frameFiles.splice(maxFramesLimit);
+      }
+
+      console.log(`Extracted ${frameFiles.length} frames. Loading into memory...`);
       const extractedFrames: string[] = [];
       for (const f of frameFiles) {
         const data = await ffmpeg.readFile(f.name);
         const blob = new Blob([data], { type: 'image/png' });
         const url = URL.createObjectURL(blob);
         extractedFrames.push(url);
+        
+        // Clean up FS to save memory
+        await ffmpeg.deleteFile(f.name);
       }
+      
+      // Clean up input file
+      await ffmpeg.deleteFile('input.mp4');
       
       setFrames(extractedFrames);
       setCurrentFrame(0);
       setIsPlaying(true);
+      console.log("Extraction complete.");
       
     } catch (error) {
       console.error("Error extracting frames:", error);
-      alert("Failed to extract frames. Check console for details.");
+      alert("Failed to extract frames. Check console for details. (프레임 추출 실패. 콘솔을 확인해주세요.)");
     } finally {
       setIsExtracting(false);
     }
@@ -741,9 +771,23 @@ export default function RemovePage() {
               </h2>
               
               {!isLoaded ? (
-                <div className={`flex items-center justify-center gap-3 p-8 rounded-xl ${isDark ? 'text-white/50 bg-black/20' : 'text-gray-500 bg-gray-100'}`}>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span className="text-base">Loading BananaCut..</span>
+                <div className={`flex flex-col items-center justify-center gap-4 p-8 rounded-xl ${isDark ? 'text-white/50 bg-black/20' : 'text-gray-500 bg-gray-100'}`}>
+                  {ffmpegError ? (
+                    <>
+                      <p className="text-sm text-center text-red-400">{ffmpegError}</p>
+                      <button 
+                        onClick={retryFFmpeg}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                      >
+                        다시 시도 (Retry)
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span className="text-base">Loading BananaCut Engine..</span>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div 
@@ -784,9 +828,23 @@ export default function RemovePage() {
             </h2>
             
             {!isLoaded ? (
-              <div className={`flex items-center gap-3 p-4 rounded-xl ${isDark ? 'text-white/50 bg-black/20' : 'text-gray-500 bg-gray-100'}`}>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm">Loading BananaCut..</span>
+              <div className={`flex flex-col items-center gap-3 p-6 rounded-xl ${isDark ? 'text-white/50 bg-black/20' : 'text-gray-500 bg-gray-100'}`}>
+                {ffmpegError ? (
+                  <>
+                    <p className="text-xs text-center text-red-400">{ffmpegError}</p>
+                    <button 
+                      onClick={retryFFmpeg}
+                      className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 transition-colors"
+                    >
+                      다시 시도 (Retry)
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="text-sm">Loading BananaCut Engine..</span>
+                  </>
+                )}
               </div>
             ) : (
               <div 
