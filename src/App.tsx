@@ -228,8 +228,8 @@ function Layout({ children }: { children: React.ReactNode }) {
                 <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>1. REMOVE (투명화) 페이지</h3>
                 <ul className="list-disc pl-5 space-y-1">
                   <li><strong>파일 업로드:</strong> 이미지나 동영상을 업로드하여 프레임을 추출합니다.</li>
-                  <li><strong>크로마키 (ChromaKey):</strong> 배경색(White, Green)을 선택하거나 Picker로 직접 선택하여 배경을 투명하게 제거합니다.</li>
-                  <li><strong>제외 브러쉬 (Exclusion Brush):</strong> 크로마키 제목 옆의 브러쉬 아이콘을 눌러 활성화합니다. 캔버스 위를 칠하면 해당 영역은 투명화 대상에서 제외되어 원본이 유지됩니다.</li>
+                  <li><strong>크로마키 (ChromaKey):</strong> 배경색(White, Green)을 선택하거나 Picker로 직접 선택하여<br /> 배경을 투명하게 제거합니다.</li>
+                  <li><strong>제외 브러쉬 (Exclusion Brush):</strong> 크로마키 제목 옆의 브러쉬 아이콘을 눌러 활성화합니다.<br /> 캔버스 위를 칠하면 해당 영역은 투명화 대상에서 제외되어 원본이 유지됩니다.</li>
                   <li><strong>Tolerance (허용 오차):</strong> 값이 클수록 비슷한 색상까지 넓게 제거됩니다.</li>
                   <li><strong>Softness (가장자리 페더링):</strong> 경계면을 부드럽게 처리하여 자연스럽게 합성되도록 합니다.</li>
                   <li><strong>Enclosed Color (내부 빈틈):</strong> 캐릭터 내부의 닫힌 공간에 있는 배경색도 함께 제거합니다.</li>
@@ -239,7 +239,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                 <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>2. RECOVER (복구) 페이지</h3>
                 <ul className="list-disc pl-5 space-y-1">
                   <li><strong>스마트 채우기 (Smart Fill):</strong> 투명화 과정에서 잘못 지워진 반투명한 틈새를 복구합니다.</li>
-                  <li><strong>브러쉬/라쏘/지우개:</strong> 캔버스에 색상을 채우거나 영역을 지정하여 채우고, 필요시 지울 수 있습니다.</li>
+                  <li><strong>브러쉬/라쏘/지우개:</strong> 캔버스에 색상을 채우거나 영역을 지정하여 채우고,<br /> 필요시 지울 수 있습니다.</li>
                 </ul>
               </section>
             </>
