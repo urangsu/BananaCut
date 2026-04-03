@@ -8,113 +8,209 @@ import {
   HelpCircle, 
   X,
   Mail,
-  Shield
+  Shield,
+  Smartphone
 } from 'lucide-react';
 import RemovePage from './pages/RemovePage';
 import RecoverPage from './pages/RecoverPage';
+import LandingPage from './pages/LandingPage';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { FFmpegProvider } from './FFmpegContext';
 import { StudioProvider } from './StudioContext';
 import { Modal } from './components/Modal';
 import { initGA, trackEvent, trackPageView } from './lib/analytics';
 
-function Sidebar() {
+function Layout({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
   const [showHelp, setShowHelp] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showGetApp, setShowGetApp] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const [lang, setLang] = useState<'KR' | 'EN' | 'JP'>('KR');
-  
+
+  const handleGuideClick = () => {
+    if (window.innerWidth < 1024) {
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+    setShowHelp(true);
+  };
+
   return (
-    <div className={`w-64 border-r h-screen flex flex-col fixed left-0 top-0 z-40 transition-colors duration-300 ${isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-      <div className={`p-6 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-        <h1 className={`text-2xl font-bold tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          BananaCut
-        </h1>
-        <p className={`text-xs mt-1 font-medium tracking-widest uppercase ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Dalgaurak Studio</p>
-      </div>
+    <div className={`flex flex-col lg:flex-row h-[100dvh] lg:overflow-hidden overflow-y-auto overflow-x-hidden w-full transition-colors duration-300 ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
       
-      <nav className="flex-1 p-4 space-y-2">
-        <NavLink
-          to="/remove"
-          onClick={() => trackEvent('Switch_To_Remove')}
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-              isActive 
-                ? (isDark ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-black/5 text-black border border-black/10 shadow-sm')
-                : (isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900')
-            }`
-          }
-        >
-          <Eraser className="w-5 h-5" />
-          <div className="flex flex-col">
-            <span>REMOVE</span>
-            <span className="text-[10px] opacity-60">(투명화)</span>
-          </div>
-        </NavLink>
-
-        <NavLink
-          to="/recover"
-          onClick={() => trackEvent('Switch_To_Recover')}
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-              isActive 
-                ? (isDark ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-black/5 text-black border border-black/10 shadow-sm')
-                : (isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900')
-            }`
-          }
-        >
-          <PaintBucket className="w-5 h-5" />
-          <div className="flex flex-col">
-            <span>RECOVER</span>
-            <span className="text-[10px] opacity-60">(복구)</span>
-          </div>
-        </NavLink>
-      </nav>
-      
-      <div className={`p-6 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-        <button 
-          onClick={() => setShowHelp(true)}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 mb-3 rounded-lg text-sm font-medium transition-all ${
-            isDark ? 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:text-gray-900'
-          }`}
-        >
-          <HelpCircle className="w-4 h-4" />
-          Guide (도움말)
-        </button>
-        <button 
-          onClick={toggleTheme}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 mb-4 rounded-lg text-sm font-medium transition-all ${
-            isDark ? 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:text-gray-900'
-          }`}
-        >
-          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          {isDark ? 'Light Mode' : 'Dark Mode'}
-        </button>
-
-        <div className={`flex flex-col items-center gap-3 pt-2 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
-          <div className={`flex flex-col items-center gap-1 text-[11px] font-medium ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors no-underline">Guide</button>
-              <span className="opacity-20">|</span>
-              <a href="https://ko-fi.com/siuuuukim" target="_blank" rel="noopener noreferrer" className="hover:text-yellow-500 transition-colors no-underline flex items-center gap-1">Support 🍌</a>
-            </div>
-            <div className="flex items-center gap-3">
-              <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline">Feedback</a>
-              <span className="opacity-20">|</span>
-              <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline">Privacy</button>
-            </div>
-          </div>
-          
-          {/* AdSense Placeholder */}
-          <div className={`w-full aspect-[4/1] rounded-lg border border-dashed flex items-center justify-center text-[9px] uppercase tracking-widest ${isDark ? 'border-white/5 bg-white/5 text-white/20' : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
-            Advertisement
-          </div>
-
-          <div className={`text-[10px] text-center ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
-            © 2026 BananaCut | Built by Dalgaurak
-          </div>
+      {/* Toast Notification */}
+      <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
+        <div className={`px-4 py-2 rounded-full shadow-lg text-sm font-medium whitespace-nowrap ${isDark ? 'bg-white/10 backdrop-blur-md text-white border border-white/20' : 'bg-black/80 backdrop-blur-md text-white border border-gray-800'}`}>
+          {lang === 'KR' ? '바나나컷은 웹사이트 환경에 최적화되어 있습니다.' : lang === 'EN' ? 'BananaCut is optimized for a web environment.' : 'BananaCutはウェブサイト環境に最適化されています。'}
         </div>
       </div>
+
+      {/* Desktop Sidebar */}
+      <aside className={`hidden lg:flex w-64 border-r flex-col shrink-0 z-40 transition-colors duration-300 ${isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+        <div className={`p-6 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+          <h1 className={`text-2xl font-bold tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            BananaCut
+          </h1>
+          <p className={`text-xs mt-1 font-medium tracking-widest uppercase ${isDark ? 'text-white/40' : 'text-gray-500'}`}>By. Dalgrac Studio</p>
+        </div>
+        
+        <nav className="flex-1 p-4 space-y-2">
+          <NavLink
+            to="/remove"
+            onClick={() => trackEvent('Switch_To_Remove')}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                isActive 
+                  ? (isDark ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-black/5 text-black border border-black/10 shadow-sm')
+                  : (isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900')
+              }`
+            }
+          >
+            <Eraser className="w-5 h-5" strokeWidth={1} />
+            <div className="flex flex-col">
+              <span>REMOVE</span>
+              <span className="text-[10px] opacity-60">(투명화)</span>
+            </div>
+          </NavLink>
+
+          <NavLink
+            to="/recover"
+            onClick={() => trackEvent('Switch_To_Recover')}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                isActive 
+                  ? (isDark ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-black/5 text-black border border-black/10 shadow-sm')
+                  : (isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900')
+              }`
+            }
+          >
+            <PaintBucket className="w-5 h-5" strokeWidth={1} />
+            <div className="flex flex-col">
+              <span>RECOVER</span>
+              <span className="text-[10px] opacity-60">(복구)</span>
+            </div>
+          </NavLink>
+        </nav>
+        
+        <div className={`p-6 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+          <button 
+            onClick={handleGuideClick}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 mb-3 rounded-lg text-sm font-medium transition-all ${
+              isDark ? 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:text-gray-900'
+            }`}
+          >
+            <HelpCircle className="w-4 h-4" strokeWidth={1} />
+            Guide (도움말)
+          </button>
+          <button 
+            onClick={toggleTheme}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 mb-4 rounded-lg text-sm font-medium transition-all ${
+              isDark ? 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:text-gray-900'
+            }`}
+          >
+            {isDark ? <Sun className="w-4 h-4" strokeWidth={1} /> : <Moon className="w-4 h-4" strokeWidth={1} />}
+            {isDark ? 'Light Mode' : 'Dark Mode'}
+          </button>
+
+          <div className={`flex flex-col items-center gap-3 pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
+            <div className={`flex flex-col items-center gap-1 text-[11px] font-medium ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+              <div className="flex items-center gap-3">
+                <button onClick={handleGuideClick} className="hover:text-blue-500 transition-colors no-underline">Guide</button>
+                <span className="opacity-20">|</span>
+                <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline">Privacy</button>
+              </div>
+              <div className="flex items-center gap-3">
+                <a href="https://ko-fi.com/유랑아이디" target="_blank" rel="noopener noreferrer" className="hover:text-yellow-500 transition-colors no-underline flex items-center gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</a>
+                <span className="opacity-20">|</span>
+                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline">Feedback</a>
+              </div>
+            </div>
+            
+            <div className={`text-[10px] text-center mt-2 ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
+              © 2026 BananaCut | By. Dalgrac Studio
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile Header */}
+      <header className={`lg:hidden flex flex-col shrink-0 z-40 ${isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-gray-50 border-gray-200'} border-b`}>
+        <div className="flex items-center justify-between p-3">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 font-bold text-lg tracking-tighter">
+              BananaCut
+            </div>
+            <span className={`text-[9px] font-medium tracking-widest uppercase ${isDark ? 'text-white/40' : 'text-gray-500'}`}>By. Dalgrac Studio</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-white/5' : 'bg-gray-200'}`}>
+              <NavLink to="/remove" onClick={() => trackEvent('Switch_To_Remove')} className={({isActive}) => `px-3 py-1.5 text-xs font-medium rounded-md transition-all ${isActive ? (isDark ? 'bg-purple-500/20 text-purple-400 shadow-sm' : 'bg-white text-gray-900 shadow-sm') : (isDark ? 'text-white/60' : 'text-gray-500')}`}>Remove</NavLink>
+              <NavLink to="/recover" onClick={() => trackEvent('Switch_To_Recover')} className={({isActive}) => `px-3 py-1.5 text-xs font-medium rounded-md transition-all ${isActive ? (isDark ? 'bg-blue-500/20 text-blue-400 shadow-sm' : 'bg-white text-gray-900 shadow-sm') : (isDark ? 'text-white/60' : 'text-gray-500')}`}>Recover</NavLink>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 min-w-0 flex flex-col min-h-0 overflow-y-auto lg:overflow-hidden relative w-full">
+        {/* Language Toggle (Desktop & Mobile) */}
+        <div className="absolute top-4 right-4 z-50 hidden lg:flex items-center gap-1 p-1 rounded-full border bg-white/50 dark:bg-black/50 backdrop-blur-md border-gray-200 dark:border-white/10">
+          {(['KR', 'EN', 'JP'] as const).map((l) => (
+            <button
+              key={l}
+              onClick={() => setLang(l)}
+              className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
+                lang === l 
+                  ? (isDark ? 'bg-white text-black' : 'bg-black text-white')
+                  : (isDark ? 'text-white/60 hover:text-white' : 'text-gray-500 hover:text-black')
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {children}
+      </main>
+
+      {/* Mobile Footer */}
+      <footer className={`lg:hidden flex flex-col shrink-0 border-t p-4 pb-[max(env(safe-area-inset-bottom),16px)] z-40 ${isDark ? 'bg-[#1a1a1a] border-white/10 text-white/40' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-1 p-1 rounded-full border bg-white/50 dark:bg-black/50 backdrop-blur-md border-gray-200 dark:border-white/10">
+            {(['KR', 'EN', 'JP'] as const).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLang(l)}
+                className={`px-3 py-1 text-[10px] font-medium rounded-full transition-all ${
+                  lang === l 
+                    ? (isDark ? 'bg-white text-black' : 'bg-black text-white')
+                    : (isDark ? 'text-white/60 hover:text-white' : 'text-gray-500 hover:text-black')
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+          <button onClick={toggleTheme} className="flex items-center gap-1 hover:text-blue-500 text-xs font-medium">
+            {isDark ? <Sun className="w-4 h-4" strokeWidth={1.5}/> : <Moon className="w-4 h-4" strokeWidth={1.5}/>} Theme
+          </button>
+        </div>
+        
+        <div className="flex justify-center items-center gap-3 text-[11px] font-medium mb-4">
+          <button onClick={handleGuideClick} className="hover:text-blue-500 transition-colors">Guide</button>
+          <span className="opacity-20">|</span>
+          <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors">Privacy</button>
+          <span className="opacity-20">|</span>
+          <a href="https://ko-fi.com/유랑아이디" target="_blank" rel="noopener noreferrer" className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center gap-1">Support 🍌</a>
+          <span className="opacity-20">|</span>
+          <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
+        </div>
+
+        <div className={`text-[9px] text-center ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
+          © 2026 BananaCut | By. Dalgrac Studio
+        </div>
+      </footer>
 
       {/* Guide Modal */}
       <Modal
@@ -199,11 +295,11 @@ function Sidebar() {
             <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
               {lang === 'KR' ? '단축키' : lang === 'EN' ? 'Shortcuts' : 'ショートカット'}
             </h3>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>{lang === 'KR' ? '스포이드' : lang === 'EN' ? 'Eyedropper' : 'スポ이트'}:</strong> <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded">Ctrl/Cmd</kbd> + Click</li>
-              <li><strong>{lang === 'KR' ? '브러쉬 크기' : lang === 'EN' ? 'Brush Size' : 'ブラシサイズ'}:</strong> <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded">[</kbd> / <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded">]</kbd></li>
-              <li><strong>{lang === 'KR' ? '다중 선택' : lang === 'EN' ? 'Multi-select' : '複数選択'}:</strong> <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded">Shift</kbd> + Click</li>
-              <li><strong>{lang === 'KR' ? '전체 동시 적용' : lang === 'EN' ? 'Apply to All' : '全フレーム適用'}:</strong> <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded">Shift</kbd> + <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded">Ctrl/Cmd</kbd> + Paint</li>
+            <ul className="list-disc pl-5 space-y-3">
+              <li><strong>{lang === 'KR' ? '스포이드' : lang === 'EN' ? 'Eyedropper' : 'スポイト'}:</strong> <kbd className="px-2 py-1 rounded-md border-2 text-xs font-mono font-bold shadow-sm bg-gray-200 border-gray-400 text-black dark:bg-gray-700 dark:border-gray-500 dark:text-white">Ctrl/Cmd</kbd> + Click</li>
+              <li><strong>{lang === 'KR' ? '브러쉬 크기' : lang === 'EN' ? 'Brush Size' : 'ブラシサイズ'}:</strong> <kbd className="px-2 py-1 rounded-md border-2 text-xs font-mono font-bold shadow-sm bg-gray-200 border-gray-400 text-black dark:bg-gray-700 dark:border-gray-500 dark:text-white">[</kbd> / <kbd className="px-2 py-1 rounded-md border-2 text-xs font-mono font-bold shadow-sm bg-gray-200 border-gray-400 text-black dark:bg-gray-700 dark:border-gray-500 dark:text-white">]</kbd></li>
+              <li><strong>{lang === 'KR' ? '다중 선택' : lang === 'EN' ? 'Multi-select' : '複数選択'}:</strong> <kbd className="px-2 py-1 rounded-md border-2 text-xs font-mono font-bold shadow-sm bg-gray-200 border-gray-400 text-black dark:bg-gray-700 dark:border-gray-500 dark:text-white">Shift</kbd> + Click</li>
+              <li><strong>{lang === 'KR' ? '전체 동시 적용' : lang === 'EN' ? 'Apply to All' : '全フレーム適用'}:</strong> <kbd className="px-2 py-1 rounded-md border-2 text-xs font-mono font-bold shadow-sm bg-gray-200 border-gray-400 text-black dark:bg-gray-700 dark:border-gray-500 dark:text-white">Shift</kbd> + <kbd className="px-2 py-1 rounded-md border-2 text-xs font-mono font-bold shadow-sm bg-gray-200 border-gray-400 text-black dark:bg-gray-700 dark:border-gray-500 dark:text-white">Ctrl/Cmd</kbd> + Paint</li>
             </ul>
           </section>
         </div>
@@ -281,18 +377,50 @@ function Sidebar() {
           )}
         </div>
       </Modal>
-    </div>
-  );
-}
 
-function Layout({ children }: { children: React.ReactNode }) {
-  const { isDark } = useTheme();
-  return (
-    <div className={`flex min-h-screen transition-colors duration-300 ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
-      <Sidebar />
-      <main className="flex-1 ml-64 overflow-x-hidden">
-        {children}
-      </main>
+      {/* GET APP Modal */}
+      <Modal
+        isOpen={showGetApp}
+        onClose={() => setShowGetApp(false)}
+        title="GET APP"
+        icon={Smartphone}
+        lang={lang}
+        setLang={setLang}
+      >
+        <div className="flex flex-col items-center justify-center text-center space-y-6 py-4">
+          <div className="w-full aspect-video bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative">
+            <img 
+              src="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=800&q=80" 
+              alt="Dalgrac Studio Team" 
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold">
+              {lang === 'KR' ? '아직 어플 준비 중입니다.' : lang === 'EN' ? 'App is under development.' : 'アプリは準備中です。'}
+            </h3>
+            <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+              {lang === 'KR' ? '반응이 좋으면 준비해볼게요! 🍌' : lang === 'EN' ? "We'll prepare it if there's good feedback! 🍌" : '反響が良ければ準備します！ 🍌'}
+            </p>
+          </div>
+
+          <div className={`w-full p-4 rounded-xl text-sm ${isDark ? 'bg-white/5 text-white/70' : 'bg-gray-50 text-gray-600'}`}>
+            {lang === 'KR' ? (
+              <>지금은 이런 작업을 준비 중이에요.<br />여정에 함께 해주세요.</>
+            ) : lang === 'EN' ? (
+              <>We are preparing this kind of work now.<br />Join us on our journey.</>
+            ) : (
+              <>現在、このような作業を準備中です。<br />私たちの旅に参加してください。</>
+            )}
+          </div>
+
+          <div className={`text-xs font-medium tracking-widest uppercase mt-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+            By. Dalgrac Studio
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -319,13 +447,11 @@ function App() {
         <StudioProvider>
           <BrowserRouter>
             <ScrollToTop />
-            <Layout>
-              <Routes>
-                <Route path="/" element={<RemovePage />} />
-                <Route path="/remove" element={<RemovePage />} />
-                <Route path="/recover" element={<RecoverPage />} />
-              </Routes>
-            </Layout>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/remove" element={<Layout><RemovePage /></Layout>} />
+              <Route path="/recover" element={<Layout><RecoverPage /></Layout>} />
+            </Routes>
           </BrowserRouter>
         </StudioProvider>
       </FFmpegProvider>

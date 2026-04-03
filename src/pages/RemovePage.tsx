@@ -49,7 +49,7 @@ export default function RemovePage() {
   const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set([0]));
   const [isPlaying, setIsPlaying] = useState(false);
   
-  const [bgMode, setBgMode] = useState<'transparent' | 'black' | 'app'>('transparent');
+  const [bgMode, setBgMode] = useState<'transparent' | 'black' | 'app'>('app');
   const [imgDims, setImgDims] = useState<{ w: number, h: number } | null>(null);
   const [drawTick, setDrawTick] = useState(0);
   const applyToAllRef = useRef(false);
@@ -723,16 +723,61 @@ export default function RemovePage() {
   const previewBgClass = `relative border-2 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center transition-colors ${isDark ? 'bg-black/40 border-white/5' : 'bg-gray-100 border-gray-200'}`;
 
   return (
-    <div className={`max-w-6xl mx-auto p-8 flex flex-col h-screen ${isDark ? 'text-white' : 'text-gray-900'}`}>
-      <header className={`mb-8 border-b pb-6 shrink-0 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+    <div className={`max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <header className={`hidden lg:block mb-8 border-b pb-6 shrink-0 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
         <h1 className="text-3xl font-semibold tracking-tight">REMOVE <span className={`text-xl font-normal ${isDark ? 'text-white/40' : 'text-gray-400'}`}>(투명화)</span></h1>
         <p className={`mt-2 text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>In-Browser White Background Removal</p>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-12 min-h-0">
-        {/* Left Panel: Controls */}
-        <div className="lg:w-[420px] shrink-0 space-y-8 overflow-y-auto pr-2 custom-scrollbar">
-          <div className={panelClass}>
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 lg:gap-12 lg:min-h-0 relative">
+        
+        {/* Mobile Phase 1: Upload Only */}
+        {frames.length === 0 && (
+          <div className="w-full flex flex-col items-center justify-center flex-1 lg:hidden">
+            <div className={`w-full max-w-md ${panelClass}`}>
+              <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <Upload className={accentIconClass} />
+                Upload File <span className="text-sm font-normal opacity-60">(파일 업로드)</span>
+              </h2>
+              
+              {!isLoaded ? (
+                <div className={`flex items-center justify-center gap-3 p-8 rounded-xl ${isDark ? 'text-white/50 bg-black/20' : 'text-gray-500 bg-gray-100'}`}>
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span className="text-base">Loading BananaCut..</span>
+                </div>
+              ) : (
+                <div 
+                  className={dropzoneClass}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <input 
+                    type="file" 
+                    accept="video/mp4,video/quicktime,image/png" 
+                    onChange={handleFileUpload}
+                    className="hidden" 
+                    id="file-upload-mobile"
+                    disabled={isExtracting}
+                  />
+                  <label htmlFor="file-upload-mobile" className={`cursor-pointer flex flex-col items-center gap-2 ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {isExtracting ? (
+                      <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-purple-400' : 'text-gray-600'}`} />
+                    ) : (
+                      <Upload className={`w-8 h-8 ${isDark ? 'text-white/60' : 'text-gray-400'}`} strokeWidth={1.5} />
+                    )}
+                    <span className="font-medium">{isExtracting ? 'Extracting...' : 'Select File'}</span>
+                    <span className="text-xs opacity-60">MP4, MOV, PNG</span>
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Left Panel: Controls (Desktop & Mobile Phase 2) */}
+        <div className={`w-full lg:w-[420px] shrink-0 lg:overflow-y-auto lg:pr-2 custom-scrollbar lg:order-1 ${frames.length === 0 ? 'hidden lg:flex lg:flex-col lg:space-y-8' : 'contents lg:flex lg:flex-col lg:space-y-8'}`}>
+          <div className={`order-1 ${panelClass}`}>
             <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               <Upload className={accentIconClass} />
               1. Upload File <span className="text-sm font-normal opacity-60">(파일 업로드)</span>
@@ -754,7 +799,7 @@ export default function RemovePage() {
                   <input type="file" className="hidden" accept="video/mp4,video/quicktime,image/png" onChange={handleFileUpload} disabled={isExtracting} />
                 </label>
                 <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
-                  <Upload className={`w-8 h-8 mb-3 transition-colors ${isDragging ? accentIconClass : (isDark ? 'text-white/40' : 'text-gray-400')}`} />
+                  <Upload className={`w-8 h-8 mb-3 transition-colors ${isDragging ? accentIconClass : (isDark ? 'text-white/40' : 'text-gray-400')}`} strokeWidth={1.5} />
                   <p className={`mb-2 text-sm ${isDark ? 'text-white/70' : 'text-gray-600'}`}><span className="font-semibold">Click to upload</span> or drag and drop</p>
                   <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>MP4, MOV or PNG</p>
                 </div>
@@ -769,7 +814,7 @@ export default function RemovePage() {
             )}
           </div>
 
-          <div className={panelClass}>
+          <div className={`order-3 ${panelClass}`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-lg font-medium flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <Sliders className={accentIconClass} />
@@ -976,7 +1021,7 @@ export default function RemovePage() {
             </div>
           </div>
 
-          <div className={panelClass}>
+          <div className={`order-4 ${panelClass}`}>
             <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               <Settings className={accentIconClass} />
               3. Asset Settings <span className="text-sm font-normal opacity-60">(에셋 설정)</span>
@@ -1128,7 +1173,7 @@ export default function RemovePage() {
           <button 
             onClick={handleDownload}
             disabled={frames.length === 0 || isProcessing}
-            className={primaryBtnClass}
+            className={`order-5 ${primaryBtnClass}`}
           >
             {isProcessing ? (
               <>
@@ -1144,22 +1189,22 @@ export default function RemovePage() {
           </button>
         </div>
 
-        {/* Right Panel: Preview */}
-        <div className="flex-1 flex flex-col items-center min-w-0 overflow-y-auto custom-scrollbar pr-2">
-          <div className="w-full flex justify-between items-center mb-4 px-2 shrink-0">
-            <div className="flex items-center gap-4">
-              <h2 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Preview <span className="text-sm font-normal opacity-60">(미리보기)</span></h2>
-              <span className={`text-xs font-mono px-2 py-1 rounded-md ${isDark ? 'bg-white/10 text-white/70' : 'bg-gray-200 text-gray-700'}`}>
-                {frames.length > 0 ? `${currentFrame + 1} / ${frames.length} frames` : '0 frames'}
+        {/* Right Panel: Preview (Sticky on Mobile Phase 2) */}
+        <div className={`order-2 w-full lg:flex-1 flex flex-col items-center min-w-0 lg:overflow-y-auto custom-scrollbar lg:pr-2 lg:order-2 ${frames.length > 0 ? 'lg:relative lg:z-auto pb-4 lg:pb-0 pt-2 lg:pt-0' : 'hidden lg:flex'} ${isDark ? 'bg-[#121212] lg:bg-transparent' : 'bg-white lg:bg-transparent'}`}>
+          <div className="w-full flex justify-between items-center mb-2 lg:mb-4 px-2 shrink-0">
+            <div className="flex items-center gap-2 lg:gap-4">
+              <h2 className={`text-base lg:text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Preview <span className="hidden lg:inline text-sm font-normal opacity-60">(미리보기)</span></h2>
+              <span className={`text-[10px] lg:text-xs font-mono px-2 py-1 rounded-md ${isDark ? 'bg-white/10 text-white/70' : 'bg-gray-200 text-gray-700'}`}>
+                {frames.length > 0 ? `${currentFrame + 1} / ${frames.length}` : '0 frames'}
               </span>
             </div>
             
-            <div className={`flex items-center gap-2 p-1 rounded-lg border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-100 border-gray-200'}`}>
+            <div className={`flex items-center gap-1 lg:gap-2 p-1 rounded-lg border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-100 border-gray-200'}`}>
               {(['transparent', 'black', 'app'] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setBgMode(mode)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${
+                  className={`px-2 lg:px-3 py-1 lg:py-1.5 text-[10px] lg:text-xs font-medium rounded-md capitalize transition-all ${
                     bgMode === mode 
                       ? (isDark ? 'bg-white/20 text-white shadow-sm' : 'bg-white text-black shadow-sm') 
                       : (isDark ? 'text-white/50 hover:text-white/80 hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200')
@@ -1171,7 +1216,7 @@ export default function RemovePage() {
             </div>
           </div>
           
-          <div className={`${previewBgClass} shrink-0`} style={{ width: 500, height: frames.length === 0 ? 450 : 700 }}>
+          <div className={`${previewBgClass} shrink-0 w-full max-w-[500px] aspect-[5/7] lg:h-[700px]`}>
             {frames.length === 0 ? (
               <div className={`flex flex-col items-center gap-3 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
                 <Play className="w-12 h-12 opacity-20" />
@@ -1187,28 +1232,29 @@ export default function RemovePage() {
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerUp}
+                style={{ touchAction: 'none' }}
               />
             )}
             
             {frames.length > 1 && (
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3">
+              <div className="absolute bottom-4 lg:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 lg:gap-3">
                 <button 
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className={`backdrop-blur-md border p-3 rounded-full transition-all shadow-xl ${
+                  className={`backdrop-blur-md border p-2 lg:p-3 rounded-full transition-all shadow-xl ${
                     isDark ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white' : 'bg-black/80 hover:bg-black border-gray-800 text-white'
                   }`}
                 >
-                  {isPlaying ? <Square className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
+                  {isPlaying ? <Square className="w-4 h-4 lg:w-5 lg:h-5 fill-current" /> : <Play className="w-4 h-4 lg:w-5 lg:h-5 fill-current" />}
                 </button>
                 <button
                   onClick={() => toggleFlag(currentFrame)}
-                  className={`backdrop-blur-md border p-3 rounded-full transition-all shadow-xl ${
+                  className={`backdrop-blur-md border p-2 lg:p-3 rounded-full transition-all shadow-xl ${
                     flaggedIndices.includes(currentFrame)
                       ? 'bg-orange-500 border-orange-400 text-white shadow-[0_0_10px_rgba(249,115,22,0.4)]'
                       : isDark ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white' : 'bg-black/80 hover:bg-black border-gray-800 text-white'
                   }`}
                 >
-                  <Flag className={`w-5 h-5 ${flaggedIndices.includes(currentFrame) ? 'fill-current' : ''}`} />
+                  <Flag className={`w-4 h-4 lg:w-5 lg:h-5 ${flaggedIndices.includes(currentFrame) ? 'fill-current' : ''}`} />
                 </button>
               </div>
             )}
@@ -1216,7 +1262,7 @@ export default function RemovePage() {
 
           {/* Scrubber & Filmstrip */}
           {frames.length > 0 && (
-            <div className="w-full max-w-[500px] mt-6 space-y-4 shrink-0 pb-8">
+            <div className="w-full max-w-[500px] mt-4 lg:mt-6 space-y-3 lg:space-y-4 shrink-0 pb-4 lg:pb-8">
               <input 
                 type="range" 
                 min="0" 
