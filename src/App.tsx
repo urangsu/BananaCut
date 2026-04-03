@@ -121,7 +121,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                 <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline">Privacy</button>
               </div>
               <div className="flex items-center gap-3">
-                <a href="https://ko-fi.com/유랑아이디" target="_blank" rel="noopener noreferrer" className="hover:text-yellow-500 transition-colors no-underline flex items-center gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</a>
+                <a href="https://ko-fi.com/siuuuukim" target="_blank" rel="noopener noreferrer" className="hover:text-yellow-500 transition-colors no-underline flex items-center gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</a>
                 <span className="opacity-20">|</span>
                 <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline">Feedback</a>
               </div>
