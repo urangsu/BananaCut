@@ -23,7 +23,8 @@ function ScratchOverlay({ isDark, lang, onReveal }: { isDark: boolean, lang: str
       if (hasStarted) return;
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      ctx.fillStyle = isDark ? '#121212' : '#ffffff';
+      // Slightly grayish "fog" color (5% darker than pure white/black)
+      ctx.fillStyle = isDark ? '#080808' : '#f8f8f8';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     };
 

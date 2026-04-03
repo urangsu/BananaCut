@@ -28,6 +28,20 @@ function Layout({ children }: { children: React.ReactNode }) {
   const [showToast, setShowToast] = useState(false);
   const [lang, setLang] = useState<'KR' | 'EN' | 'JP'>('KR');
 
+  const openToonation = () => {
+    const url = "https://toon.at/donate/dalgrac";
+    const width = 450;
+    const height = 650;
+    const left = (window.screen.width / 2) - (width / 2);
+    const top = (window.screen.height / 2) - (height / 2);
+
+    window.open(
+        url, 
+        "ToonationPopup", 
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
+  };
+
   const handleGuideClick = () => {
     if (window.innerWidth < 1024) {
       setShowToast(true);
@@ -120,10 +134,13 @@ function Layout({ children }: { children: React.ReactNode }) {
                 <span className="opacity-20">|</span>
                 <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline">Privacy</button>
               </div>
-              <div className="flex items-center gap-3">
-                <a href="https://ko-fi.com/siuuuukim" target="_blank" rel="noopener noreferrer" className="hover:text-yellow-500 transition-colors no-underline flex items-center gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</a>
-                <span className="opacity-20">|</span>
-                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline">Feedback</a>
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-3">
+                  <button onClick={openToonation} className="hover:text-yellow-500 transition-colors no-underline flex items-center gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
+                  <span className="opacity-20">|</span>
+                  <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline">Feedback</a>
+                </div>
+                <a href="https://ko-fi.com/siuuuukim" target="_blank" rel="noopener noreferrer" className="hover:text-yellow-500 transition-colors no-underline text-[9px] opacity-40">Ko-fi 바로가기</a>
               </div>
             </div>
             
@@ -197,14 +214,17 @@ function Layout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         
-        <div className="flex justify-center items-center gap-3 text-[11px] font-medium mb-4">
-          <button onClick={handleGuideClick} className="hover:text-blue-500 transition-colors">Guide</button>
-          <span className="opacity-20">|</span>
-          <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors">Privacy</button>
-          <span className="opacity-20">|</span>
-          <a href="https://ko-fi.com/유랑아이디" target="_blank" rel="noopener noreferrer" className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center gap-1">Support 🍌</a>
-          <span className="opacity-20">|</span>
-          <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
+        <div className="flex flex-col items-center gap-2 mb-4">
+          <div className="flex justify-center items-center gap-3 text-[11px] font-medium">
+            <button onClick={handleGuideClick} className="hover:text-blue-500 transition-colors">Guide</button>
+            <span className="opacity-20">|</span>
+            <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors">Privacy</button>
+            <span className="opacity-20">|</span>
+            <button onClick={openToonation} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center gap-1 font-bold">Support 🍌</button>
+            <span className="opacity-20">|</span>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
+          </div>
+          <a href="https://ko-fi.com/siuuuukim" target="_blank" rel="noopener noreferrer" className="text-yellow-500/60 hover:text-yellow-500 transition-colors text-[9px]">Ko-fi 바로가기</a>
         </div>
 
         <div className={`text-[9px] text-center ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
