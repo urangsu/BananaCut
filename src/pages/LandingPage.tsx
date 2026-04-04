@@ -164,16 +164,17 @@ export default function LandingPage() {
               GET APP
             </button>
           </div>
-          <div className="flex flex-col md:flex-row gap-1 md:gap-4">
+          <div className="flex flex-row gap-2 md:gap-4">
             <button 
               onClick={() => navigate('/remove')}
-              className="px-3 md:px-6 py-1.5 md:py-2 rounded-full text-[10px] md:text-sm font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg"
+              className="px-3 md:px-6 py-1.5 md:py-2 rounded-full text-[9px] md:text-sm font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg whitespace-nowrap"
             >
-              GO TO APP
+              <span className="md:hidden">GO APP</span>
+              <span className="hidden md:inline">GO TO APP</span>
             </button>
             <button 
               onClick={() => setShowGetApp(true)}
-              className="md:hidden px-3 py-1.5 rounded-full text-[10px] font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg"
+              className="md:hidden px-3 py-1.5 rounded-full text-[9px] font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg whitespace-nowrap"
             >
               GET APP
             </button>
@@ -217,12 +218,17 @@ export default function LandingPage() {
           </section>
 
           {/* Before/After Demo */}
-          <section className="max-w-4xl mx-auto rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-white/10">
-            <ReactCompareSlider
-              itemOne={<ReactCompareSliderImage src="https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80" alt="Before" />}
-              itemTwo={<ReactCompareSliderImage src="https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80" style={{ filter: 'grayscale(100%) brightness(1.5)' }} alt="After" />}
-              className="h-[400px] lg:h-[500px] w-full"
-            />
+          <section className="max-w-4xl mx-auto space-y-4">
+            <div className="rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-white/10">
+              <ReactCompareSlider
+                itemOne={<ReactCompareSliderImage src="https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80" alt="Before" />}
+                itemTwo={<ReactCompareSliderImage src="https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80" style={{ filter: 'grayscale(100%) brightness(1.5)' }} alt="After" />}
+                className="h-[400px] lg:h-[500px] w-full"
+              />
+            </div>
+            <p className={`text-center text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+              {lang === 'KR' ? '이제 에셋을 간편하게 만들어보세요' : lang === 'EN' ? 'Now, create assets easily' : '今、アセットを簡単に作成しましょう'}
+            </p>
           </section>
 
           {/* Bento Grid Features */}
@@ -291,11 +297,11 @@ export default function LandingPage() {
         setLang={setLang}
       >
         <div className="flex flex-col items-center justify-center text-center space-y-6 py-4">
-          <div className="w-full aspect-video bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative">
+          <div className="w-full bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative">
             <img 
-              src="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=800&q=80" 
+              src="/team.png" 
               alt="Dalgrac Studio Team" 
-              className="w-full h-full object-cover"
+              className="max-w-full h-auto object-contain"
               referrerPolicy="no-referrer"
             />
           </div>

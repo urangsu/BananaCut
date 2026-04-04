@@ -7,6 +7,7 @@ import { useTheme } from '../ThemeContext';
 import { useFFmpeg } from '../FFmpegContext';
 import { useStudio } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
+import { DownloadModal } from '../components/DownloadModal';
 
 const MIDDLE_NAME_OPTIONS = [
   { id: "idle_sitting", desc: "자연스러운 호흡" },
@@ -44,6 +45,8 @@ export default function RemovePage() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
   
   const [currentFrame, setCurrentFrame] = useState(0);
   const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set([0]));
@@ -619,12 +622,62 @@ export default function RemovePage() {
     });
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async (type: 'withRaw' | 'resultOnly' | 'gif') => {
     if (frames.length === 0) return;
     
     trackEvent('Download_Asset');
     setIsProcessing(true);
+    setShowDownloadModal(false);
     try {
+      if (type === 'gif') {
+        const GIF = (await import('gif.js')).default;
+        const gif = new GIF({
+          workers: 2,
+          quality: 10,
+          width: imgDims?.w || 512,
+          height: imgDims?.h || 512,
+          transparent: 'rgba(0,0,0,0)'
+        });
+
+        for (let i = 0; i < frames.length; i++) {
+          const img = new Image();
+          img.src = frames[i];
+          await new Promise((resolve) => {
+            img.onload = resolve;
+          });
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (!ctx) continue;
+          
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          
+          const currentMask = exclusionMasks.get(i);
+          applyChromaKey(imageData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
+          ctx.putImageData(imageData, 0, 0);
+          
+          gif.addFrame(canvas, { delay: 1000 / fps });
+        }
+
+        gif.on('finished', (blob: Blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${charName}_animated.gif`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          setIsProcessing(false);
+        });
+
+        gif.render();
+        return; // Exit early for GIF, as it handles its own processing state
+      }
+
       const zip = new JSZip();
       
       for (const seg of segments) {
@@ -659,11 +712,13 @@ export default function RemovePage() {
         }
       }
       
-      for (let i = 0; i < frames.length; i++) {
-        const response = await fetch(frames[i]);
-        const blob = await response.blob();
-        const frameNum = String(i + 1).padStart(3, '0');
-        zip.file(`${charName}_raw_${frameNum}.png`, blob);
+      if (type === 'withRaw') {
+        for (let i = 0; i < frames.length; i++) {
+          const response = await fetch(frames[i]);
+          const blob = await response.blob();
+          const frameNum = String(i + 1).padStart(3, '0');
+          zip.file(`${charName}_raw_${frameNum}.png`, blob);
+        }
       }
       
       const content = await zip.generateAsync({ type: 'blob' });
@@ -680,7 +735,9 @@ export default function RemovePage() {
       console.error("Processing failed:", error);
       alert("Failed to process frames.");
     } finally {
-      setIsProcessing(false);
+      if (type !== 'gif') {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -753,7 +810,7 @@ export default function RemovePage() {
   const previewBgClass = `relative border-2 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center transition-colors ${isDark ? 'bg-black/40 border-white/5' : 'bg-gray-100 border-gray-200'}`;
 
   return (
-    <div className={`max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen ${isDark ? 'text-white' : 'text-gray-900'}`}>
+    <div className={`max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen lg:overflow-x-hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
       <header className={`hidden lg:block mb-8 border-b pb-6 shrink-0 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
         <h1 className="text-3xl font-semibold tracking-tight">REMOVE <span className={`text-xl font-normal ${isDark ? 'text-white/40' : 'text-gray-400'}`}>(투명화)</span></h1>
         <p className={`mt-2 text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>In-Browser White Background Removal</p>
@@ -820,7 +877,7 @@ export default function RemovePage() {
         )}
 
         {/* Left Panel: Controls (Desktop & Mobile Phase 2) */}
-        <div className={`w-full lg:w-[420px] shrink-0 lg:overflow-y-auto lg:pr-2 custom-scrollbar lg:order-1 ${frames.length === 0 ? 'hidden lg:flex lg:flex-col lg:space-y-8' : 'contents lg:flex lg:flex-col lg:space-y-8'}`}>
+        <div className={`order-2 w-full lg:w-[420px] shrink-0 lg:overflow-y-auto lg:pr-2 custom-scrollbar lg:order-1 ${frames.length === 0 ? 'hidden lg:flex lg:flex-col lg:space-y-8' : 'contents lg:flex lg:flex-col lg:space-y-8'}`}>
           <div className={`order-1 ${panelClass}`}>
             <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               <Upload className={accentIconClass} />
@@ -1229,7 +1286,7 @@ export default function RemovePage() {
           </div>
 
           <button 
-            onClick={handleDownload}
+            onClick={() => setShowDownloadModal(true)}
             disabled={frames.length === 0 || isProcessing}
             className={`order-5 ${primaryBtnClass}`}
           >
@@ -1248,95 +1305,128 @@ export default function RemovePage() {
         </div>
 
         {/* Right Panel: Preview (Sticky on Mobile Phase 2) */}
-        <div className={`order-2 w-full lg:flex-1 flex flex-col items-center min-w-0 lg:overflow-y-auto custom-scrollbar lg:pr-2 lg:order-2 ${frames.length > 0 ? 'lg:relative lg:z-auto pb-4 lg:pb-0 pt-2 lg:pt-0' : 'hidden lg:flex'} ${isDark ? 'bg-[#121212] lg:bg-transparent' : 'bg-white lg:bg-transparent'}`}>
-          <div className="w-full flex justify-between items-center mb-2 lg:mb-4 px-2 shrink-0">
-            <div className="flex items-center gap-2 lg:gap-4">
-              <h2 className={`text-base lg:text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Preview <span className="hidden lg:inline text-sm font-normal opacity-60">(미리보기)</span></h2>
-              <span className={`text-[10px] lg:text-xs font-mono px-2 py-1 rounded-md ${isDark ? 'bg-white/10 text-white/70' : 'bg-gray-200 text-gray-700'}`}>
-                {frames.length > 0 ? `${currentFrame + 1} / ${frames.length}` : '0 frames'}
-              </span>
-            </div>
-            
-            <div className={`flex items-center gap-1 lg:gap-2 p-1 rounded-lg border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-100 border-gray-200'}`}>
-              {(['transparent', 'black', 'app'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setBgMode(mode)}
-                  className={`px-2 lg:px-3 py-1 lg:py-1.5 text-[10px] lg:text-xs font-medium rounded-md capitalize transition-all ${
-                    bgMode === mode 
-                      ? (isDark ? 'bg-white/20 text-white shadow-sm' : 'bg-white text-black shadow-sm') 
-                      : (isDark ? 'text-white/50 hover:text-white/80 hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200')
-                  }`}
-                >
-                  {mode === 'app' ? 'App UI' : mode}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <div className={`${previewBgClass} shrink-0 w-full max-w-[500px] aspect-[5/7] lg:h-[700px]`}>
-            {frames.length === 0 ? (
-              <div className={`flex flex-col items-center gap-3 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
-                <Play className="w-12 h-12 opacity-20" />
-                <p className="text-sm">Upload a file to preview (파일을 업로드하여 미리보세요)</p>
+        <div className={`order-1 w-full lg:flex-1 flex flex-col items-center min-w-0 lg:overflow-y-auto custom-scrollbar lg:pr-2 lg:order-2 ${frames.length > 0 ? 'pb-2 lg:pb-0 pt-2 lg:pt-0 lg:relative lg:z-auto border-b lg:border-none' : 'hidden lg:flex'} ${isDark ? 'bg-[#121212] border-white/10 lg:bg-transparent' : 'bg-white border-gray-200 lg:bg-transparent'}`}>
+          <div className={`sticky top-[56px] lg:top-0 z-40 w-full ${isDark ? 'bg-[#121212]' : 'bg-white'} flex flex-col items-center`}>
+            <div className="w-full flex justify-between items-center mb-2 lg:mb-4 px-2 shrink-0 pt-2 lg:pt-0">
+              <div className="flex items-center gap-2 lg:gap-4">
+                <h2 className={`text-base lg:text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Preview <span className="hidden lg:inline text-sm font-normal opacity-60">(미리보기)</span></h2>
+                <span className={`text-[10px] lg:text-xs font-mono px-2 py-1 rounded-md ${isDark ? 'bg-white/10 text-white/70' : 'bg-gray-200 text-gray-700'}`}>
+                  {frames.length > 0 ? `${currentFrame + 1} / ${frames.length}` : '0 frames'}
+                </span>
               </div>
-            ) : (
-              <canvas 
-                ref={canvasRef} 
-                width={500} 
-                height={700} 
-                className={`w-full h-full object-contain ${isBrushActive || isPickingColor ? 'cursor-crosshair' : ''}`}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerLeave={handlePointerUp}
-                style={{ touchAction: 'none' }}
-              />
-            )}
+              
+              <div className={`flex items-center gap-1 lg:gap-2 p-1 rounded-lg border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-100 border-gray-200'}`}>
+                {(['transparent', 'black', 'app'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setBgMode(mode)}
+                    className={`px-2 lg:px-3 py-1 lg:py-1.5 text-[10px] lg:text-xs font-medium rounded-md capitalize transition-all ${
+                      bgMode === mode 
+                        ? (isDark ? 'bg-white/20 text-white shadow-sm' : 'bg-white text-black shadow-sm') 
+                        : (isDark ? 'text-white/50 hover:text-white/80 hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200')
+                    }`}
+                  >
+                    {mode === 'app' ? 'App UI' : mode}
+                  </button>
+                ))}
+              </div>
+            </div>
             
-            {frames.length > 1 && (
-              <div className="absolute bottom-4 lg:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 lg:gap-3">
-                <button 
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className={`backdrop-blur-md border p-2 lg:p-3 rounded-full transition-all shadow-xl ${
-                    isDark ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white' : 'bg-black/80 hover:bg-black border-gray-800 text-white'
-                  }`}
-                >
-                  {isPlaying ? <Square className="w-4 h-4 lg:w-5 lg:h-5 fill-current" /> : <Play className="w-4 h-4 lg:w-5 lg:h-5 fill-current" />}
-                </button>
-                <button
-                  onClick={() => toggleFlag(currentFrame)}
-                  className={`backdrop-blur-md border p-2 lg:p-3 rounded-full transition-all shadow-xl ${
-                    flaggedIndices.includes(currentFrame)
-                      ? 'bg-orange-500 border-orange-400 text-white shadow-[0_0_10px_rgba(249,115,22,0.4)]'
-                      : isDark ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white' : 'bg-black/80 hover:bg-black border-gray-800 text-white'
-                  }`}
-                >
-                  <Flag className={`w-4 h-4 lg:w-5 lg:h-5 ${flaggedIndices.includes(currentFrame) ? 'fill-current' : ''}`} />
-                </button>
+            <div className={`${previewBgClass} shrink-0 w-full lg:max-w-[500px] h-[34dvh] lg:h-[700px] lg:aspect-[5/7] lg:relative`}>
+              {frames.length === 0 ? (
+                <div className={`flex flex-col items-center gap-3 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
+                  <Play className="w-12 h-12 opacity-20" />
+                  <p className="text-sm">Upload a file to preview (파일을 업로드하여 미리보세요)</p>
+                </div>
+              ) : (
+                <canvas 
+                  ref={canvasRef} 
+                  width={500} 
+                  height={700} 
+                  className={`w-full h-full object-contain ${isBrushActive || isPickingColor ? 'cursor-crosshair' : ''}`}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerLeave={handlePointerUp}
+                  style={{ touchAction: 'none' }}
+                />
+              )}
+              
+              {frames.length > 1 && (
+                <div className="absolute bottom-4 lg:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 lg:gap-3">
+                  <button 
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className={`backdrop-blur-md border p-2 lg:p-3 rounded-full transition-all shadow-xl ${
+                      isDark ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white' : 'bg-black/80 hover:bg-black border-gray-800 text-white'
+                    }`}
+                  >
+                    {isPlaying ? <Square className="w-4 h-4 lg:w-5 lg:h-5 fill-current" /> : <Play className="w-4 h-4 lg:w-5 lg:h-5 fill-current" />}
+                  </button>
+                  <button
+                    onClick={() => toggleFlag(currentFrame)}
+                    className={`backdrop-blur-md border p-2 lg:p-3 rounded-full transition-all shadow-xl ${
+                      flaggedIndices.includes(currentFrame)
+                        ? 'bg-orange-500 border-orange-400 text-white shadow-[0_0_10px_rgba(249,115,22,0.4)]'
+                        : isDark ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white' : 'bg-black/80 hover:bg-black border-gray-800 text-white'
+                    }`}
+                  >
+                    <Flag className={`w-4 h-4 lg:w-5 lg:h-5 ${flaggedIndices.includes(currentFrame) ? 'fill-current' : ''}`} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Scrubber & Filmstrip (Sticky part) */}
+            {frames.length > 0 && (
+              <div className="w-full max-w-[500px] mt-2 lg:mt-6 space-y-2 lg:space-y-4 shrink-0 pb-2 lg:pb-8 px-2">
+                <input 
+                  type="range" 
+                  min="0" 
+                  max={frames.length - 1} 
+                  value={currentFrame}
+                  onChange={(e) => {
+                    setCurrentFrame(Number(e.target.value));
+                    setIsPlaying(false);
+                  }}
+                  className={`w-full ${isDark ? 'accent-purple-500' : 'accent-black'}`}
+                />
+                <div className={`h-16 lg:h-24 border rounded-xl p-2 overflow-x-auto flex gap-2 items-center custom-scrollbar ${isDark ? 'bg-black/40 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                  {frames.map((frame, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={(e) => {
+                        toggleSelection(idx, e.ctrlKey || e.metaKey, e.shiftKey);
+                        setIsPlaying(false);
+                      }}
+                      className={`shrink-0 relative h-full aspect-[5/7] rounded-md overflow-hidden border-2 cursor-pointer transition-all ${
+                        selectedFrames.has(idx) 
+                          ? (isDark ? 'border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' : 'border-black shadow-[0_0_10px_rgba(0,0,0,0.2)]')
+                          : (isDark ? 'border-white/10 hover:border-white/30 opacity-60 hover:opacity-100' : 'border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100')
+                      } ${currentFrame === idx ? 'ring-2 ring-inset ring-white/20' : ''}`}
+                    >
+                      <img src={frame} alt={`Frame ${idx}`} className={`w-full h-full object-contain ${isDark ? 'bg-[#121212]' : 'bg-white'}`} />
+                      {selectedFrames.has(idx) && (
+                        <div className="absolute top-1 right-1 w-3 h-3 bg-purple-500 rounded-full border border-white shadow-sm" />
+                      )}
+                      {flaggedIndices.includes(idx) && (
+                        <div className="absolute top-1 left-1">
+                          <Flag className="w-3 h-3 text-orange-500 fill-orange-500 drop-shadow-md" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Scrubber & Filmstrip */}
+          {/* Additional Controls (Not sticky) */}
           {frames.length > 0 && (
-            <div className="w-full max-w-[500px] mt-4 lg:mt-6 space-y-3 lg:space-y-4 shrink-0 pb-4 lg:pb-8">
-              <input 
-                type="range" 
-                min="0" 
-                max={frames.length - 1} 
-                value={currentFrame}
-                onChange={(e) => {
-                  setCurrentFrame(Number(e.target.value));
-                  setIsPlaying(false);
-                }}
-                className={`w-full ${isDark ? 'accent-purple-500' : 'accent-black'}`}
-              />
-              
+            <div className="w-full max-w-[500px] mt-2 lg:mt-6 space-y-3 lg:space-y-4 shrink-0 pb-4 lg:pb-8 px-2">
               <div className="flex justify-between items-center mb-1">
                 <div className="flex items-center gap-3">
                   <h3 className={`text-[10px] font-bold uppercase tracking-tighter ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-                    Sequence <span className="opacity-60">({frames.length})</span>
+                    Selection <span className="opacity-60">({selectedFrames.size})</span>
                   </h3>
                   <div className="flex gap-1.5">
                     <button 
@@ -1381,37 +1471,17 @@ export default function RemovePage() {
                   Apply Current to Selected
                 </button>
               </div>
-
-              <div className={`h-24 border rounded-xl p-2 overflow-x-auto flex gap-2 items-center custom-scrollbar ${isDark ? 'bg-black/40 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-                {frames.map((frame, idx) => (
-                  <div 
-                    key={idx}
-                    onClick={(e) => {
-                      toggleSelection(idx, e.ctrlKey || e.metaKey, e.shiftKey);
-                      setIsPlaying(false);
-                    }}
-                    className={`shrink-0 relative h-full aspect-[5/7] rounded-md overflow-hidden border-2 cursor-pointer transition-all ${
-                      selectedFrames.has(idx) 
-                        ? (isDark ? 'border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' : 'border-black shadow-[0_0_10px_rgba(0,0,0,0.2)]')
-                        : (isDark ? 'border-white/10 hover:border-white/30 opacity-60 hover:opacity-100' : 'border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100')
-                    } ${currentFrame === idx ? 'ring-2 ring-inset ring-white/20' : ''}`}
-                  >
-                    <img src={frame} alt={`Frame ${idx}`} className={`w-full h-full object-contain ${isDark ? 'bg-[#121212]' : 'bg-white'}`} />
-                    {selectedFrames.has(idx) && (
-                      <div className="absolute top-1 right-1 w-3 h-3 bg-purple-500 rounded-full border border-white shadow-sm" />
-                    )}
-                    {flaggedIndices.includes(idx) && (
-                      <div className="absolute top-1 left-1">
-                        <Flag className="w-3 h-3 text-orange-500 fill-orange-500 drop-shadow-md" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
       </div>
+      <DownloadModal
+        isOpen={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        lang={downloadLang}
+        onDownload={handleDownload}
+        isDark={isDark}
+      />
     </div>
   );
 }

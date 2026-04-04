@@ -67,7 +67,7 @@ export default function RecoverPage() {
     
     const newFrames: Frame[] = [];
     Array.from(files).forEach(file => {
-      if (file.type.startsWith('image/png')) {
+      if (file.type.startsWith('image/')) {
         newFrames.push({
           id: Math.random().toString(36).substring(7),
           file,
@@ -603,7 +603,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
   const inputBg = theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-gray-50 border-gray-200';
 
   return (
-    <div className={`max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen ${textPrimary}`}>
+    <div className={`w-full max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen overflow-x-hidden ${textPrimary}`}>
       <header className={`hidden lg:flex mb-8 border-b pb-6 shrink-0 justify-between items-end ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">RECOVER <span className={`${textMuted} text-xl font-normal`}>(복구)</span></h1>
@@ -651,14 +651,14 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                   <input 
                     type="file" 
                     className="hidden" 
-                    accept="image/png" 
+                    accept="image/png,image/jpeg,image/jpg" 
                     multiple 
                     onChange={(e) => handleFiles(e.target.files)} 
                   />
                 </label>
                 <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
                   <Upload className={`w-10 h-10 mb-3 transition-colors ${isDragging ? 'text-blue-500' : textMuted}`} />
-                  <p className={`mb-2 text-base ${textSecondary} text-center px-4`}><span className="font-semibold">Click</span> or drag PNG sequences</p>
+                  <p className={`mb-2 text-base ${textSecondary} text-center px-4`}><span className="font-semibold">Click</span> or drag PNG/JPG sequences</p>
                 </div>
               </div>
             </div>
@@ -666,7 +666,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
         )}
 
         {/* Left Panel: Tools (Desktop & Mobile Phase 2) */}
-        <div className={`w-full lg:w-80 shrink-0 lg:overflow-y-auto lg:pr-2 custom-scrollbar lg:order-1 ${frames.length === 0 ? 'hidden lg:flex lg:flex-col lg:space-y-6' : 'contents lg:flex lg:flex-col lg:space-y-6'}`}>
+        <div className={`order-2 w-full lg:w-80 shrink-0 lg:overflow-y-auto lg:pr-2 custom-scrollbar lg:order-1 ${frames.length === 0 ? 'hidden lg:flex lg:flex-col lg:space-y-6' : 'contents lg:flex lg:flex-col lg:space-y-6'}`}>
           
           {/* Upload Area (Desktop) */}
           <div className="hidden lg:block order-1">
@@ -686,14 +686,14 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                 <input 
                   type="file" 
                   className="hidden" 
-                  accept="image/png" 
+                  accept="image/png,image/jpeg,image/jpg" 
                   multiple 
                   onChange={(e) => handleFiles(e.target.files)} 
                 />
               </label>
               <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
                 <Upload className={`w-8 h-8 mb-3 transition-colors ${isDragging ? 'text-blue-500' : textMuted}`} strokeWidth={1.5} />
-                <p className={`mb-2 text-sm ${textSecondary} text-center px-4`}><span className="font-semibold">Click</span> or drag PNG sequences</p>
+                <p className={`mb-2 text-sm ${textSecondary} text-center px-4`}><span className="font-semibold">Click</span> or drag PNG/JPG sequences</p>
               </div>
             </div>
           </div>
@@ -871,82 +871,85 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
         </div>
 
         {/* Right Panel: Canvas & Filmstrip (Order 1) */}
-        <div className={`order-1 w-full lg:flex-1 flex flex-col min-w-0 border lg:border-none rounded-2xl lg:rounded-none overflow-hidden lg:overflow-visible ${panelBg} lg:bg-transparent lg:order-2 ${frames.length > 0 ? 'lg:relative lg:z-auto pb-4 lg:pb-0 pt-2 lg:pt-0' : 'hidden lg:flex'}`}>
+        <div className={`order-1 w-full lg:flex-1 flex flex-col min-w-0 border-b lg:border-none overflow-hidden lg:overflow-visible ${panelBg} lg:bg-transparent lg:order-2 ${frames.length > 0 ? 'pb-2 lg:pb-0 pt-2 lg:pt-0 lg:relative lg:z-auto' : 'hidden lg:flex'}`}>
           
-          {/* Canvas Header */}
-          <div className={`h-12 lg:h-14 border-b flex items-center justify-between px-2 lg:px-4 shrink-0 ${theme === 'dark' ? 'bg-black/20 lg:bg-transparent border-white/10' : 'bg-gray-50 lg:bg-transparent border-gray-200'}`}>
-            <div className={`flex items-center gap-1 lg:gap-2 p-1 rounded-lg border ${theme === 'dark' ? 'bg-black/40 border-white/5' : 'bg-gray-200 border-gray-300'}`}>
-              {(['transparent', 'black', 'app'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setBgMode(mode)}
-                  className={`px-2 lg:px-3 py-1 lg:py-1.5 text-[10px] lg:text-xs font-medium rounded-md capitalize transition-all ${
-                    bgMode === mode 
-                      ? theme === 'dark' ? 'bg-white/20 text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm'
-                      : theme === 'dark' ? 'text-white/50 hover:text-white/80 hover:bg-white/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {mode === 'app' ? 'App UI' : mode}
+          <div className="sticky top-0 z-40 w-full bg-inherit">
+            {/* Canvas Header */}
+            <div className={`h-auto lg:h-14 flex flex-col sm:flex-row items-center justify-between p-2 lg:px-4 gap-2 shrink-0 ${theme === 'dark' ? 'bg-black/20 lg:bg-transparent' : 'bg-gray-50 lg:bg-transparent'}`}>
+              <div className={`flex items-center gap-1 lg:gap-2 p-1 rounded-lg border w-full sm:w-auto justify-center ${theme === 'dark' ? 'bg-black/40 border-white/5' : 'bg-gray-200 border-gray-300'}`}>
+                {(['transparent', 'black', 'app'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setBgMode(mode)}
+                    className={`flex-1 sm:flex-none px-2 lg:px-3 py-1 lg:py-1.5 text-[9px] lg:text-xs font-medium rounded-md capitalize transition-all ${
+                      bgMode === mode 
+                        ? theme === 'dark' ? 'bg-white/20 text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm'
+                        : theme === 'dark' ? 'text-white/50 hover:text-white/80 hover:bg-white/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {mode === 'app' ? 'App UI' : mode}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-1 lg:gap-3 w-full sm:w-auto justify-center">
+                <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
+                  <ZoomOut className="w-3 h-3 lg:w-4 lg:h-4" />
                 </button>
-              ))}
+                <span className={`text-[10px] lg:text-xs font-mono w-8 lg:w-12 text-center ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>{Math.round(zoom * 100)}%</span>
+                <button onClick={() => setZoom(z => Math.min(5, z + 0.1))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
+                  <ZoomIn className="w-3 h-3 lg:w-4 lg:h-4" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-1 lg:gap-3">
-              <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
-                <ZoomOut className="w-3 h-3 lg:w-4 lg:h-4" />
-              </button>
-              <span className={`text-[10px] lg:text-xs font-mono w-8 lg:w-12 text-center ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>{Math.round(zoom * 100)}%</span>
-              <button onClick={() => setZoom(z => Math.min(5, z + 0.1))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
-                <ZoomIn className="w-3 h-3 lg:w-4 lg:h-4" />
-              </button>
+            {/* Canvas Area */}
+            <div 
+              ref={containerRef}
+              className={`w-full lg:flex-1 overflow-auto relative flex items-center justify-center h-[23dvh] max-h-[23dvh] lg:h-auto lg:max-h-none lg:relative lg:top-auto lg:z-auto ${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}
+              onWheel={handleWheel}
+            >
+              {frames.length === 0 ? (
+                <div className={`flex flex-col items-center gap-3 ${theme === 'dark' ? 'text-white/30' : 'text-gray-400'}`}>
+                  <MousePointer2 className="w-12 h-12 opacity-20" />
+                  <p className="text-sm">Upload PNG sequences to start recovering</p>
+                </div>
+              ) : (
+                <div 
+                  className="relative shadow-2xl transition-transform duration-75 origin-center max-w-full"
+                  style={{ 
+                    width: canvasWidth, 
+                    height: canvasHeight,
+                    maxWidth: '100%',
+                    transform: `scale(${zoom})`,
+                    backgroundColor: bgMode === 'black' ? '#000000' : bgMode === 'app' ? (theme === 'dark' ? '#121212' : '#f3f4f6') : '#ffffff',
+                    backgroundImage: bgMode === 'transparent' ? 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb), linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb)' : 'none',
+                    backgroundPosition: bgMode === 'transparent' ? '0 0, 10px 10px' : 'initial',
+                    backgroundSize: bgMode === 'transparent' ? '20px 20px' : 'initial'
+                  }}
+                >
+                  <canvas 
+                    ref={canvasRef}
+                    width={canvasWidth}
+                    height={canvasHeight}
+                    className="w-full h-full cursor-crosshair touch-none absolute inset-0"
+                    onMouseDown={handlePointerDown}
+                    onMouseMove={handlePointerMove}
+                    onMouseUp={handlePointerUp}
+                    onMouseLeave={handlePointerLeave}
+                    onTouchStart={handlePointerDown}
+                    onTouchMove={handlePointerMove}
+                    onTouchEnd={handlePointerUp}
+                    onTouchCancel={handlePointerLeave}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Canvas Area */}
-          <div 
-            ref={containerRef}
-            className={`flex-1 overflow-auto relative flex items-center justify-center max-h-[45vh] lg:max-h-none ${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}
-            onWheel={handleWheel}
-          >
-            {frames.length === 0 ? (
-              <div className={`flex flex-col items-center gap-3 ${theme === 'dark' ? 'text-white/30' : 'text-gray-400'}`}>
-                <MousePointer2 className="w-12 h-12 opacity-20" />
-                <p className="text-sm">Upload PNG sequences to start recovering</p>
-              </div>
-            ) : (
-              <div 
-                className="relative shadow-2xl transition-transform duration-75 origin-center"
-                style={{ 
-                  width: canvasWidth, 
-                  height: canvasHeight,
-                  transform: `scale(${zoom})`,
-                  backgroundColor: bgMode === 'black' ? '#000000' : bgMode === 'app' ? (theme === 'dark' ? '#121212' : '#f3f4f6') : '#ffffff',
-                  backgroundImage: bgMode === 'transparent' ? 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb), linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb)' : 'none',
-                  backgroundPosition: bgMode === 'transparent' ? '0 0, 10px 10px' : 'initial',
-                  backgroundSize: bgMode === 'transparent' ? '20px 20px' : 'initial'
-                }}
-              >
-                <canvas 
-                  ref={canvasRef}
-                  width={canvasWidth}
-                  height={canvasHeight}
-                  className="w-full h-full cursor-crosshair touch-none absolute inset-0"
-                  onMouseDown={handlePointerDown}
-                  onMouseMove={handlePointerMove}
-                  onMouseUp={handlePointerUp}
-                  onMouseLeave={handlePointerLeave}
-                  onTouchStart={handlePointerDown}
-                  onTouchMove={handlePointerMove}
-                  onTouchEnd={handlePointerUp}
-                  onTouchCancel={handlePointerLeave}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Filmstrip */}
+          {/* Filmstrip (Now after Canvas on Mobile) */}
           {frames.length > 0 && (
-            <div className={`h-32 border-t shrink-0 p-3 overflow-x-auto flex gap-2 items-center custom-scrollbar ${theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+            <div className={`h-16 lg:h-32 border-t shrink-0 p-2 lg:p-3 overflow-x-auto flex gap-2 items-center custom-scrollbar mt-2 lg:mt-6 ${theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
               {frames.map((frame) => (
                 <div 
                   key={frame.id}
@@ -969,6 +972,8 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
           )}
         </div>
       </div>
+
+
     </div>
   );
 }

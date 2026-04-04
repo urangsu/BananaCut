@@ -24,23 +24,10 @@ function Layout({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
   const [showHelp, setShowHelp] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
   const [showGetApp, setShowGetApp] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [lang, setLang] = useState<'KR' | 'EN' | 'JP'>('KR');
-
-  const openToonation = () => {
-    const url = "https://toon.at/donate/dalgrac";
-    const width = 450;
-    const height = 650;
-    const left = (window.screen.width / 2) - (width / 2);
-    const top = (window.screen.height / 2) - (height / 2);
-
-    window.open(
-        url, 
-        "ToonationPopup", 
-        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-    );
-  };
 
   const handleGuideClick = () => {
     if (window.innerWidth < 1024) {
@@ -128,19 +115,15 @@ function Layout({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className={`flex flex-col items-center gap-3 pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
-            <div className={`flex flex-col items-center gap-1 text-[11px] font-medium ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-              <div className="flex items-center gap-3">
-                <button onClick={handleGuideClick} className="hover:text-blue-500 transition-colors no-underline">Guide</button>
-                <span className="opacity-20">|</span>
-                <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline">Privacy</button>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <div className="flex items-center gap-3">
-                  <button onClick={openToonation} className="hover:text-yellow-500 transition-colors no-underline flex items-center gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
-                  <span className="opacity-20">|</span>
-                  <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline">Feedback</a>
-                </div>
-                <a href="https://ko-fi.com/siuuuukim" target="_blank" rel="noopener noreferrer" className="hover:text-yellow-500 transition-colors no-underline text-[9px] opacity-40">Ko-fi 바로가기</a>
+            <div className={`flex flex-col items-center gap-1 text-[11px] font-medium w-full ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+              <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center w-full">
+                <button onClick={handleGuideClick} className="hover:text-blue-500 transition-colors no-underline text-right">Guide</button>
+                <span className="opacity-20 text-center">|</span>
+                <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline text-left">Privacy</button>
+
+                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-end gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
+                <span className="opacity-20 text-center">|</span>
+                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline text-left">Feedback</a>
               </div>
             </div>
             
@@ -152,13 +135,16 @@ function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile Header */}
-      <header className={`lg:hidden flex flex-col shrink-0 z-40 ${isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-gray-50 border-gray-200'} border-b`}>
+      <header className={`lg:hidden sticky top-0 flex flex-col shrink-0 z-50 ${isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-gray-50 border-gray-200'} border-b`}>
         <div className="flex items-center justify-between p-3">
           <div className="flex flex-col">
             <div className="flex items-center gap-2 font-bold text-lg tracking-tighter">
               BananaCut
             </div>
-            <span className={`text-[9px] font-medium tracking-widest uppercase ${isDark ? 'text-white/40' : 'text-gray-500'}`}>By. Dalgrac Studio</span>
+            <div className={`text-[9px] font-medium tracking-widest uppercase leading-tight ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+              <div>BY. DALGRAC</div>
+              <div className="pl-[22px]">STUDIO</div>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-white/5' : 'bg-gray-200'}`}>
@@ -170,7 +156,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 flex flex-col min-h-0 overflow-y-auto lg:overflow-hidden relative w-full">
+      <main className="lg:flex-1 min-w-0 flex flex-col lg:min-h-0 lg:overflow-hidden relative w-full">
         {/* Language Toggle (Desktop & Mobile) */}
         <div className="absolute top-4 right-4 z-50 hidden lg:flex items-center gap-1 p-1 rounded-full border bg-white/50 dark:bg-black/50 backdrop-blur-md border-gray-200 dark:border-white/10">
           {(['KR', 'EN', 'JP'] as const).map((l) => (
@@ -214,23 +200,69 @@ function Layout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         
-        <div className="flex flex-col items-center gap-2 mb-4">
-          <div className="flex justify-center items-center gap-3 text-[11px] font-medium">
-            <button onClick={handleGuideClick} className="hover:text-blue-500 transition-colors">Guide</button>
-            <span className="opacity-20">|</span>
-            <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors">Privacy</button>
-            <span className="opacity-20">|</span>
-            <button onClick={openToonation} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center gap-1 font-bold">Support 🍌</button>
-            <span className="opacity-20">|</span>
-            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
+        <div className="flex flex-col items-center gap-2 mb-4 w-full px-4">
+          <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center text-[11px] font-medium w-full max-w-[240px]">
+            <button onClick={handleGuideClick} className="hover:text-blue-500 transition-colors text-right">Guide</button>
+            <span className="opacity-20 text-center">|</span>
+            <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors text-left">Privacy</button>
+            
+            <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-end gap-1 font-bold">Support 🍌</button>
+            <span className="opacity-20 text-center">|</span>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors text-left">Feedback</a>
           </div>
-          <a href="https://ko-fi.com/siuuuukim" target="_blank" rel="noopener noreferrer" className="text-yellow-500/60 hover:text-yellow-500 transition-colors text-[9px]">Ko-fi 바로가기</a>
         </div>
 
         <div className={`text-[9px] text-center ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
           © 2026 BananaCut | By. Dalgrac Studio
         </div>
       </footer>
+
+      {/* Support Modal */}
+      <Modal
+        isOpen={showSupport}
+        onClose={() => setShowSupport(false)}
+        title={lang === 'KR' ? '후원하기' : lang === 'EN' ? 'Support Us' : 'サポート'}
+        icon={HelpCircle}
+        lang={lang}
+        setLang={setLang}
+        maxWidthClass="max-w-[350px]"
+      >
+        <div className="grid grid-cols-1 gap-3 py-2">
+          <button
+            onClick={() => {
+              if (window.innerWidth < 768) {
+                window.open("https://toon.at/donate/dalgracstudio", "_blank");
+              } else {
+                const width = 450;
+                const height = 600;
+                const left = (window.screen.width / 2) - (width / 2);
+                const top = (window.screen.height / 2) - (height / 2);
+                window.open(
+                  "https://toon.at/donate/dalgracstudio",
+                  "ToonationPopup",
+                  `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no`
+                );
+              }
+              setShowSupport(false);
+            }}
+            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[#673ab7] text-white font-medium hover:bg-[#5e35b1] transition-colors shadow-sm whitespace-nowrap text-sm"
+          >
+            <span className="text-base">☕</span>
+            {lang === 'KR' ? '익명으로 커피 후원하기' : lang === 'EN' ? 'Buy us a coffee anonymously' : '匿名でコーヒーを一杯おごる'}
+          </button>
+          
+          <a
+            href="https://ko-fi.com/siuuuukim"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setShowSupport(false)}
+            className={`flex items-center justify-center gap-2 p-3 rounded-xl font-medium transition-colors border whitespace-nowrap text-sm ${isDark ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-gray-100'}`}
+          >
+            <span className="text-base">🍌</span>
+            {lang === 'KR' ? 'Ko-fi로 후원하기' : lang === 'EN' ? 'Support via Ko-fi' : 'Ko-fiでサポート'}
+          </a>
+        </div>
+      </Modal>
 
       {/* Guide Modal */}
       <Modal
@@ -408,11 +440,11 @@ function Layout({ children }: { children: React.ReactNode }) {
         setLang={setLang}
       >
         <div className="flex flex-col items-center justify-center text-center space-y-6 py-4">
-          <div className="w-full aspect-video bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative">
+          <div className="w-full bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative">
             <img 
-              src="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=800&q=80" 
+              src="/team.png" 
               alt="Dalgrac Studio Team" 
-              className="w-full h-full object-cover"
+              className="max-w-full h-auto object-contain"
               referrerPolicy="no-referrer"
             />
           </div>
