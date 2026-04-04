@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 import { useTheme } from '../ThemeContext';
-import { Scissors, Wand2, Download, Smartphone } from 'lucide-react';
+import { useLanguage } from '../LanguageContext';
+import { Scissors, Wand2, Download, Smartphone, Play } from 'lucide-react';
 import { Modal } from '../components/Modal';
 
 function ScratchOverlay({ isDark, lang, onReveal }: { isDark: boolean, lang: string, onReveal: () => void }) {
@@ -126,7 +127,7 @@ function ScratchOverlay({ isDark, lang, onReveal }: { isDark: boolean, lang: str
 export default function LandingPage() {
   const navigate = useNavigate();
   const { isDark } = useTheme();
-  const [lang, setLang] = useState<'KR' | 'EN' | 'JP'>('KR');
+  const { lang, setLang } = useLanguage();
   const [showGetApp, setShowGetApp] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
@@ -137,7 +138,7 @@ export default function LandingPage() {
       <header className={`relative z-50 flex items-center justify-between p-6 border-b ${isDark ? 'bg-[#121212] border-white/10' : 'bg-white border-gray-200'}`}>
         <div className="flex flex-col">
           <div className="text-2xl font-bold tracking-tighter">BananaCut</div>
-          <div className={`text-[10px] font-medium tracking-widest uppercase mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>By. Dalgrac Studio</div>
+          <div className={`text-[10px] font-medium tracking-widest uppercase mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>BY. DALGRACSTUDIO</div>
         </div>
         <div className="flex items-center gap-2 md:gap-4">
           <div className="flex items-center gap-1 p-1 rounded-full border bg-white/50 dark:bg-black/50 backdrop-blur-md border-gray-200 dark:border-white/10">
@@ -198,7 +199,9 @@ export default function LandingPage() {
           <section className="text-center space-y-8">
             <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight">
               Remove Backgrounds <br />
-              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>In Your Browser</span>
+              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
+                In Your Browser
+              </span>
             </h1>
             <p className={`text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
               {lang === 'KR' ? (
@@ -215,6 +218,55 @@ export default function LandingPage() {
             >
               START REMOVING
             </button>
+          </section>
+
+          {/* Video Demo Section (For Users & Bots) */}
+          <section className="max-w-5xl mx-auto space-y-6">
+            <div className={`aspect-video rounded-3xl flex items-center justify-center border overflow-hidden relative shadow-2xl ${isDark ? 'bg-black border-white/10' : 'bg-black border-gray-200'}`}>
+              <iframe 
+                src="https://www.youtube.com/embed/rTOB6sX-zA8?start=34&autoplay=1&mute=1&loop=1&playlist=rTOB6sX-zA8" 
+                className="w-full h-full object-cover"
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin allow-top-navigation allow-presentation"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+                title="BananaCut Demo"
+              ></iframe>
+            </div>
+            
+            {/* Text description for SEO/Bots */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-left">
+              <div className={`p-6 rounded-2xl shadow-sm ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-100'}`}>
+                <strong className={`block mb-3 text-base ${isDark ? 'text-white' : 'text-black'}`}>
+                  00:34 - Upload
+                </strong>
+                <p className={`leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                  {lang === 'KR' ? '웹브라우저에 직접 영상을 업로드 합니다.' : 
+                   lang === 'EN' ? 'Upload videos directly to your web browser.' : 
+                   'ウェブブラウザに直接動画をアップロードします。'}
+                </p>
+              </div>
+              <div className={`p-6 rounded-2xl shadow-sm ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-100'}`}>
+                <strong className={`block mb-3 text-base ${isDark ? 'text-white' : 'text-black'}`}>
+                  00:35 - REMOVE
+                </strong>
+                <p className={`leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                  {lang === 'KR' ? '배경 색상을 선택하고 오차 범위를 조절하여 피사체를 즉시 추출합니다.' : 
+                   lang === 'EN' ? 'Select background color and adjust tolerance to extract subjects.' : 
+                   '背景色を選択し、誤差範囲を調整して被写体を即座に抽出します。'}
+                </p>
+              </div>
+              <div className={`p-6 rounded-2xl shadow-sm ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-100'}`}>
+                <strong className={`block mb-3 text-base ${isDark ? 'text-white' : 'text-black'}`}>
+                  01:14 - RECOVER
+                </strong>
+                <p className={`leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                  {lang === 'KR' ? '손상된 알파 채널을 스마트 필 알고리즘으로 정교하게 복구합니다.' : 
+                   lang === 'EN' ? 'Precisely recover damaged alpha channels with the Smart Fill algorithm.' : 
+                   '損傷したアルファチャネルをスマートフィルで精巧に復元します。'}
+                </p>
+              </div>
+            </div>
           </section>
 
           {/* Before/After Demo */}
@@ -284,6 +336,38 @@ export default function LandingPage() {
               </p>
             </div>
           </section>
+          {/* Below the Fold: About & Tech Specs (SEO Optimized) */}
+          <section className="max-w-5xl mx-auto pt-24 pb-12 border-t border-gray-200 dark:border-white/10 text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
+              <div>
+                <h2 className="text-3xl md:text-5xl font-bold tracking-wide mb-6">
+                  {lang === 'KR' ? '왜 \u00A0 바나나컷인가요?' : lang === 'EN' ? 'Why BananaCut?' : 'なぜBananaCut？'}
+                </h2>
+                <p className={`text-lg md:text-xl leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                  {lang === 'KR' ? '바나나컷은 프라이버시와 속도, 정밀함을 요구하는 크리에이터를 위해 설계되었습니다. 모든 작업은 고성능 웹 기반 엔진으로 브라우저 내부에서 처리되어 파일이 외부 서버로 전송되지 않습니다.' : 
+                   lang === 'EN' ? 'BananaCut is designed for creators, designers, and video editors who demand privacy, speed, and precision. By leveraging a high-performance web-based engine, we eliminate the need for cloud uploads. Your files never leave your device.' : 
+                   'BananaCutは、プライバシー、速度、精度を求めるクリエイターのために設計されました。すべての処理は高性能ウェブベースエンジンによってブラウザ内で行われるため、ファイルが外部サーバーに送信されることはありません。'}
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-2xl font-semibold mb-6 tracking-tight">
+                  {lang === 'KR' ? '기술 사양' : lang === 'EN' ? 'Technical Specifications' : '技術仕様'}
+                </h3>
+                <ul className="space-y-6">
+                  <li className={`border-b pb-4 ${isDark ? 'border-white/10 text-white/60' : 'border-gray-200 text-gray-600'}`}>
+                    <strong className={isDark ? 'text-white' : 'text-black'}>{lang === 'KR' ? '처리 엔진:' : lang === 'EN' ? 'Processing Engine:' : '処理エンジン：'}</strong> {lang === 'KR' ? '브라우저 내 네이티브 성능을 위한 고성능 웹 기반 엔진' : lang === 'EN' ? 'High-performance web-based engine for native-like performance in the browser.' : 'ブラウザでのネイティブのようなパフォーマンスのための高性能ウェブベースエンジン。'}
+                  </li>
+                  <li className={`border-b pb-4 ${isDark ? 'border-white/10 text-white/60' : 'border-gray-200 text-gray-600'}`}>
+                    <strong className={isDark ? 'text-white' : 'text-black'}>{lang === 'KR' ? '지원 형식:' : lang === 'EN' ? 'Supported Formats:' : 'サポートされている形式：'}</strong> MP4, MOV, PNG, JPG/JPEG {lang === 'KR' ? '시퀀스' : lang === 'EN' ? 'sequences' : 'シーケンス'}
+                  </li>
+                  <li className={`border-b pb-4 ${isDark ? 'border-white/10 text-white/60' : 'border-gray-200 text-gray-600'}`}>
+                    <strong className={isDark ? 'text-white' : 'text-black'}>{lang === 'KR' ? '데이터 프라이버시:' : lang === 'EN' ? 'Data Privacy:' : '데이터プライバシー：'}</strong> {lang === 'KR' ? '100% 로컬 처리. 서버 보관 없음. 외부 서버로 데이터가 전송되지 않습니다.' : lang === 'EN' ? '100% Local Processing. Zero server retention. No data is transmitted to external servers.' : '100％ローカル処理。サーバーの保持はゼロ。外部サーバーにデータは送信されません。'}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
         </div>
       </main>
 
@@ -326,7 +410,7 @@ export default function LandingPage() {
           </div>
 
           <div className={`text-xs font-medium tracking-widest uppercase mt-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-            By. Dalgrac Studio
+            BY. DALGRACSTUDIO
           </div>
         </div>
       </Modal>

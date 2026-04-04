@@ -14,7 +14,9 @@ import {
 import RemovePage from './pages/RemovePage';
 import RecoverPage from './pages/RecoverPage';
 import LandingPage from './pages/LandingPage';
+import GuidePage from './pages/GuidePage';
 import { ThemeProvider, useTheme } from './ThemeContext';
+import { LanguageProvider, useLanguage } from './LanguageContext';
 import { FFmpegProvider } from './FFmpegContext';
 import { StudioProvider } from './StudioContext';
 import { Modal } from './components/Modal';
@@ -22,12 +24,12 @@ import { initGA, trackEvent, trackPageView } from './lib/analytics';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
+  const { lang, setLang } = useLanguage();
   const [showHelp, setShowHelp] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [showGetApp, setShowGetApp] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const [lang, setLang] = useState<'KR' | 'EN' | 'JP'>('KR');
 
   const handleGuideClick = () => {
     if (window.innerWidth < 1024) {
@@ -53,7 +55,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <h1 className={`text-2xl font-bold tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'}`}>
             BananaCut
           </h1>
-          <p className={`text-xs mt-1 font-medium tracking-widest uppercase ${isDark ? 'text-white/40' : 'text-gray-500'}`}>By. Dalgrac Studio</p>
+          <p className={`text-xs mt-1 font-medium tracking-widest uppercase ${isDark ? 'text-white/40' : 'text-gray-500'}`}>BY. DALGRACSTUDIO</p>
         </div>
         
         <nav className="flex-1 p-4 space-y-2">
@@ -117,18 +119,18 @@ function Layout({ children }: { children: React.ReactNode }) {
           <div className={`flex flex-col items-center gap-3 pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
             <div className={`flex flex-col items-center gap-1 text-[11px] font-medium w-full ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
               <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center w-full">
-                <button onClick={handleGuideClick} className="hover:text-blue-500 transition-colors no-underline text-right">Guide</button>
+                <NavLink to="/guide" className="hover:text-blue-500 transition-colors no-underline text-right">Guide</NavLink>
                 <span className="opacity-20 text-center">|</span>
                 <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline text-left">Privacy</button>
 
-                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-end gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
+                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline text-right">Feedback</a>
                 <span className="opacity-20 text-center">|</span>
-                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline text-left">Feedback</a>
+                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-start gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
               </div>
             </div>
             
             <div className={`text-[10px] text-center mt-2 ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
-              © 2026 BananaCut | By. Dalgrac Studio
+              © 2026 BananaCut | BY. DALGRACSTUDIO
             </div>
           </div>
         </div>
@@ -142,8 +144,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               BananaCut
             </div>
             <div className={`text-[9px] font-medium tracking-widest uppercase leading-tight ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-              <div>BY. DALGRAC</div>
-              <div className="pl-[22px]">STUDIO</div>
+              <div>BY. DALGRACSTUDIO</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -202,18 +203,18 @@ function Layout({ children }: { children: React.ReactNode }) {
         
         <div className="flex flex-col items-center gap-2 mb-4 w-full px-4">
           <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center text-[11px] font-medium w-full max-w-[240px]">
-            <button onClick={handleGuideClick} className="hover:text-blue-500 transition-colors text-right">Guide</button>
+            <NavLink to="/guide" className="hover:text-blue-500 transition-colors text-right">Guide</NavLink>
             <span className="opacity-20 text-center">|</span>
             <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors text-left">Privacy</button>
             
-            <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-end gap-1 font-bold">Support 🍌</button>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors text-right">Feedback</a>
             <span className="opacity-20 text-center">|</span>
-            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors text-left">Feedback</a>
+            <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-start gap-1 font-bold">Support 🍌</button>
           </div>
         </div>
 
         <div className={`text-[9px] text-center ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
-          © 2026 BananaCut | By. Dalgrac Studio
+          © 2026 BananaCut | BY. DALGRACSTUDIO
         </div>
       </footer>
 
@@ -469,7 +470,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className={`text-xs font-medium tracking-widest uppercase mt-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-            By. Dalgrac Studio
+            BY. DALGRACSTUDIO
           </div>
         </div>
       </Modal>
@@ -495,18 +496,21 @@ function App() {
 
   return (
     <ThemeProvider>
-      <FFmpegProvider>
-        <StudioProvider>
-          <BrowserRouter>
-            <ScrollToTop />
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/remove" element={<Layout><RemovePage /></Layout>} />
-              <Route path="/recover" element={<Layout><RecoverPage /></Layout>} />
-            </Routes>
-          </BrowserRouter>
-        </StudioProvider>
-      </FFmpegProvider>
+      <LanguageProvider>
+        <FFmpegProvider>
+          <StudioProvider>
+            <BrowserRouter>
+              <ScrollToTop />
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/remove" element={<Layout><RemovePage /></Layout>} />
+                <Route path="/recover" element={<Layout><RecoverPage /></Layout>} />
+                <Route path="/guide" element={<Layout><GuidePage /></Layout>} />
+              </Routes>
+            </BrowserRouter>
+          </StudioProvider>
+        </FFmpegProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
