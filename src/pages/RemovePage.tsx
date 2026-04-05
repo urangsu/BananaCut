@@ -55,7 +55,7 @@ export default function RemovePage() {
   const [bgMode, setBgMode] = useState<'transparent' | 'black' | 'app'>('app');
   const [imgDims, setImgDims] = useState<{ w: number, h: number } | null>(null);
   const [drawTick, setDrawTick] = useState(0);
-  const applyToAllRef = useRef(false);
+  const applyToSelectedRef = useRef(false);
   
   // Chroma Key Settings
   const [chromaKeyColor, setChromaKeyColor] = useState<'White' | 'Green' | 'Picker'>('White');
@@ -360,9 +360,9 @@ export default function RemovePage() {
     if (!isBrushActive) return;
     
     if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
-      applyToAllRef.current = true;
+      applyToSelectedRef.current = true;
     } else {
-      applyToAllRef.current = false;
+      applyToSelectedRef.current = false;
     }
     
     setIsDrawing(true);
@@ -407,7 +407,7 @@ export default function RemovePage() {
 
   const handlePointerUp = () => {
     setIsDrawing(false);
-    applyToAllRef.current = false;
+    applyToSelectedRef.current = false;
     // Commit to global state by creating a new Map reference
     setExclusionMasks(new Map(exclusionMasks));
   };
@@ -447,10 +447,10 @@ export default function RemovePage() {
   const performDraw = (ox: number, oy: number, imgW: number, imgH: number) => {
     let targetIndices: number[] = [];
     
-    if (applyToAllRef.current) {
-      targetIndices = frames.map((_, i) => i);
+    if (applyToSelectedRef.current) {
+      targetIndices = Array.from(selectedFrames);
     } else {
-      targetIndices = selectedFrames.has(currentFrame) ? Array.from(selectedFrames) : [currentFrame];
+      targetIndices = [currentFrame];
     }
     
     const canvas = canvasRef.current;
@@ -781,7 +781,7 @@ export default function RemovePage() {
     setSegments(segments.filter((_, i) => i !== index));
   };
 
-  const updateSegment = (index: number, field: 'name' | 'start' | 'end', value: string | number) => {
+  const updateSegment = (index: number, field: 'name' | 'start' | 'end' | 'useFrames', value: string | number | boolean) => {
     const newSegments = [...segments];
     newSegments[index] = { ...newSegments[index], [field]: value };
     setSegments(newSegments);

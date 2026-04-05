@@ -98,15 +98,19 @@ function Layout({ children }: { children: React.ReactNode }) {
         </nav>
         
         <div className={`p-6 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-          <button 
-            onClick={handleGuideClick}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 mb-3 rounded-lg text-sm font-medium transition-all ${
-              isDark ? 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:text-gray-900'
-            }`}
+          <NavLink 
+            to="/guide"
+            className={({ isActive }) =>
+              `w-full flex items-center justify-center gap-2 py-2.5 mb-3 rounded-lg text-sm font-medium transition-all ${
+                isActive 
+                  ? (isDark ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20' : 'bg-blue-100 text-blue-700 border border-blue-200')
+                  : (isDark ? 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:text-gray-900')
+              }`
+            }
           >
             <HelpCircle className="w-4 h-4" strokeWidth={1} />
             Guide (도움말)
-          </button>
+          </NavLink>
           <button 
             onClick={toggleTheme}
             className={`w-full flex items-center justify-center gap-2 py-2.5 mb-4 rounded-lg text-sm font-medium transition-all ${
@@ -120,7 +124,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <div className={`flex flex-col items-center gap-3 pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
             <div className={`flex flex-col items-center gap-1 text-[11px] font-medium w-full ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
               <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center w-full">
-                <NavLink to="/guide" className="hover:text-blue-500 transition-colors no-underline text-right">Guide</NavLink>
+                <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors no-underline text-right">Guide</button>
                 <span className="opacity-20 text-center">|</span>
                 <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline text-left">Privacy</button>
 
@@ -204,7 +208,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         
         <div className="flex flex-col items-center gap-2 mb-4 w-full px-4">
           <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center text-[11px] font-medium w-full max-w-[240px]">
-            <NavLink to="/guide" className="hover:text-blue-500 transition-colors text-right">Guide</NavLink>
+            <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors text-right">Guide</button>
             <span className="opacity-20 text-center">|</span>
             <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors text-left">Privacy</button>
             
