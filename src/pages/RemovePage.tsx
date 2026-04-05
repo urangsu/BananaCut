@@ -369,8 +369,13 @@ export default function RemovePage() {
     drawOnMask(e);
   };
 
+  const lastDrawRef = useRef(0);
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current || frames.length === 0) return;
+    
+    const now = Date.now();
+    if (isDrawing && now - lastDrawRef.current < 16) return; // Throttle to ~60fps
+    lastDrawRef.current = now;
     
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -444,6 +449,17 @@ export default function RemovePage() {
     }
   };
 
+  const drawTickRef = useRef(0);
+  const animationFrameRef = useRef<number>();
+
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
+
   const performDraw = (ox: number, oy: number, imgW: number, imgH: number) => {
     let targetIndices: number[] = [];
     
@@ -481,7 +497,12 @@ export default function RemovePage() {
       }
     });
 
-    setDrawTick(t => t + 1);
+    if (!animationFrameRef.current) {
+      animationFrameRef.current = requestAnimationFrame(() => {
+        setDrawTick(t => t + 1);
+        animationFrameRef.current = undefined;
+      });
+    }
   };
 
   const extractFrames = async (file: File, targetFps: number) => {
