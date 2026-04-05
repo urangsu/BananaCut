@@ -138,6 +138,10 @@ export default function GuidePage() {
                   <strong>{lang === 'KR' ? '전체 동시 적용: ' : lang === 'EN' ? 'Apply to All: ' : '全体同時適用：'}</strong>
                   <kbd className={`px-2 py-1 rounded text-xs font-mono shadow-sm ${isDark ? 'bg-white/10 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>Shift</kbd> + <kbd className={`px-2 py-1 rounded text-xs font-mono shadow-sm ${isDark ? 'bg-white/10 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>Ctrl/Cmd</kbd> + Paint
                 </li>
+                <li className="flex items-center gap-2">
+                  <strong>{lang === 'KR' ? '모션 구간 시간/프레임 전환: ' : lang === 'EN' ? 'Toggle Motion Segment Time/Frame: ' : 'モーション区間時間/フレーム切り替え：'}</strong>
+                  {lang === 'KR' ? '구간 설정 내 [Time/Frame] 버튼 클릭' : lang === 'EN' ? 'Click [Time/Frame] button in segment settings' : '区間設定内の[Time/Frame]ボタンをクリック'}
+                </li>
               </ul>
             </section>
           </div>

@@ -4,6 +4,7 @@ export interface Segment {
   name: string;
   start: number;
   end: number;
+  useFrames?: boolean; // New field
 }
 
 export interface Preset {

@@ -1258,20 +1258,28 @@ export default function RemovePage() {
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className={segmentLabelClass}>Start (s) <span className="font-normal">(시작)</span></label>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className={segmentLabelClass}>{seg.useFrames ? 'Start (f)' : 'Start (s)'} <span className="font-normal">{seg.useFrames ? '(시작 프레임)' : '(시작 초)'}</span></label>
+                            <button 
+                              onClick={() => updateSegment(idx, 'useFrames', !seg.useFrames)}
+                              className="text-[9px] bg-white/10 px-1 rounded"
+                            >
+                              {seg.useFrames ? 'Time' : 'Frame'}
+                            </button>
+                          </div>
                           <input 
                             type="number" 
-                            step="0.1"
+                            step={seg.useFrames ? "1" : "0.1"}
                             value={seg.start}
                             onChange={(e) => updateSegment(idx, 'start', parseFloat(e.target.value))}
                             className={segmentInputClass}
                           />
                         </div>
                         <div>
-                          <label className={segmentLabelClass}>End (s) <span className="font-normal">(종료)</span></label>
+                          <label className={segmentLabelClass}>{seg.useFrames ? 'End (f)' : 'End (s)'} <span className="font-normal">{seg.useFrames ? '(종료 프레임)' : '(종료 초)'}</span></label>
                           <input 
                             type="number" 
-                            step="0.1"
+                            step={seg.useFrames ? "1" : "0.1"}
                             value={seg.end}
                             onChange={(e) => updateSegment(idx, 'end', parseFloat(e.target.value))}
                             className={segmentInputClass}

@@ -21,6 +21,7 @@ import { FFmpegProvider } from './FFmpegContext';
 import { StudioProvider } from './StudioContext';
 import { Modal } from './components/Modal';
 import { initGA, trackEvent, trackPageView } from './lib/analytics';
+import teamImg from './assets/team.jpg';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
@@ -443,7 +444,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col items-center justify-center text-center space-y-6 py-4">
           <div className="w-full bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative">
             <img 
-              src="/team.png" 
+              src={teamImg} 
               alt="Dalgrac Studio Team" 
               className="max-w-full h-auto object-contain"
               referrerPolicy="no-referrer"
