@@ -115,6 +115,14 @@ export default function GuidePage() {
               </h2>
               <ul className={`space-y-4 list-disc pl-5 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
                 <li className="flex items-center gap-2">
+                  <strong>{lang === 'KR' ? '화면 확대/축소: ' : lang === 'EN' ? 'Zoom In/Out: ' : 'ズームイン/アウト：'}</strong>
+                  <kbd className={`px-2 py-1 rounded text-xs font-mono shadow-sm ${isDark ? 'bg-white/10 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>Ctrl/Cmd</kbd> + <kbd className={`px-2 py-1 rounded text-xs font-mono shadow-sm ${isDark ? 'bg-white/10 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>Wheel</kbd>
+                </li>
+                <li className="flex items-center gap-2">
+                  <strong>{lang === 'KR' ? '화면 맞춤/원본 크기: ' : lang === 'EN' ? 'Fit/100% Size: ' : '画面に合わせる/元のサイズ：'}</strong>
+                  {lang === 'KR' ? '줌 비율 텍스트 클릭' : lang === 'EN' ? 'Click zoom percentage text' : 'ズームのパーセンテージテキストをクリック'}
+                </li>
+                <li className="flex items-center gap-2">
                   <strong>{lang === 'KR' ? '스포이드: ' : lang === 'EN' ? 'Eyedropper: ' : 'スポイト：'}</strong>
                   <kbd className={`px-2 py-1 rounded text-xs font-mono shadow-sm ${isDark ? 'bg-white/10 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>Ctrl/Cmd</kbd> + Click
                 </li>
@@ -206,6 +214,14 @@ export default function GuidePage() {
             <div className={`p-6 rounded-2xl mt-6 shadow-sm ${isDark ? 'bg-white/5 border border-white/10' : 'bg-yellow-50/50 border border-yellow-100/50'}`}>
               <h3 className="text-xl font-bold mb-4">{lang === 'KR' ? '단축키 안내' : lang === 'EN' ? 'Keyboard Shortcuts' : 'キーボードショートカット'}</h3>
               <ul className="space-y-3">
+                <li className="flex items-center justify-between">
+                  <span>{lang === 'KR' ? '화면 확대/축소' : lang === 'EN' ? 'Zoom In/Out' : 'ズームイン/アウト'}</span>
+                  <div className="space-x-1">
+                    <kbd className={`px-2 py-1 rounded text-xs font-mono shadow-sm ${isDark ? 'bg-white/10 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>Ctrl/Cmd</kbd>
+                    <span>+</span>
+                    <kbd className={`px-2 py-1 rounded text-xs font-mono shadow-sm ${isDark ? 'bg-white/10 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>Wheel</kbd>
+                  </div>
+                </li>
                 <li className="flex items-center justify-between">
                   <span>{lang === 'KR' ? '실행 취소 (Undo)' : lang === 'EN' ? 'Undo' : '元に戻す'}</span>
                   <kbd className={`px-2 py-1 rounded text-xs font-mono shadow-sm ${isDark ? 'bg-white/10 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>Ctrl/Cmd + Z</kbd>

@@ -30,6 +30,9 @@ export default function RecoverPage() {
   const [canvasHeight, setCanvasHeight] = useState(() => Number(localStorage.getItem('recover_canvasHeight')) || 700);
   const [zoom, setZoom] = useState(1);
   const [bgMode, setBgMode] = useState<'transparent' | 'black' | 'app'>('app');
+  const [detectedResolution, setDetectedResolution] = useState<{width: number, height: number} | null>(null);
+  const [showResolutionToast, setShowResolutionToast] = useState(false);
+  const [manualCanvasSize, setManualCanvasSize] = useState(false);
   
   // Tool Settings
   const [activeTool, setActiveTool] = useState<'brush' | 'lasso' | 'eraser'>('brush');
@@ -62,6 +65,39 @@ export default function RecoverPage() {
     } : { r: 255, g: 255, b: 255 };
   };
 
+  const fitToScreen = useCallback(() => {
+    if (!containerRef.current || !canvasWidth || !canvasHeight) return;
+    const container = containerRef.current;
+    const rect = container.getBoundingClientRect();
+    
+    const availableWidth = container.clientWidth;
+    // Calculate available height based on window height minus the container's top position
+    // Subtract some padding (e.g., 40px) for bottom spacing
+    const availableHeight = window.innerHeight - rect.top - 40;
+    
+    if (availableWidth <= 0 || availableHeight <= 0) return;
+
+    const scaleX = availableWidth / canvasWidth;
+    const scaleY = availableHeight / canvasHeight;
+    
+    // Use 0.95 to give a small margin
+    let newScale = Math.min(scaleX, scaleY) * 0.95;
+    
+    // Cap at 1 so we don't auto-enlarge small images, only scale down large ones
+    newScale = Math.min(newScale, 1);
+    
+    setZoom(Number(newScale.toFixed(2)));
+  }, [canvasWidth, canvasHeight]);
+
+  useEffect(() => {
+    if (detectedResolution) {
+      const timer = setTimeout(() => {
+        fitToScreen();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [detectedResolution, fitToScreen]);
+
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
     
@@ -78,6 +114,19 @@ export default function RecoverPage() {
     });
     
     if (newFrames.length > 0) {
+      const firstFrame = newFrames[0];
+      const img = new Image();
+      img.onload = () => {
+        const width = img.naturalWidth;
+        const height = img.naturalHeight;
+        setCanvasWidth(width);
+        setCanvasHeight(height);
+        setDetectedResolution({ width, height });
+        setShowResolutionToast(true);
+        setTimeout(() => setShowResolutionToast(false), 3000);
+      };
+      img.src = firstFrame.url;
+
       setFrames(prev => [...prev, ...newFrames]);
       if (!currentFrameId) {
         setCurrentFrameId(newFrames[0].id);
@@ -182,13 +231,21 @@ export default function RecoverPage() {
     drawFrame();
   }, [drawFrame]);
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      setZoom(prev => Math.min(Math.max(0.1, prev + delta), 5));
-    }
-  };
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleNativeWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        setZoom(prev => Number(Math.min(Math.max(0.1, prev + delta), 5).toFixed(2)));
+      }
+    };
+
+    container.addEventListener('wheel', handleNativeWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleNativeWheel);
+  }, []);
 
   const toggleSelection = (id: string, ctrlKey: boolean, shiftKey: boolean) => {
     setSelectedFrames(prev => {
@@ -221,6 +278,7 @@ export default function RecoverPage() {
     setCurrentFrameId(null);
     imageCache.current.clear();
     setLastAction(null);
+    setDetectedResolution(null);
   };
 
   const getMousePos = (e: React.MouseEvent | React.TouchEvent) => {
@@ -700,25 +758,44 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
 
           {/* Canvas Settings */}
           <div className={`order-3 border rounded-2xl p-5 ${panelBg}`}>
-            <h3 className={`text-sm font-medium mb-4 ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>Canvas Size <span className="font-normal opacity-60">(크기)</span></h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-sm font-medium ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>Canvas Size <span className="font-normal opacity-60">(크기)</span></h3>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <span className={`text-[10px] uppercase tracking-tighter ${textMuted}`}>Manual Edit</span>
+                <input 
+                  type="checkbox" 
+                  checked={manualCanvasSize}
+                  onChange={(e) => setManualCanvasSize(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                />
+              </label>
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              <div className="relative">
                 <label className={`block text-[10px] ${textMuted} mb-1 uppercase tracking-tighter`}>Width</label>
                 <input 
                   type="number" 
                   value={canvasWidth}
                   onChange={(e) => setCanvasWidth(Number(e.target.value))}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 ${inputBg}`}
+                  readOnly={!manualCanvasSize}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 ${inputBg} ${!manualCanvasSize ? 'opacity-70 cursor-not-allowed' : ''}`}
                 />
+                {!manualCanvasSize && detectedResolution && (
+                  <div className="absolute right-2 top-7 text-[9px] text-blue-500 font-medium">Auto</div>
+                )}
               </div>
-              <div>
+              <div className="relative">
                 <label className={`block text-[10px] ${textMuted} mb-1 uppercase tracking-tighter`}>Height</label>
                 <input 
                   type="number" 
                   value={canvasHeight}
                   onChange={(e) => setCanvasHeight(Number(e.target.value))}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 ${inputBg}`}
+                  readOnly={!manualCanvasSize}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 ${inputBg} ${!manualCanvasSize ? 'opacity-70 cursor-not-allowed' : ''}`}
                 />
+                {!manualCanvasSize && detectedResolution && (
+                  <div className="absolute right-2 top-7 text-[9px] text-blue-500 font-medium">Auto</div>
+                )}
               </div>
             </div>
           </div>
@@ -893,11 +970,23 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
               </div>
 
               <div className="flex items-center gap-1 lg:gap-3 w-full sm:w-auto justify-center">
-                <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
+                <button onClick={() => setZoom(z => Number(Math.max(0.1, z - 0.1).toFixed(2)))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
                   <ZoomOut className="w-3 h-3 lg:w-4 lg:h-4" />
                 </button>
-                <span className={`text-[10px] lg:text-xs font-mono w-8 lg:w-12 text-center ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>{Math.round(zoom * 100)}%</span>
-                <button onClick={() => setZoom(z => Math.min(5, z + 0.1))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
+                <button 
+                  onClick={() => {
+                    if (zoom === 1) {
+                      fitToScreen();
+                    } else {
+                      setZoom(1);
+                    }
+                  }}
+                  className={`text-[10px] lg:text-xs font-mono w-12 lg:w-16 text-center rounded-md py-1 transition-colors ${theme === 'dark' ? 'text-white/70 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-200'}`}
+                  title="Toggle Fit / 100%"
+                >
+                  {Math.round(zoom * 100)}%
+                </button>
+                <button onClick={() => setZoom(z => Number(Math.min(5, z + 0.1).toFixed(2)))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
                   <ZoomIn className="w-3 h-3 lg:w-4 lg:h-4" />
                 </button>
               </div>
@@ -906,21 +995,25 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
             {/* Canvas Area */}
             <div 
               ref={containerRef}
-              className={`w-full lg:flex-1 overflow-auto relative flex items-center justify-center h-[23dvh] max-h-[23dvh] lg:h-auto lg:max-h-none lg:relative lg:top-auto lg:z-auto ${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}
-              onWheel={handleWheel}
+              className={`w-full lg:flex-1 overflow-auto relative flex items-start justify-center pt-4 lg:pt-8 h-[23dvh] max-h-[23dvh] lg:h-auto lg:max-h-none lg:relative lg:top-auto lg:z-auto ${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}
             >
+              {showResolutionToast && detectedResolution && (
+                <div className="absolute top-4 right-4 z-50 bg-black/80 text-white text-xs px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm transition-opacity duration-300">
+                  Detected Resolution: {detectedResolution.width} x {detectedResolution.height}
+                </div>
+              )}
               {frames.length === 0 ? (
-                <div className={`flex flex-col items-center gap-3 ${theme === 'dark' ? 'text-white/30' : 'text-gray-400'}`}>
+                <div className={`flex flex-col items-center gap-3 mt-10 ${theme === 'dark' ? 'text-white/30' : 'text-gray-400'}`}>
                   <MousePointer2 className="w-12 h-12 opacity-20" />
                   <p className="text-sm">Upload PNG sequences to start recovering</p>
                 </div>
               ) : (
                 <div 
-                  className="relative shadow-2xl transition-transform duration-75 origin-center max-w-full"
+                  className="relative shadow-2xl transition-transform duration-75 origin-top max-w-full"
                   style={{ 
                     width: canvasWidth, 
-                    height: canvasHeight,
                     maxWidth: '100%',
+                    aspectRatio: `${canvasWidth} / ${canvasHeight}`,
                     transform: `scale(${zoom})`,
                     backgroundColor: bgMode === 'black' ? '#000000' : bgMode === 'app' ? (theme === 'dark' ? '#121212' : '#f3f4f6') : '#ffffff',
                     backgroundImage: bgMode === 'transparent' ? 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb), linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb)' : 'none',
