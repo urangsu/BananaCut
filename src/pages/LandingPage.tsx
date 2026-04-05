@@ -342,7 +342,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
               <div>
                 <h2 className="text-3xl md:text-5xl font-bold tracking-wide mb-6">
-                  {lang === 'KR' ? '왜 \u00A0 바나나컷인가요?' : lang === 'EN' ? 'Why BananaCut?' : 'なぜBananaCut？'}
+                  {lang === 'KR' ? '왜 바나나컷인가요?' : lang === 'EN' ? 'Why BananaCut?' : 'なぜBananaCut？'}
                 </h2>
                 <p className={`text-lg md:text-xl leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
                   {lang === 'KR' ? '바나나컷은 프라이버시와 속도, 정밀함을 요구하는 크리에이터를 위해 설계되었습니다. 모든 작업은 고성능 웹 기반 엔진으로 브라우저 내부에서 처리되어 파일이 외부 서버로 전송되지 않습니다.' : 
