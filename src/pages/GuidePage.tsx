@@ -98,9 +98,11 @@ export default function GuidePage() {
           <div className={`transition-all duration-500 ${activeTab === 'detailed' ? 'opacity-100 visible' : 'opacity-0 invisible absolute top-0 left-0 w-full'}`}>
             <div className="space-y-16">
               <section>
-                <h2 className="text-3xl font-bold mb-6 tracking-tight">{lang === 'KR' ? '1. 바나나컷 소개' : lang === 'EN' ? '1. Introduction to BananaCut' : '1. BananaCutの紹介'}</h2>
+                <h2 className="text-3xl font-bold mb-6 tracking-tight">{lang === 'KR' ? '1. 바나나컷 소개' : lang === 'EN' ? '1. Introduction' : '1. BananaCutの紹介'}</h2>
                 <div className={`space-y-4 leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-700'}`}>
-                  <p>{lang === 'KR' ? '바나나컷은 크리에이터, 3D 아티스트, 영상 편집자를 위해 설계된 혁신적인 웹 기반 도구입니다. 무거운 영상 파일을 원격 서버에 업로드해야 하는 기존 클라우드 기반 서비스와 달리, 바나나컷은 고성능 웹 기반 엔진을 사용하여 브라우저 내부에서 모든 것을 직접 처리합니다.' : lang === 'EN' ? 'BananaCut is a revolutionary web-based tool designed for creators, 3D artists, and video editors. Unlike traditional cloud-based services that require you to upload heavy video files to a remote server, BananaCut processes everything directly inside your browser using a high-performance web-based engine.' : 'BananaCutは、クリエイター、3Dアーティスト、ビデオ編集者のために設計された革新的なウェブベースのツールです。重いビデオファイルをリモートサーバーにアップロードする必要がある従来のクラウドベースのサービスとは異なり、BananaCutは高性能ウェブベースエンジンを使用して、ブラウザ内ですべてを直接処理します。'}</p>
+                  <p>{lang === 'KR' ? '바나나컷은 크리에이터, 3D 아티스트, 영상 편집자를 위해 설계된 100% 무료 웹 기반 도구입니다. 무거운 영상 파일을 원격 서버에 업로드해야 했던 기존의 클라우드 서비스들과 달리, 바나나컷은 웹 기반 엔진을 활용하여 브라우저 환경에서 모든 프레임을 직접 처리합니다. 업로드 대기 시간 제로, 완벽한 데이터 보안, 그리고 무제한 사용. 여러분의 작업물은 절대 컴퓨터 밖으로 나가지 않습니다. 그린 스크린 제거부터 손상된 알파 채널 복구까지, 필요한 기능들을 웹에서 바로 사용해 보세요.' : 
+                     lang === 'EN' ? 'BananaCut is a completely free web-based tool designed for creators, 3D artists, and video editors. Unlike traditional cloud services that require you to upload heavy video files to remote servers, BananaCut uses a web engine to process everything directly inside your browser. Zero upload times, absolute data privacy, and unlimited usage. Your files never leave your computer. From removing green screens to recovering damaged alpha channels, use the tools you need right in your web browser.' : 
+                     'BananaCutは、クリエイター、3Dアーティスト、ビデオ編集者のために設計された完全無料のウェブベースのツールです。重い動画ファイルをリモートサーバーにアップロードする必要がある従来のクラウドサービスとは異なり、BananaCutはウェブエンジンを使用し、ブラウザ内ですべてを直接処理します。アップロードの待ち時間はゼロ、完璧なデータプライバシー、そして無制限の利用。ファイルがコンピューターから外部に出ることは決してありません。グリーンスクリーンの除去から損傷したアルファチャネルの復元まで、必要な機能をブラウザですぐにお使いいただけます。'}</p>
                 </div>
               </section>
               <section>
@@ -128,6 +130,23 @@ export default function GuidePage() {
               {/* [1] Image Generation Tips */}
               <section>
                 <h3 className="text-2xl font-bold mb-6 tracking-tight flex items-center gap-2">🖼️ {lang === 'KR' ? '[1] 이미지 생성 팁' : lang === 'EN' ? '[1] Image Generation Tips' : '[1] 画像生成のヒント'}</h3>
+                
+                {/* Prompt Structure Template */}
+                <div className={`p-6 rounded-2xl border mb-6 ${isDark ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
+                  <h4 className="text-lg font-bold mb-2">{lang === 'KR' ? '구조화 템플릿 (Prompt Structure Template)' : lang === 'EN' ? 'Prompt Structure Template' : 'プロンプト構造テンプレート'}</h4>
+                  <div className="flex items-center justify-between gap-4 mb-3">
+                    <p className="font-mono text-sm text-blue-600 dark:text-blue-400">[Reference subject], [Camera Perspective], [Character Pose], [Attire/Clothing], [Character Art Style], [Point Color]</p>
+                    <button onClick={() => copyToClipboard('[Reference subject], [Camera Perspective], [Character Pose], [Attire/Clothing], [Character Art Style], [Point Color]')} className={`px-3 py-1 text-xs rounded-lg transition-colors whitespace-nowrap flex-shrink-0 ${isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-200 hover:bg-gray-300'}`}>
+                      {lang === 'KR' ? '복사' : lang === 'EN' ? 'Copy' : 'コピー'}
+                    </button>
+                  </div>
+                  <p className={`text-sm ${isDark ? 'text-white/70' : 'text-gray-700'}`}>
+                    {lang === 'KR' ? '원하는 공통 사항으로 "참조 대상, 시점, 자세, 인상착의, 캐릭터 그림체, 포인트 색상"을 함께 적어 프롬프트를 고도화하세요. 이 뼈대에 단어만 채워 넣으면 일관된 고품질 에셋을 얻을 수 있습니다.' : 
+                     lang === 'EN' ? 'Enhance your prompt by filling in this template: "Reference, Perspective, Pose, Attire, Art Style, and Point Color". This guarantees consistent and high-quality assets.' : 
+                     '希望する共通事項として「参照対象、視点、姿勢、服装、キャラクターの絵柄、ポイントカラー」を一緒に入力してプロンプトを高度化してください。'}
+                  </p>
+                </div>
+
                 <div className="grid gap-6">
                   {[
                     {

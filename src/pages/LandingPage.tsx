@@ -345,9 +345,9 @@ export default function LandingPage() {
                   {lang === 'KR' ? '왜 바나나컷인가요?' : lang === 'EN' ? 'Why BananaCut?' : 'なぜBananaCut？'}
                 </h2>
                 <p className={`text-lg md:text-xl leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                  {lang === 'KR' ? '바나나컷은 프라이버시와 속도, 정밀함을 요구하는 크리에이터를 위해 설계되었습니다. 모든 작업은 고성능 웹 기반 엔진으로 브라우저 내부에서 처리되어 파일이 외부 서버로 전송되지 않습니다.' : 
-                   lang === 'EN' ? 'BananaCut is designed for creators, designers, and video editors who demand privacy, speed, and precision. By leveraging a high-performance web-based engine, we eliminate the need for cloud uploads. Your files never leave your device.' : 
-                   'BananaCutは、プライバシー、速度、精度を求めるクリエイターのために設計されました。すべての処理は高性能ウェブベースエンジンによってブラウザ内で行われるため、ファイルが外部サーバーに送信されることはありません。'}
+                  {lang === 'KR' ? '바나나컷은 프라이버시, 속도, 정밀함을 중요하게 생각하는 크리에이터를 위해 만들어졌습니다. 웹 기반 엔진을 통해 모든 작업이 브라우저 내부에서만 처리되므로, 파일이 외부 서버로 전송될 걱정이 없습니다. 바나나컷의 모든 기능을 100% 무료로, 횟수 제한 없이 편하게 사용해 보세요.' : 
+                   lang === 'EN' ? 'BananaCut is built for creators who value privacy, speed, and precision. Powered by a web engine, everything is processed locally in your browser—meaning your files never leave your device. Experience all these features 100% free, with no limits.' : 
+                   'BananaCutは、プライバシー、スピード、精度を重視するクリエイターのために作られました。ウェブエンジンにより、すべての作業はブラウザ内で処理されるため、ファイルが外部に送信される心配はありません。これらの機能を完全無料で、無制限にお使いいただけます。'}
                 </p>
               </div>
               

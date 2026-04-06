@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, Download, Loader2, ZoomIn, ZoomOut, MousePointer2, Paintbrush, SquareDashed, Trash2, Eraser, Play, Square, Sliders, ChevronDown, Undo2, Redo2, PaintBucket } from 'lucide-react';
 import JSZip from 'jszip';
+import { useLanguage } from '../LanguageContext';
 import { useTheme } from '../ThemeContext';
 import { trackEvent } from '../lib/analytics';
 
@@ -18,6 +19,7 @@ interface Point {
 }
 
 export default function RecoverPage() {
+  const { lang } = useLanguage();
   const { theme } = useTheme();
   const [frames, setFrames] = useState<Frame[]>([]);
   const [selectedFrames, setSelectedFrames] = useState<Set<string>>(new Set());
@@ -594,7 +596,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
 
   const applyToAllSelected = async () => {
     if (!lastAction) {
-      alert("Please use the brush or lasso tool on a frame first before applying to all.");
+      alert(lang === 'KR' ? "먼저 브러시나 올가미 도구를 사용하여 프레임에 칠해주세요." : lang === 'EN' ? "Please use the brush or lasso tool on a frame first before applying to all." : "まず、ブラシまたは投げ縄ツールを使用してフレームを塗りつぶしてください。");
       return;
     }
 
@@ -608,7 +610,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
       }
     } catch (error) {
       console.error("Error applying to all:", error);
-      alert("Failed to apply to all selected frames.");
+      alert(lang === 'KR' ? "선택된 프레임에 적용 실패." : lang === 'EN' ? "Failed to apply to all selected frames." : "選択したすべてのフレームへの適用に失敗しました。");
     } finally {
       setIsProcessing(false);
     }
@@ -648,7 +650,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
       
     } catch (error) {
       console.error("Error exporting ZIP:", error);
-      alert("Failed to export ZIP file.");
+      alert(lang === 'KR' ? "ZIP 파일 내보내기 실패." : lang === 'EN' ? "Failed to export ZIP file." : "ZIPファイルの書き出しに失敗しました。");
     } finally {
       setIsProcessing(false);
     }
@@ -664,8 +666,8 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
     <div className={`w-full max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen overflow-x-hidden ${textPrimary}`}>
       <header className={`hidden lg:flex mb-8 border-b pb-6 shrink-0 justify-between items-end ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">RECOVER <span className={`${textMuted} text-xl font-normal`}>(복구)</span></h1>
-          <p className={`${textSecondary} mt-2 text-sm`}>Smart Alpha Fill & Sequence Recovery</p>
+          <h1 className="text-3xl font-semibold tracking-tight">RECOVER <span className={`${textMuted} text-xl font-normal`}>{lang === 'KR' ? '(복구)' : lang === 'EN' ? '(Recover)' : '(復旧)'}</span></h1>
+          <p className={`${textSecondary} mt-2 text-sm`}>{lang === 'KR' ? 'Smart Alpha Fill & Sequence Recovery' : lang === 'EN' ? 'Smart Alpha Fill & Sequence Recovery' : 'スマートアルファ塗りつぶし＆シーケンス復旧'}</p>
         </div>
         {frames.length > 0 && (
           <button 
@@ -677,7 +679,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
             }`}
           >
             <Trash2 className="w-4 h-4" />
-            Clear All
+            {lang === 'KR' ? 'Clear All' : lang === 'EN' ? 'Clear All' : 'すべてクリア'}
           </button>
         )}
       </header>
@@ -690,7 +692,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
             <div className={`w-full max-w-md border rounded-2xl p-6 ${panelBg}`}>
               <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 <Upload className={`w-5 h-5 ${theme === 'dark' ? 'text-blue-400' : 'text-black'}`} />
-                Upload Sequence <span className="text-sm font-normal opacity-60">(시퀀스 업로드)</span>
+                {lang === 'KR' ? 'Upload Sequence (시퀀스 업로드)' : lang === 'EN' ? 'Upload Sequence' : 'シーケンスをアップロード'}
               </h2>
               
               <div 
@@ -716,7 +718,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                 </label>
                 <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
                   <Upload className={`w-10 h-10 mb-3 transition-colors ${isDragging ? 'text-blue-500' : textMuted}`} />
-                  <p className={`mb-2 text-base ${textSecondary} text-center px-4`}><span className="font-semibold">Click</span> or drag PNG/JPG sequences</p>
+                  <p className={`mb-2 text-base ${textSecondary} text-center px-4`}><span className="font-semibold">{lang === 'KR' ? 'Click' : lang === 'EN' ? 'Click' : 'クリック'}</span> {lang === 'KR' ? 'or drag PNG/JPG sequences' : lang === 'EN' ? 'or drag PNG/JPG sequences' : 'またはPNG/JPGシーケンスをドラッグ'}</p>
                 </div>
               </div>
             </div>
@@ -751,7 +753,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
               </label>
               <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
                 <Upload className={`w-8 h-8 mb-3 transition-colors ${isDragging ? 'text-blue-500' : textMuted}`} strokeWidth={1.5} />
-                <p className={`mb-2 text-sm ${textSecondary} text-center px-4`}><span className="font-semibold">Click</span> or drag PNG/JPG sequences</p>
+                <p className={`mb-2 text-sm ${textSecondary} text-center px-4`}><span className="font-semibold">{lang === 'KR' ? 'Click' : lang === 'EN' ? 'Click' : 'クリック'}</span> {lang === 'KR' ? 'or drag PNG/JPG sequences' : lang === 'EN' ? 'or drag PNG/JPG sequences' : 'またはPNG/JPGシーケンスをドラッグ'}</p>
               </div>
             </div>
           </div>
@@ -759,9 +761,9 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
           {/* Canvas Settings */}
           <div className={`order-3 border rounded-2xl p-5 ${panelBg}`}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className={`text-sm font-medium ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>Canvas Size <span className="font-normal opacity-60">(크기)</span></h3>
+              <h3 className={`text-sm font-medium ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>{lang === 'KR' ? 'Canvas Size (크기)' : lang === 'EN' ? 'Canvas Size' : 'キャンバスサイズ'}</h3>
               <label className="flex items-center gap-2 cursor-pointer">
-                <span className={`text-[10px] uppercase tracking-tighter ${textMuted}`}>Manual Edit</span>
+                <span className={`text-[10px] uppercase tracking-tighter ${textMuted}`}>{lang === 'KR' ? 'Manual Edit' : lang === 'EN' ? 'Manual Edit' : '手動編集'}</span>
                 <input 
                   type="checkbox" 
                   checked={manualCanvasSize}
@@ -772,7 +774,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="relative">
-                <label className={`block text-[10px] ${textMuted} mb-1 uppercase tracking-tighter`}>Width</label>
+                <label className={`block text-[10px] ${textMuted} mb-1 uppercase tracking-tighter`}>{lang === 'KR' ? 'Width' : lang === 'EN' ? 'Width' : '幅'}</label>
                 <input 
                   type="number" 
                   value={canvasWidth}
@@ -781,11 +783,11 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                   className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 ${inputBg} ${!manualCanvasSize ? 'opacity-70 cursor-not-allowed' : ''}`}
                 />
                 {!manualCanvasSize && detectedResolution && (
-                  <div className="absolute right-2 top-7 text-[9px] text-blue-500 font-medium">Auto</div>
+                  <div className="absolute right-2 top-7 text-[9px] text-blue-500 font-medium">{lang === 'KR' ? 'Auto' : lang === 'EN' ? 'Auto' : '自動'}</div>
                 )}
               </div>
               <div className="relative">
-                <label className={`block text-[10px] ${textMuted} mb-1 uppercase tracking-tighter`}>Height</label>
+                <label className={`block text-[10px] ${textMuted} mb-1 uppercase tracking-tighter`}>{lang === 'KR' ? 'Height' : lang === 'EN' ? 'Height' : '高さ'}</label>
                 <input 
                   type="number" 
                   value={canvasHeight}
@@ -794,7 +796,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                   className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 ${inputBg} ${!manualCanvasSize ? 'opacity-70 cursor-not-allowed' : ''}`}
                 />
                 {!manualCanvasSize && detectedResolution && (
-                  <div className="absolute right-2 top-7 text-[9px] text-blue-500 font-medium">Auto</div>
+                  <div className="absolute right-2 top-7 text-[9px] text-blue-500 font-medium">{lang === 'KR' ? 'Auto' : lang === 'EN' ? 'Auto' : '自動'}</div>
                 )}
               </div>
             </div>
@@ -802,11 +804,11 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
 
           {/* Smart Fill Tools */}
           <div className={`order-2 border rounded-2xl p-5 ${panelBg}`}>
-            <h3 className={`text-sm font-medium mb-4 ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>Smart Fill <span className="text-xs font-normal opacity-60">(스마트 채우기)</span></h3>
+            <h3 className={`text-sm font-medium mb-4 ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>{lang === 'KR' ? 'Smart Fill (스마트 채우기)' : lang === 'EN' ? 'Smart Fill' : 'スマート塗りつぶし'}</h3>
             
             <div className="space-y-5">
               <div>
-                <label className={`block text-[10px] ${textMuted} mb-2 uppercase tracking-tighter`}>Tool Selection</label>
+                <label className={`block text-[10px] ${textMuted} mb-2 uppercase tracking-tighter`}>{lang === 'KR' ? 'Tool Selection' : lang === 'EN' ? 'Tool Selection' : 'ツール選択'}</label>
                 <div className="flex gap-1.5">
                   <button 
                     onClick={() => setActiveTool('brush')}
@@ -817,7 +819,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                     }`}
                   >
                     <Paintbrush className="w-3.5 h-3.5" strokeWidth={1} />
-                    <span className="text-[9px] font-medium uppercase tracking-wider">Brush</span>
+                    <span className="text-[9px] font-medium uppercase tracking-wider">{lang === 'KR' ? 'Brush' : lang === 'EN' ? 'Brush' : 'ブラシ'}</span>
                   </button>
                   <button 
                     onClick={() => setActiveTool('lasso')}
@@ -828,7 +830,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                     }`}
                   >
                     <SquareDashed className="w-3.5 h-3.5" strokeWidth={1} />
-                    <span className="text-[9px] font-medium uppercase tracking-wider">Lasso</span>
+                    <span className="text-[9px] font-medium uppercase tracking-wider">{lang === 'KR' ? 'Lasso' : lang === 'EN' ? 'Lasso' : '投げ縄'}</span>
                   </button>
                   <button 
                     onClick={() => setActiveTool('eraser')}
@@ -839,7 +841,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                     }`}
                   >
                     <Eraser className="w-3.5 h-3.5" strokeWidth={1} />
-                    <span className="text-[9px] font-medium uppercase tracking-wider">Eraser</span>
+                    <span className="text-[9px] font-medium uppercase tracking-wider">{lang === 'KR' ? 'Eraser' : lang === 'EN' ? 'Eraser' : '消しゴム'}</span>
                   </button>
                   <button 
                     onClick={handleFillAll}
@@ -849,13 +851,13 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                     }`}
                   >
                     <PaintBucket className="w-3.5 h-3.5" strokeWidth={1} />
-                    <span className="text-[9px] font-medium uppercase tracking-wider">Fill All</span>
+                    <span className="text-[9px] font-medium uppercase tracking-wider">{lang === 'KR' ? 'Fill All' : lang === 'EN' ? 'Fill All' : 'すべて塗りつぶし'}</span>
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className={`block text-[10px] ${textMuted} mb-2 uppercase tracking-tighter`}>Fill Color</label>
+                <label className={`block text-[10px] ${textMuted} mb-2 uppercase tracking-tighter`}>{lang === 'KR' ? 'Fill Color' : lang === 'EN' ? 'Fill Color' : '塗りつぶし色'}</label>
                 <div className="flex gap-3">
                   <input 
                     type="color" 
@@ -873,7 +875,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
               </div>
 
               <div>
-                <label className={`block text-[10px] ${textMuted} mb-2 uppercase tracking-tighter`}>Tool</label>
+                <label className={`block text-[10px] ${textMuted} mb-2 uppercase tracking-tighter`}>{lang === 'KR' ? 'Tool' : lang === 'EN' ? 'Tool' : 'ツール'}</label>
                 <div className={`flex p-1 rounded-lg border ${theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-gray-100 border-gray-200'}`}>
                   <button
                     onClick={() => setActiveTool('brush')}
@@ -883,7 +885,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                         : theme === 'dark' ? 'text-white/50 hover:text-white/80' : 'text-gray-500 hover:text-gray-700'
                     }`}
                   >
-                    <Paintbrush className="w-4 h-4" /> Brush
+                    <Paintbrush className="w-4 h-4" /> {lang === 'KR' ? 'Brush' : lang === 'EN' ? 'Brush' : 'ブラシ'}
                   </button>
                   <button
                     onClick={() => setActiveTool('lasso')}
@@ -893,7 +895,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                         : theme === 'dark' ? 'text-white/50 hover:text-white/80' : 'text-gray-500 hover:text-gray-700'
                     }`}
                   >
-                    <SquareDashed className="w-4 h-4" /> Lasso
+                    <SquareDashed className="w-4 h-4" /> {lang === 'KR' ? 'Lasso' : lang === 'EN' ? 'Lasso' : '投げ縄'}
                   </button>
                 </div>
               </div>
@@ -901,7 +903,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
               {activeTool === 'brush' && (
                 <div className={`p-4 rounded-xl border mb-4 animate-in fade-in slide-in-from-top-2 duration-200 ${theme === 'dark' ? 'bg-blue-500/5 border-blue-500/20' : 'bg-gray-50 border-gray-200'}`}>
                   <div className="flex justify-between items-center mb-2">
-                    <label className={`block text-[10px] ${textMuted} uppercase tracking-tighter`}>Brush Size</label>
+                    <label className={`block text-[10px] ${textMuted} uppercase tracking-tighter`}>{lang === 'KR' ? 'Brush Size' : lang === 'EN' ? 'Brush Size' : 'ブラシサイズ'}</label>
                     <span className={`text-xs font-mono font-bold ${theme === 'dark' ? 'text-blue-400' : 'text-black'}`}>{brushSize}px</span>
                   </div>
                   <input 
@@ -923,8 +925,8 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                     : 'bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200'
                 }`}
               >
-                <span>Apply to All Selected</span>
-                <span className="text-[10px] opacity-80 font-normal">(선택된 모든 프레임에 적용)</span>
+                <span>{lang === 'KR' ? 'Apply to All Selected' : lang === 'EN' ? 'Apply to All Selected' : '選択したすべてに適用'}</span>
+                <span className="text-[10px] opacity-80 font-normal">{lang === 'KR' ? '(선택된 모든 프레임에 적용)' : lang === 'EN' ? '(Apply to all selected frames)' : '(選択されたすべてのフレームに適用)'}</span>
               </button>
             </div>
           </div>
@@ -943,7 +945,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
             ) : (
               <Download className="w-5 h-5" />
             )}
-            EXPORT <span className="font-normal opacity-80">(다운로드)</span>
+            {lang === 'KR' ? 'EXPORT (다운로드)' : lang === 'EN' ? 'EXPORT' : 'エクスポート'}
           </button>
         </div>
 
@@ -964,7 +966,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                         : theme === 'dark' ? 'text-white/50 hover:text-white/80 hover:bg-white/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                     }`}
                   >
-                    {mode === 'app' ? 'App UI' : mode}
+                    {mode === 'app' ? 'App UI' : mode === 'transparent' ? (lang === 'KR' ? 'Transparent' : lang === 'EN' ? 'Transparent' : '透明') : (lang === 'KR' ? 'Black' : lang === 'EN' ? 'Black' : 'ブラック')}
                   </button>
                 ))}
               </div>
@@ -998,14 +1000,14 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
               className={`w-full lg:flex-1 overflow-auto relative flex items-start justify-center pt-4 lg:pt-8 h-[23dvh] max-h-[23dvh] lg:h-auto lg:max-h-none lg:relative lg:top-auto lg:z-auto ${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}
             >
               {showResolutionToast && detectedResolution && (
-                <div className="absolute top-4 right-4 z-50 bg-black/80 text-white text-xs px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm transition-opacity duration-300">
-                  Detected Resolution: {detectedResolution.width} x {detectedResolution.height}
+                <div className="absolute top-4 right-4 z-50 bg-black/80 text-white text-[10px] px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm transition-opacity duration-300">
+                  {lang === 'KR' ? 'Detected Resolution' : lang === 'EN' ? 'Detected Resolution' : '検出された解像度'}: {detectedResolution.width} x {detectedResolution.height}
                 </div>
               )}
               {frames.length === 0 ? (
                 <div className={`flex flex-col items-center gap-3 mt-10 ${theme === 'dark' ? 'text-white/30' : 'text-gray-400'}`}>
                   <MousePointer2 className="w-12 h-12 opacity-20" />
-                  <p className="text-sm">Upload PNG sequences to start recovering</p>
+                  <p className="text-sm">{lang === 'KR' ? 'Upload PNG sequences to start recovering' : lang === 'EN' ? 'Upload PNG sequences to start recovering' : 'PNGシーケンスをアップロードして復旧を開始'}</p>
                 </div>
               ) : (
                 <div 

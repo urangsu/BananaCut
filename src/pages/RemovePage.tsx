@@ -9,27 +9,31 @@ import { useStudio } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
 import { DownloadModal } from '../components/DownloadModal';
 
-const MIDDLE_NAME_OPTIONS = [
-  { id: "idle_sitting", desc: "자연스러운 호흡" },
-  { id: "typing", desc: "빠른 타이핑" },
-  { id: "back_to_idle", desc: "자연스러운 복귀" },
-  { id: "speaking", desc: "부드러운 입 움직임" },
-  { id: "agree", desc: "자신감 있는 끄덕임" },
-  { id: "confused", desc: "부드러운 고개 기울임" },
-  { id: "lifted_dangling", desc: "가볍게 떠있는 상태" },
-  { id: "lowering_landing", desc: "천천히 내려앉기" },
-  { id: "back_to_work", desc: "자세 정리" },
-  { id: "greeting", desc: "정중한 인사" },
-  { id: "joy", desc: "밝은 표정" },
-  { id: "sad", desc: "슬픈 표정" },
-  { id: "resting", desc: "조용히 앉아있기" },
-  { id: "clock_in", desc: "노트북 열고 준비" }
+import { useLanguage } from '../LanguageContext';
+
+const GET_MIDDLE_NAME_OPTIONS = (lang: string) => [
+  { id: "idle_sitting", desc: lang === 'KR' ? "자연스러운 호흡" : lang === 'EN' ? "Natural Breathing" : "自然な呼吸" },
+  { id: "typing", desc: lang === 'KR' ? "빠른 타이핑" : lang === 'EN' ? "Fast Typing" : "速いタイピング" },
+  { id: "back_to_idle", desc: lang === 'KR' ? "자연스러운 복귀" : lang === 'EN' ? "Natural Return" : "自然な復帰" },
+  { id: "speaking", desc: lang === 'KR' ? "부드러운 입 움직임" : lang === 'EN' ? "Smooth Mouth Movement" : "スムーズな口の動き" },
+  { id: "agree", desc: lang === 'KR' ? "자신감 있는 끄덕임" : lang === 'EN' ? "Confident Nod" : "自信のある頷き" },
+  { id: "confused", desc: lang === 'KR' ? "부드러운 고개 기울임" : lang === 'EN' ? "Smooth Head Tilt" : "スムーズな首の傾き" },
+  { id: "lifted_dangling", desc: lang === 'KR' ? "가볍게 떠있는 상태" : lang === 'EN' ? "Lightly Floating" : "軽く浮いている状態" },
+  { id: "lowering_landing", desc: lang === 'KR' ? "천천히 내려앉기" : lang === 'EN' ? "Slowly Landing" : "ゆっくり着지" },
+  { id: "back_to_work", desc: lang === 'KR' ? "자세 정리" : lang === 'EN' ? "Adjusting Posture" : "姿勢を整える" },
+  { id: "greeting", desc: lang === 'KR' ? "정중한 인사" : lang === 'EN' ? "Polite Greeting" : "丁寧な挨拶" },
+  { id: "joy", desc: lang === 'KR' ? "밝은 표정" : lang === 'EN' ? "Bright Expression" : "明るい表情" },
+  { id: "sad", desc: lang === 'KR' ? "슬픈 표정" : lang === 'EN' ? "Sad Expression" : "悲しい表情" },
+  { id: "resting", desc: lang === 'KR' ? "조용히 앉아있기" : lang === 'EN' ? "Quietly Sitting" : "静かに座っている" },
+  { id: "clock_in", desc: lang === 'KR' ? "노트북 열고 준비" : lang === 'EN' ? "Opening Laptop & Prep" : "ノートパソコンを開いて準備" }
 ];
 
 
 
 export default function RemovePage() {
   const { isDark } = useTheme();
+  const { lang } = useLanguage();
+  const MIDDLE_NAME_OPTIONS = GET_MIDDLE_NAME_OPTIONS(lang);
   const { ffmpeg, isLoaded, error: ffmpegError, retry: retryFFmpeg } = useFFmpeg();
   const { 
     frames, setFrames, 
@@ -540,7 +544,7 @@ export default function RemovePage() {
       frameFiles.sort((a, b) => a.name.localeCompare(b.name));
       
       if (frameFiles.length === 0) {
-        throw new Error("No frames extracted. Check video format.");
+        throw new Error(lang === 'KR' ? "프레임이 추출되지 않았습니다. 비디오 형식을 확인하세요." : lang === 'EN' ? "No frames extracted. Check video format." : "フレームが抽出されませんでした。ビデオ形式を確認してください。");
       }
 
       // Safety check for memory
@@ -571,7 +575,7 @@ export default function RemovePage() {
       
     } catch (error) {
       console.error("Error extracting frames:", error);
-      alert("Failed to extract frames. Check console for details. (프레임 추출 실패. 콘솔을 확인해주세요.)");
+      alert(lang === 'KR' ? "프레임 추출 실패. 콘솔을 확인해주세요." : lang === 'EN' ? "Failed to extract frames. Check console for details." : "フレームの抽出に失敗しました。詳細はコンソールを確認してください。");
     } finally {
       setIsExtracting(false);
     }
@@ -595,7 +599,7 @@ export default function RemovePage() {
       return;
     }
     
-    alert("Please upload an MP4, MOV, or PNG file. (MP4, MOV 또는 PNG 파일을 업로드해주세요.)");
+    alert(lang === 'KR' ? "MP4, MOV 또는 PNG 파일을 업로드해주세요." : lang === 'EN' ? "Please upload an MP4, MOV, or PNG file." : "MP4、MOV、またはPNGファイルをアップロードしてください。");
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -754,7 +758,7 @@ export default function RemovePage() {
       
     } catch (error) {
       console.error("Processing failed:", error);
-      alert("Failed to process frames.");
+      alert(lang === 'KR' ? "프레임 처리 실패." : lang === 'EN' ? "Failed to process frames." : "フレームの処理に失敗しました。");
     } finally {
       if (type !== 'gif') {
         setIsProcessing(false);
@@ -833,8 +837,8 @@ export default function RemovePage() {
   return (
     <div className={`max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen lg:overflow-x-hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
       <header className={`hidden lg:block mb-8 border-b pb-6 shrink-0 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-        <h1 className="text-3xl font-semibold tracking-tight">REMOVE <span className={`text-xl font-normal ${isDark ? 'text-white/40' : 'text-gray-400'}`}>(투명화)</span></h1>
-        <p className={`mt-2 text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>In-Browser White Background Removal</p>
+        <h1 className="text-3xl font-semibold tracking-tight">REMOVE <span className={`text-xl font-normal ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{lang === 'KR' ? '(투명화)' : lang === 'EN' ? '(Chroma Key)' : '(クロマキー)'}</span></h1>
+        <p className={`mt-2 text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{lang === 'KR' ? 'In-Browser White Background Removal' : lang === 'EN' ? 'In-Browser White Background Removal' : 'ブラウザ内での白背景削除'}</p>
       </header>
 
       <div className="flex-1 flex flex-col lg:flex-row gap-6 lg:gap-12 lg:min-h-0 relative">
@@ -857,13 +861,13 @@ export default function RemovePage() {
                         onClick={retryFFmpeg}
                         className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
                       >
-                        다시 시도 (Retry)
+                        {lang === 'KR' ? '다시 시도 (Retry)' : lang === 'EN' ? 'Retry' : '再試行'}
                       </button>
                     </>
                   ) : (
                     <>
                       <Loader2 className="w-6 h-6 animate-spin" />
-                      <span className="text-base">Loading BananaCut Engine..</span>
+                      <span className="text-base">{lang === 'KR' ? 'BananaCut 엔진 로딩 중...' : lang === 'EN' ? 'Loading BananaCut Engine..' : 'BananaCutエンジンを読み込み中..'}</span>
                     </>
                   )}
                 </div>
@@ -888,7 +892,7 @@ export default function RemovePage() {
                     ) : (
                       <Upload className={`w-8 h-8 ${isDark ? 'text-white/60' : 'text-gray-400'}`} strokeWidth={1.5} />
                     )}
-                    <span className="font-medium">{isExtracting ? 'Extracting...' : 'Select File'}</span>
+                    <span className="font-medium">{isExtracting ? (lang === 'KR' ? 'Extracting...' : lang === 'EN' ? 'Extracting...' : '抽出中...') : (lang === 'KR' ? 'Select File' : lang === 'EN' ? 'Select File' : 'ファイルを選択')}</span>
                     <span className="text-xs opacity-60">MP4, MOV, PNG</span>
                   </label>
                 </div>
@@ -902,7 +906,7 @@ export default function RemovePage() {
           <div className={`order-1 ${panelClass}`}>
             <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               <Upload className={accentIconClass} />
-              1. Upload File <span className="text-sm font-normal opacity-60">(파일 업로드)</span>
+              1. Upload File <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(파일 업로드)' : lang === 'EN' ? '(File Upload)' : '(ファイルアップ로드)'}</span>
             </h2>
             
             {!isLoaded ? (
@@ -914,13 +918,13 @@ export default function RemovePage() {
                       onClick={retryFFmpeg}
                       className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 transition-colors"
                     >
-                      다시 시도 (Retry)
+                      {lang === 'KR' ? '다시 시도 (Retry)' : lang === 'EN' ? 'Retry' : '再試行'}
                     </button>
                   </>
                 ) : (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="text-sm">Loading BananaCut Engine..</span>
+                    <span className="text-sm">{lang === 'KR' ? 'BananaCut 엔진 로딩 중...' : lang === 'EN' ? 'Loading BananaCut Engine..' : 'BananaCutエンジンを読み込み中..'}</span>
                   </>
                 )}
               </div>
@@ -936,7 +940,7 @@ export default function RemovePage() {
                 </label>
                 <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
                   <Upload className={`w-8 h-8 mb-3 transition-colors ${isDragging ? accentIconClass : (isDark ? 'text-white/40' : 'text-gray-400')}`} strokeWidth={1.5} />
-                  <p className={`mb-2 text-sm ${isDark ? 'text-white/70' : 'text-gray-600'}`}><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                  <p className={`mb-2 text-sm ${isDark ? 'text-white/70' : 'text-gray-600'}`}><span className="font-semibold">{lang === 'KR' ? 'Click to upload' : lang === 'EN' ? 'Click to upload' : 'クリックしてアップロード'}</span> {lang === 'KR' ? 'or drag and drop' : lang === 'EN' ? 'or drag and drop' : 'またはドラッグ＆ドロップ'}</p>
                   <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>MP4, MOV or PNG</p>
                 </div>
               </div>
@@ -945,7 +949,7 @@ export default function RemovePage() {
             {isExtracting && (
               <div className={`mt-4 flex items-center gap-3 p-3 rounded-lg text-sm ${isDark ? 'text-blue-400 bg-blue-500/10' : 'text-black bg-gray-100'}`}>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Extracting frames at {fps}fps...
+                {lang === 'KR' ? `Extracting frames at ${fps}fps...` : lang === 'EN' ? `Extracting frames at ${fps}fps...` : `フレーム抽出中 (${fps}fps)...`}
               </div>
             )}
           </div>
@@ -954,7 +958,7 @@ export default function RemovePage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-lg font-medium flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <Sliders className={accentIconClass} />
-                2. ChromaKey <span className="text-sm font-normal opacity-60">(투명화)</span>
+                2. ChromaKey <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(투명화)' : lang === 'EN' ? '(Chroma Key)' : '(クロマキー)'}</span>
               </h2>
               <div className="flex items-center gap-2">
                 <button
@@ -1001,8 +1005,7 @@ export default function RemovePage() {
                 <div className={`p-4 rounded-xl border mb-4 animate-in fade-in slide-in-from-top-2 duration-200 ${isDark ? 'bg-blue-500/5 border-blue-500/20' : 'bg-gray-50 border-gray-200'}`}>
                   <div className="flex justify-between items-center mb-2">
                     <label className={labelClass}>
-                      {activeTool === 'brush' ? 'Brush Size' : 'Eraser Size'} 
-                      <span className="text-[10px] opacity-60 ml-1">({activeTool === 'brush' ? '제외 브러쉬 크기' : '제외 지우개 크기'})</span>
+                      {activeTool === 'brush' ? (lang === 'KR' ? 'Brush Size' : lang === 'EN' ? 'Brush Size' : 'ブラシサイズ') : (lang === 'KR' ? 'Eraser Size' : lang === 'EN' ? 'Eraser Size' : '消しゴムサイズ')} 
                     </label>
                     <span className={badgeClass}>{brushSize}px</span>
                   </div>
@@ -1015,8 +1018,8 @@ export default function RemovePage() {
                     className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
                   />
                   <p className="text-[10px] mt-2 opacity-60 leading-tight">
-                    Paint on the preview to <strong>exclude</strong> areas from chroma key.<br/>
-                    (미리보기 위를 칠하면 해당 영역은 투명화되지 않고 복구됩니다.)
+                    {lang === 'KR' ? 'Paint on the preview to exclude areas from chroma key.' : lang === 'EN' ? 'Paint on the preview to exclude areas from chroma key.' : 'プレビューを塗って、クロマキーから除外する領域を指定します。'}<br/>
+                    <span className="opacity-60">{lang === 'KR' ? '(미리보기 위를 칠하면 해당 영역은 투명화되지 않고 복구됩니다.)' : lang === 'EN' ? '(Painting on the preview will recover those areas from being transparent.)' : '(プレビュー上を塗ると、その領域は透明化されずに復元されます。)'}</span>
                   </p>
                   <button 
                     onClick={() => {
@@ -1029,12 +1032,12 @@ export default function RemovePage() {
                       isDark ? 'border-white/10 hover:bg-white/5 text-white/60' : 'border-gray-200 hover:bg-gray-50 text-gray-500'
                     }`}
                   >
-                    Reset Frame Mask (현재 프레임 초기화)
+                    {lang === 'KR' ? 'Reset Frame Mask (현재 프레임 초기화)' : lang === 'EN' ? 'Reset Frame Mask' : '現在のフレームのマスクをリセット'}
                   </button>
                 </div>
               )}
               <div>
-                <label className={labelClass}>Target Color</label>
+                <label className={labelClass}>{lang === 'KR' ? 'Target Color' : lang === 'EN' ? 'Target Color' : 'ターゲットカラー'}</label>
                 <div className="flex gap-2 mt-2">
                   {['White', 'Green'].map((color) => (
                     <button
@@ -1049,7 +1052,7 @@ export default function RemovePage() {
                           : (isDark ? 'bg-[#2A2A2A] border-[#3A3A3A] text-gray-400 hover:bg-[#333333]' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50')
                       }`}
                     >
-                      {color}
+                      {color === 'White' ? (lang === 'KR' ? 'White' : lang === 'EN' ? 'White' : 'ホワイト') : (lang === 'KR' ? 'Green' : lang === 'EN' ? 'Green' : 'グリーン')}
                     </button>
                   ))}
                   <button
@@ -1061,7 +1064,7 @@ export default function RemovePage() {
                     }`}
                   >
                     <Pipette className={`w-4 h-4 ${isPickingColor ? 'animate-pulse' : ''}`} />
-                    Picker
+                    {lang === 'KR' ? 'Picker' : lang === 'EN' ? 'Picker' : 'スポイト'}
                   </button>
                 </div>
                 {chromaKeyColor === 'Picker' && !isPickingColor && (
@@ -1079,7 +1082,7 @@ export default function RemovePage() {
 
               <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className={labelClass}>Tolerance <span className="font-normal opacity-70">(허용 오차)</span></label>
+                  <label className={labelClass}>{lang === 'KR' ? 'Tolerance (허용 오차)' : lang === 'EN' ? 'Tolerance' : '許容誤差'}</label>
                   <span className={badgeClass}>{tolerance}</span>
                 </div>
                 <input 
@@ -1093,14 +1096,14 @@ export default function RemovePage() {
                 />
                 <p className={descClass}>
                   {chromaKeyColor === 'Green' 
-                    ? <><span className="block">Remove more green-tinted pixels.</span><span className="block">(더 많은 초록색 픽셀이 제거됩니다.)</span></>
-                    : <><span className="block">Remove more off-white pixels.</span><span className="block">(더 많은 밝은 픽셀이 제거됩니다.)</span></>}
+                    ? <><span className="block">{lang === 'KR' ? 'Remove more green-tinted pixels.' : lang === 'EN' ? 'Remove more green-tinted pixels.' : 'より多くの緑がかったピクセルを削除します。'}</span><span className="block">{lang === 'KR' ? '(더 많은 초록색 픽셀이 제거됩니다.)' : lang === 'EN' ? '(More green pixels will be removed.)' : '(より多くの緑のピクセルが削除されます。)'}</span></>
+                    : <><span className="block">{lang === 'KR' ? 'Remove more off-white pixels.' : lang === 'EN' ? 'Remove more off-white pixels.' : 'より多くのオフホワイトのピクセルを削除します。'}</span><span className="block">{lang === 'KR' ? '(더 많은 밝은 픽셀이 제거됩니다.)' : lang === 'EN' ? '(More bright pixels will be removed.)' : '(より多くの明るいピクセルが削除されます。)'}</span></>}
                 </p>
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className={labelClass}>Softness <span className="font-normal opacity-70">(가장자리 페더링)</span></label>
+                  <label className={labelClass}>{lang === 'KR' ? 'Softness (가장자리 페더링)' : lang === 'EN' ? 'Softness' : '柔らかさ'}</label>
                   <span className={badgeClass}>{softness}</span>
                 </div>
                 <input 
@@ -1113,14 +1116,14 @@ export default function RemovePage() {
                   className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
                 />
                 <p className={descClass}>
-                  <span className="block">Smooth out the edges.</span>
-                  <span className="block">(가장자리가 부드러워집니다.)</span>
+                  <span className="block">{lang === 'KR' ? 'Smooth out the edges.' : lang === 'EN' ? 'Smooth out the edges.' : 'エッジを滑らかにします。'}</span>
+                  <span className="block">{lang === 'KR' ? '(가장자리가 부드러워집니다.)' : lang === 'EN' ? '(Edges will become softer.)' : '(エッジが柔らかくなります。)'}</span>
                 </p>
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className={labelClass}>Enclosed Color <span className="font-normal opacity-70">(내부 빈틈)</span></label>
+                  <label className={labelClass}>{lang === 'KR' ? 'Enclosed Color (내부 빈틈)' : lang === 'EN' ? 'Enclosed Color' : '囲まれた色'}</label>
                   <span className={badgeClass}>{enclosedTolerance}</span>
                 </div>
                 <input 
@@ -1133,14 +1136,14 @@ export default function RemovePage() {
                   className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
                 />
                 <p className={descClass}>
-                  <span className="block">Removes isolated colors between objects.</span>
-                  <span className="block">(객체 사이의 고립된 색상을 제거합니다.)</span>
+                  <span className="block">{lang === 'KR' ? 'Removes isolated colors between objects.' : lang === 'EN' ? 'Removes isolated colors between objects.' : 'オブジェクト間の孤立した色を削除します。'}</span>
+                  <span className="block">{lang === 'KR' ? '(객체 사이의 고립된 색상을 제거합니다.)' : lang === 'EN' ? '(Removes isolated colors between objects.)' : '(オブジェクト間の孤立した色を削除します。)'}</span>
                 </p>
               </div>
 
               <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className={labelClass}>Extraction FPS <span className="font-normal opacity-70">(추출 프레임)</span></label>
+                  <label className={labelClass}>{lang === 'KR' ? 'Extraction FPS (추출 프레임)' : lang === 'EN' ? 'Extraction FPS' : '抽出FPS'}</label>
                   <span className={badgeClass}>{fps} FPS</span>
                 </div>
                 <input 
@@ -1160,12 +1163,12 @@ export default function RemovePage() {
           <div className={`order-4 ${panelClass}`}>
             <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               <Settings className={accentIconClass} />
-              3. Asset Settings <span className="text-sm font-normal opacity-60">(에셋 설정)</span>
+              3. Asset Settings <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(에셋 설정)' : lang === 'EN' ? '(Asset Settings)' : '(アセット設定)'}</span>
             </h2>
             
             <div className="space-y-4">
               <div>
-                <label className={labelClass}>First Name <span className="font-normal opacity-70">(파일명)</span></label>
+                <label className={labelClass}>{lang === 'KR' ? 'First Name (파일명)' : lang === 'EN' ? 'First Name' : 'ファイル名'}</label>
                 <input 
                   type="text" 
                   value={charName}
@@ -1177,12 +1180,12 @@ export default function RemovePage() {
 
               <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
                 <div className="flex justify-between items-center mb-3">
-                  <label className={`text-sm font-medium ${isDark ? 'text-white/80' : 'text-gray-900'}`}>Video Presets <span className="font-normal opacity-60">(비디오 프리셋)</span></label>
+                  <label className={`text-sm font-medium ${isDark ? 'text-white/80' : 'text-gray-900'}`}>{lang === 'KR' ? 'Video Presets (비디오 프리셋)' : lang === 'EN' ? 'Video Presets' : 'ビデオプリセット'}</label>
                   <button 
                     onClick={saveCurrentAsPreset}
                     className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded transition-colors ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
                   >
-                    Save Current
+                    {lang === 'KR' ? 'Save Current' : lang === 'EN' ? 'Save Current' : '現在を保存'}
                   </button>
                 </div>
                 <div className="space-y-1">
@@ -1209,7 +1212,7 @@ export default function RemovePage() {
                   ))}
                   {presets.length === 0 && (
                     <div className={`text-xs text-center py-4 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
-                      No presets saved.
+                      {lang === 'KR' ? 'No presets saved.' : lang === 'EN' ? 'No presets saved.' : '保存されたプリセットはありません。'}
                     </div>
                   )}
                 </div>
@@ -1217,12 +1220,12 @@ export default function RemovePage() {
 
               <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
                 <div className="flex justify-between items-center mb-3">
-                  <label className={`text-sm font-medium ${isDark ? 'text-white/80' : 'text-gray-900'}`}>Motion Segments <span className="font-normal opacity-60">(모션 구간)</span></label>
+                  <label className={`text-sm font-medium ${isDark ? 'text-white/80' : 'text-gray-900'}`}>{lang === 'KR' ? 'Motion Segments (모션 구간)' : lang === 'EN' ? 'Motion Segments' : 'モーション区間'}</label>
                   <button 
                     onClick={addSegment}
                     className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded transition-colors ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
                   >
-                    + Add Segment (+ 구간 추가)
+                    {lang === 'KR' ? '+ Add Segment (+ 구간 추가)' : lang === 'EN' ? '+ Add Segment' : '+ 区間を追加'}
                   </button>
                 </div>
 
@@ -1243,7 +1246,7 @@ export default function RemovePage() {
                             value={seg.name}
                             onChange={(e) => updateSegment(idx, 'name', e.target.value)}
                             className={segmentInputClass}
-                            placeholder="Motion name..."
+                            placeholder={lang === 'KR' ? "Motion name..." : lang === 'EN' ? "Motion name..." : "モーション名..."}
                           />
                           <button 
                             type="button"
@@ -1280,12 +1283,12 @@ export default function RemovePage() {
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <div className="flex justify-between items-center mb-1">
-                            <label className={segmentLabelClass}>{seg.useFrames ? 'Start (f)' : 'Start (s)'} <span className="font-normal">{seg.useFrames ? '(시작 프레임)' : '(시작 초)'}</span></label>
+                            <label className={segmentLabelClass}>{seg.useFrames ? (lang === 'KR' ? 'Start (f)' : lang === 'EN' ? 'Start (f)' : '開始 (f)') : (lang === 'KR' ? 'Start (s)' : lang === 'EN' ? 'Start (s)' : '開始 (s)')} <span className="font-normal">{seg.useFrames ? (lang === 'KR' ? '(시작 프레임)' : lang === 'EN' ? '(Start Frame)' : '(開始フレーム)') : (lang === 'KR' ? '(시작 초)' : lang === 'EN' ? '(Start Second)' : '(開始秒)')}</span></label>
                             <button 
                               onClick={() => updateSegment(idx, 'useFrames', !seg.useFrames)}
                               className="text-[9px] bg-white/10 px-1 rounded"
                             >
-                              {seg.useFrames ? 'Time' : 'Frame'}
+                              {seg.useFrames ? (lang === 'KR' ? 'Time' : lang === 'EN' ? 'Time' : '時間') : (lang === 'KR' ? 'Frame' : lang === 'EN' ? 'Frame' : 'フレーム')}
                             </button>
                           </div>
                           <input 
@@ -1297,7 +1300,7 @@ export default function RemovePage() {
                           />
                         </div>
                         <div>
-                          <label className={segmentLabelClass}>{seg.useFrames ? 'End (f)' : 'End (s)'} <span className="font-normal">{seg.useFrames ? '(종료 프레임)' : '(종료 초)'}</span></label>
+                          <label className={segmentLabelClass}>{seg.useFrames ? (lang === 'KR' ? 'End (f)' : lang === 'EN' ? 'End (f)' : '終了 (f)') : (lang === 'KR' ? 'End (s)' : lang === 'EN' ? 'End (s)' : '終了 (s)')} <span className="font-normal">{seg.useFrames ? (lang === 'KR' ? '(종료 프레임)' : lang === 'EN' ? '(End Frame)' : '(終了フレーム)') : (lang === 'KR' ? '(종료 초)' : lang === 'EN' ? '(End Second)' : '(終了秒)')}</span></label>
                           <input 
                             type="number" 
                             step={seg.useFrames ? "1" : "0.1"}
@@ -1322,12 +1325,12 @@ export default function RemovePage() {
             {isProcessing ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Processing & Zipping...
+                {lang === 'KR' ? 'Processing & Zipping...' : lang === 'EN' ? 'Processing & Zipping...' : '処理中＆圧縮中...'}
               </>
             ) : (
               <>
                 <Download className="w-5 h-5" />
-                Process & Download <span className="font-normal opacity-80">(처리/다운로드)</span>
+                {lang === 'KR' ? 'Process & Download (처리/다운로드)' : lang === 'EN' ? 'Process & Download' : '処理してダウンロード'}
               </>
             )}
           </button>
@@ -1338,9 +1341,9 @@ export default function RemovePage() {
           <div className={`sticky top-[56px] lg:top-0 z-40 w-full ${isDark ? 'bg-[#121212]' : 'bg-white'} flex flex-col items-center`}>
             <div className="w-full flex justify-between items-center mb-2 lg:mb-4 px-2 shrink-0 pt-2 lg:pt-0">
               <div className="flex items-center gap-2 lg:gap-4">
-                <h2 className={`text-base lg:text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Preview <span className="hidden lg:inline text-sm font-normal opacity-60">(미리보기)</span></h2>
+                <h2 className={`text-base lg:text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === 'KR' ? 'Preview (미리보기)' : lang === 'EN' ? 'Preview' : 'プレビュー'}</h2>
                 <span className={`text-[10px] lg:text-xs font-mono px-2 py-1 rounded-md ${isDark ? 'bg-white/10 text-white/70' : 'bg-gray-200 text-gray-700'}`}>
-                  {frames.length > 0 ? `${currentFrame + 1} / ${frames.length}` : '0 frames'}
+                  {frames.length > 0 ? `${currentFrame + 1} / ${frames.length}` : (lang === 'KR' ? '0 frames' : lang === 'EN' ? '0 frames' : '0 フレーム')}
                 </span>
               </div>
               
@@ -1355,7 +1358,7 @@ export default function RemovePage() {
                         : (isDark ? 'text-white/50 hover:text-white/80 hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200')
                     }`}
                   >
-                    {mode === 'app' ? 'App UI' : mode}
+                    {mode === 'app' ? 'App UI' : mode === 'transparent' ? (lang === 'KR' ? 'Transparent' : lang === 'EN' ? 'Transparent' : '透明') : (lang === 'KR' ? 'Black' : lang === 'EN' ? 'Black' : 'ブラック')}
                   </button>
                 ))}
               </div>
@@ -1365,7 +1368,7 @@ export default function RemovePage() {
               {frames.length === 0 ? (
                 <div className={`flex flex-col items-center gap-3 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
                   <Play className="w-12 h-12 opacity-20" />
-                  <p className="text-sm">Upload a file to preview (파일을 업로드하여 미리보세요)</p>
+                  <p className="text-sm">{lang === 'KR' ? 'Upload a file to preview (파일을 업로드하여 미리보세요)' : lang === 'EN' ? 'Upload a file to preview' : 'ファイルをアップロードしてプレビュー'}</p>
                 </div>
               ) : (
                 <canvas 
@@ -1455,7 +1458,7 @@ export default function RemovePage() {
               <div className="flex justify-between items-center mb-1">
                 <div className="flex items-center gap-3">
                   <h3 className={`text-[10px] font-bold uppercase tracking-tighter ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-                    Selection <span className="opacity-60">({selectedFrames.size})</span>
+                    {lang === 'KR' ? 'Selection' : lang === 'EN' ? 'Selection' : '選択'} <span className="opacity-60">({selectedFrames.size})</span>
                   </h3>
                   <div className="flex gap-1.5">
                     <button 
@@ -1464,7 +1467,7 @@ export default function RemovePage() {
                         isDark ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white/60' : 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-600'
                       }`}
                     >
-                      All
+                      {lang === 'KR' ? 'All' : lang === 'EN' ? 'All' : 'すべて'}
                     </button>
                     <button 
                       onClick={() => setSelectedFrames(new Set([currentFrame]))}
@@ -1472,7 +1475,7 @@ export default function RemovePage() {
                         isDark ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white/60' : 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-600'
                       }`}
                     >
-                      Clear
+                      {lang === 'KR' ? 'Clear' : lang === 'EN' ? 'Clear' : 'クリア'}
                     </button>
                   </div>
                 </div>
@@ -1497,7 +1500,7 @@ export default function RemovePage() {
                   }`}
                 >
                   <MousePointer2 className="w-2.5 h-2.5" />
-                  Apply Current to Selected
+                  {lang === 'KR' ? 'Apply Current to Selected' : lang === 'EN' ? 'Apply Current to Selected' : '現在を選択したフレームに適用'}
                 </button>
               </div>
             </div>
