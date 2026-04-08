@@ -906,7 +906,10 @@ export default function RemovePage() {
           <div className={`order-1 ${panelClass}`}>
             <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               <Upload className={accentIconClass} />
-              1. Upload File <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(파일 업로드)' : lang === 'EN' ? '(File Upload)' : '(ファイルアップ로드)'}</span>
+              <div className="flex flex-col">
+                <span>1. Upload File</span>
+                <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(파일 업로드)' : lang === 'EN' ? '(File Upload)' : '(ファイルアップロード)'}</span>
+              </div>
             </h2>
             
             {!isLoaded ? (
@@ -1339,20 +1342,20 @@ export default function RemovePage() {
         {/* Right Panel: Preview (Sticky on Mobile Phase 2) */}
         <div className={`order-1 w-full lg:flex-1 flex flex-col items-center min-w-0 lg:overflow-y-auto custom-scrollbar lg:pr-2 lg:order-2 ${frames.length > 0 ? 'pb-2 lg:pb-0 pt-2 lg:pt-0 lg:relative lg:z-auto border-b lg:border-none' : 'hidden lg:flex'} ${isDark ? 'bg-[#121212] border-white/10 lg:bg-transparent' : 'bg-white border-gray-200 lg:bg-transparent'}`}>
           <div className={`sticky top-[56px] lg:top-0 z-40 w-full ${isDark ? 'bg-[#121212]' : 'bg-white'} flex flex-col items-center`}>
-            <div className="w-full flex justify-between items-center mb-2 lg:mb-4 px-2 shrink-0 pt-2 lg:pt-0">
-              <div className="flex items-center gap-2 lg:gap-4">
+            <div className="w-full flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 lg:gap-0 mb-3 lg:mb-4 px-2 shrink-0 pt-2 lg:pt-0">
+              <div className="flex items-center justify-between lg:justify-start gap-2 lg:gap-4 w-full lg:w-auto">
                 <h2 className={`text-base lg:text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === 'KR' ? 'Preview (미리보기)' : lang === 'EN' ? 'Preview' : 'プレビュー'}</h2>
                 <span className={`text-[10px] lg:text-xs font-mono px-2 py-1 rounded-md ${isDark ? 'bg-white/10 text-white/70' : 'bg-gray-200 text-gray-700'}`}>
                   {frames.length > 0 ? `${currentFrame + 1} / ${frames.length}` : (lang === 'KR' ? '0 frames' : lang === 'EN' ? '0 frames' : '0 フレーム')}
                 </span>
               </div>
               
-              <div className={`flex items-center gap-1 lg:gap-2 p-1 rounded-lg border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-100 border-gray-200'}`}>
+              <div className={`flex flex-wrap items-center gap-2 p-1.5 lg:p-1 rounded-xl lg:rounded-lg border w-full lg:w-auto ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-100 border-gray-200'}`}>
                 {(['transparent', 'black', 'app'] as const).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => setBgMode(mode)}
-                    className={`px-2 lg:px-3 py-1 lg:py-1.5 text-[10px] lg:text-xs font-medium rounded-md capitalize transition-all ${
+                    className={`flex-1 lg:flex-none px-3 lg:px-3 py-2.5 lg:py-1.5 text-xs font-medium rounded-lg lg:rounded-md capitalize transition-all ${
                       bgMode === mode 
                         ? (isDark ? 'bg-white/20 text-white shadow-sm' : 'bg-white text-black shadow-sm') 
                         : (isDark ? 'text-white/50 hover:text-white/80 hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200')

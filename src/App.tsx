@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import RemovePage from './pages/RemovePage';
 import RecoverPage from './pages/RecoverPage';
+import AssetPage from './pages/AssetPage';
 import LandingPage from './pages/LandingPage';
 import GuidePage from './pages/GuidePage';
 import { ThemeProvider, useTheme } from './ThemeContext';
@@ -21,7 +22,6 @@ import { FFmpegProvider } from './FFmpegContext';
 import { StudioProvider } from './StudioContext';
 import { Modal } from './components/Modal';
 import { initGA, trackEvent, trackPageView } from './lib/analytics';
-import teamImg from './assets/team.jpg';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
@@ -95,6 +95,24 @@ function Layout({ children }: { children: React.ReactNode }) {
               <span className="text-[10px] opacity-60">(복구)</span>
             </div>
           </NavLink>
+
+          <NavLink
+            to="/asset"
+            onClick={() => trackEvent('Switch_To_Asset')}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                isActive 
+                  ? (isDark ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-black/5 text-black border border-black/10 shadow-sm')
+                  : (isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900')
+              }`
+            }
+          >
+            <Smartphone className="w-5 h-5" strokeWidth={1} />
+            <div className="flex flex-col">
+              <span>ASSET</span>
+              <span className="text-[10px] opacity-60">(에셋)</span>
+            </div>
+          </NavLink>
         </nav>
         
         <div className={`p-6 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
@@ -156,6 +174,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-white/5' : 'bg-gray-200'}`}>
               <NavLink to="/remove" onClick={() => trackEvent('Switch_To_Remove')} className={({isActive}) => `px-3 py-1.5 text-xs font-medium rounded-md transition-all ${isActive ? (isDark ? 'bg-purple-500/20 text-purple-400 shadow-sm' : 'bg-white text-gray-900 shadow-sm') : (isDark ? 'text-white/60' : 'text-gray-500')}`}>Remove</NavLink>
               <NavLink to="/recover" onClick={() => trackEvent('Switch_To_Recover')} className={({isActive}) => `px-3 py-1.5 text-xs font-medium rounded-md transition-all ${isActive ? (isDark ? 'bg-blue-500/20 text-blue-400 shadow-sm' : 'bg-white text-gray-900 shadow-sm') : (isDark ? 'text-white/60' : 'text-gray-500')}`}>Recover</NavLink>
+              <NavLink to="/asset" onClick={() => trackEvent('Switch_To_Asset')} className={({isActive}) => `px-3 py-1.5 text-xs font-medium rounded-md transition-all ${isActive ? (isDark ? 'bg-green-500/20 text-green-400 shadow-sm' : 'bg-white text-gray-900 shadow-sm') : (isDark ? 'text-white/60' : 'text-gray-500')}`}>Asset</NavLink>
             </div>
           </div>
         </div>
@@ -448,7 +467,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col items-center justify-center text-center space-y-6 py-4">
           <div className="w-full bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative">
             <img 
-              src={teamImg} 
+              src="/images/team.jpg" 
               alt="Dalgrac Studio Team" 
               className="max-w-full h-auto object-contain"
               referrerPolicy="no-referrer"
@@ -510,6 +529,7 @@ function App() {
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/remove" element={<Layout><RemovePage /></Layout>} />
                 <Route path="/recover" element={<Layout><RecoverPage /></Layout>} />
+                <Route path="/asset" element={<Layout><AssetPage /></Layout>} />
                 <Route path="/guide" element={<Layout><GuidePage /></Layout>} />
               </Routes>
             </BrowserRouter>

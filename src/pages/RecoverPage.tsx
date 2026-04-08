@@ -692,7 +692,12 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
             <div className={`w-full max-w-md border rounded-2xl p-6 ${panelBg}`}>
               <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 <Upload className={`w-5 h-5 ${theme === 'dark' ? 'text-blue-400' : 'text-black'}`} />
-                {lang === 'KR' ? 'Upload Sequence (시퀀스 업로드)' : lang === 'EN' ? 'Upload Sequence' : 'シーケンスをアップロード'}
+                {lang === 'KR' ? (
+                  <div className="flex flex-col">
+                    <span>Upload Sequence</span>
+                    <span className="text-sm font-normal opacity-60">(시퀀스 업로드)</span>
+                  </div>
+                ) : lang === 'EN' ? 'Upload Sequence' : 'シーケンスをアップロード'}
               </h2>
               
               <div 
@@ -954,13 +959,42 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
           
           <div className="sticky top-0 z-40 w-full bg-inherit">
             {/* Canvas Header */}
-            <div className={`h-auto lg:h-14 flex flex-col sm:flex-row items-center justify-between p-2 lg:px-4 gap-2 shrink-0 ${theme === 'dark' ? 'bg-black/20 lg:bg-transparent' : 'bg-gray-50 lg:bg-transparent'}`}>
-              <div className={`flex items-center gap-1 lg:gap-2 p-1 rounded-lg border w-full sm:w-auto justify-center ${theme === 'dark' ? 'bg-black/40 border-white/5' : 'bg-gray-200 border-gray-300'}`}>
+            <div className={`h-auto lg:h-14 flex flex-col lg:flex-row items-center justify-between p-2 lg:px-4 gap-3 lg:gap-2 shrink-0 ${theme === 'dark' ? 'bg-black/20 lg:bg-transparent' : 'bg-gray-50 lg:bg-transparent'}`}>
+              <div className="flex items-center justify-between lg:justify-start gap-2 w-full lg:w-auto">
+                <div className="flex items-center gap-1 lg:gap-3 w-full lg:w-auto justify-between lg:justify-center">
+                  <span className={`text-[10px] lg:text-xs font-mono px-2 py-1 rounded-md ${theme === 'dark' ? 'bg-white/10 text-white/70' : 'bg-gray-200 text-gray-700'}`}>
+                    {frames.length > 0 ? `${frames.findIndex(f => f.id === currentFrameId) + 1} / ${frames.length}` : (lang === 'KR' ? '0 frames' : lang === 'EN' ? '0 frames' : '0 フレーム')}
+                  </span>
+                  <div className="flex items-center gap-1 lg:gap-3">
+                    <button onClick={() => setZoom(z => Number(Math.max(0.1, z - 0.1).toFixed(2)))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
+                      <ZoomOut className="w-4 h-4 lg:w-4 lg:h-4" />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (zoom === 1) {
+                          fitToScreen();
+                        } else {
+                          setZoom(1);
+                        }
+                      }}
+                      className={`text-[10px] lg:text-xs font-mono w-12 lg:w-16 text-center rounded-md py-1 transition-colors ${theme === 'dark' ? 'text-white/70 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-200'}`}
+                      title="Toggle Fit / 100%"
+                    >
+                      {Math.round(zoom * 100)}%
+                    </button>
+                    <button onClick={() => setZoom(z => Number(Math.min(5, z + 0.1).toFixed(2)))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
+                      <ZoomIn className="w-4 h-4 lg:w-4 lg:h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className={`flex flex-wrap items-center gap-2 p-1.5 lg:p-1 rounded-xl lg:rounded-lg border w-full lg:w-auto justify-center ${theme === 'dark' ? 'bg-black/40 border-white/5' : 'bg-gray-200 border-gray-300'}`}>
                 {(['transparent', 'black', 'app'] as const).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => setBgMode(mode)}
-                    className={`flex-1 sm:flex-none px-2 lg:px-3 py-1 lg:py-1.5 text-[9px] lg:text-xs font-medium rounded-md capitalize transition-all ${
+                    className={`flex-1 lg:flex-none px-3 lg:px-3 py-2.5 lg:py-1.5 text-xs font-medium rounded-lg lg:rounded-md capitalize transition-all ${
                       bgMode === mode 
                         ? theme === 'dark' ? 'bg-white/20 text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm'
                         : theme === 'dark' ? 'text-white/50 hover:text-white/80 hover:bg-white/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
@@ -969,28 +1003,6 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                     {mode === 'app' ? 'App UI' : mode === 'transparent' ? (lang === 'KR' ? 'Transparent' : lang === 'EN' ? 'Transparent' : '透明') : (lang === 'KR' ? 'Black' : lang === 'EN' ? 'Black' : 'ブラック')}
                   </button>
                 ))}
-              </div>
-
-              <div className="flex items-center gap-1 lg:gap-3 w-full sm:w-auto justify-center">
-                <button onClick={() => setZoom(z => Number(Math.max(0.1, z - 0.1).toFixed(2)))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
-                  <ZoomOut className="w-3 h-3 lg:w-4 lg:h-4" />
-                </button>
-                <button 
-                  onClick={() => {
-                    if (zoom === 1) {
-                      fitToScreen();
-                    } else {
-                      setZoom(1);
-                    }
-                  }}
-                  className={`text-[10px] lg:text-xs font-mono w-12 lg:w-16 text-center rounded-md py-1 transition-colors ${theme === 'dark' ? 'text-white/70 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-200'}`}
-                  title="Toggle Fit / 100%"
-                >
-                  {Math.round(zoom * 100)}%
-                </button>
-                <button onClick={() => setZoom(z => Number(Math.min(5, z + 0.1).toFixed(2)))} className={`p-1 lg:p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'}`}>
-                  <ZoomIn className="w-3 h-3 lg:w-4 lg:h-4" />
-                </button>
               </div>
             </div>
 

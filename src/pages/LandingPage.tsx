@@ -5,7 +5,6 @@ import { useTheme } from '../ThemeContext';
 import { useLanguage } from '../LanguageContext';
 import { Scissors, Wand2, Download, Smartphone, Play } from 'lucide-react';
 import { Modal } from '../components/Modal';
-import teamImg from '../assets/team.jpg';
 
 function ScratchOverlay({ isDark, lang, onReveal }: { isDark: boolean, lang: string, onReveal: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -171,8 +170,10 @@ export default function LandingPage() {
               onClick={() => navigate('/remove')}
               className="px-3 md:px-6 py-1.5 md:py-2 rounded-full text-[9px] md:text-sm font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg whitespace-nowrap"
             >
-              <span className="md:hidden">GO APP</span>
-              <span className="hidden md:inline">GO TO APP</span>
+              <span className="md:hidden">STUDIO</span>
+              <span className="hidden md:inline">
+                {lang === 'JP' ? 'スタジオに入る' : 'ENTER STUDIO'}
+              </span>
             </button>
             <button 
               onClick={() => setShowGetApp(true)}
@@ -337,35 +338,100 @@ export default function LandingPage() {
               </p>
             </div>
           </section>
-          {/* Below the Fold: About & Tech Specs (SEO Optimized) */}
-          <section className="max-w-5xl mx-auto pt-24 pb-12 border-t border-gray-200 dark:border-white/10 text-left">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
-              <div>
-                <h2 className="text-3xl md:text-5xl font-bold tracking-wide mb-6">
-                  {lang === 'KR' ? '왜 바나나컷인가요?' : lang === 'EN' ? 'Why BananaCut?' : 'なぜBananaCut？'}
-                </h2>
-                <p className={`text-lg md:text-xl leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                  {lang === 'KR' ? '바나나컷은 프라이버시, 속도, 정밀함을 중요하게 생각하는 크리에이터를 위해 만들어졌습니다. 웹 기반 엔진을 통해 모든 작업이 브라우저 내부에서만 처리되므로, 파일이 외부 서버로 전송될 걱정이 없습니다. 바나나컷의 모든 기능을 100% 무료로, 횟수 제한 없이 편하게 사용해 보세요.' : 
-                   lang === 'EN' ? 'BananaCut is built for creators who value privacy, speed, and precision. Powered by a web engine, everything is processed locally in your browser—meaning your files never leave your device. Experience all these features 100% free, with no limits.' : 
-                   'BananaCutは、プライバシー、スピード、精度を重視するクリエイターのために作られました。ウェブエンジンにより、すべての作業はブラウザ内で処理されるため、ファイルが外部に送信される心配はありません。これらの機能を完全無料で、無制限にお使いいただけます。'}
-                </p>
+          {/* Below the Fold: SEO Optimized Editorial Layout */}
+          <section className="max-w-6xl mx-auto pt-24 pb-12 border-t border-gray-200 dark:border-white/10 text-left space-y-32">
+            
+            {/* 1. Why BananaCut? (Expanded Editorial Layout) */}
+            <div>
+              <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-12">
+                {lang === 'KR' ? '왜 바나나컷인가요?' : lang === 'EN' ? 'Why BananaCut?' : 'なぜBananaCut？'}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-bold tracking-tight">100% Local Processing</h3>
+                  <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                    {lang === 'KR' ? '바나나컷은 고성능 웹 엔진(WASM/FFmpeg)을 사용하여 모든 작업을 브라우저 내부에서 처리합니다. 무거운 4K 영상을 외부 서버에 업로드할 필요가 없으며, 사용자의 데이터 프라이버시는 완벽하게 보호됩니다.' : 
+                     lang === 'EN' ? 'BananaCut uses a high-performance web engine (WASM/FFmpeg) to process everything inside your browser. No need to upload heavy 4K videos to external servers, and your data privacy is perfectly protected.' : 
+                     'BananaCutは高性能ウェブエンジン（WASM/FFmpeg）を使用して、すべての作業をブラウザ内で処理します。重い4K動画を外部サーバーにアップロードする必要はなく、ユーザーのデータプライバシーは完全に保護されます。'}
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-bold tracking-tight">Advanced Alpha Repair</h3>
+                  <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                    {lang === 'KR' ? '단순한 배경 제거를 넘어, 손상된 알파 채널을 복구하는 Smart Fill 알고리즘을 제공합니다. 프레임 단위의 수작업 로토스코핑 시간을 획기적으로 단축하세요.' : 
+                     lang === 'EN' ? 'Beyond simple background removal, we provide a Smart Fill algorithm that repairs damaged alpha channels. Drastically reduce your frame-by-frame manual rotoscoping time.' : 
+                     '単純な背景削除を超えて、損傷したアルファチャネルを復元するSmart Fillアルゴリズムを提供します。フレーム単位の手作業によるロトスコープの時間を劇的に短縮します。'}
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-bold tracking-tight">Forever Free & No Limits</h3>
+                  <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                    {lang === 'KR' ? '이 모든 전문가급 기능을 100% 무료로 제공합니다. 워터마크도, 사용량 제한도, 번거로운 회원가입도 필요 없습니다.' : 
+                     lang === 'EN' ? 'We provide all these professional-grade features 100% free. No watermarks, no usage limits, and no cumbersome sign-ups required.' : 
+                     'これらのプロフェッショナルレベルの機能をすべて完全無料で提供します。透かしも、使用制限も、面倒な会員登録も必要ありません。'}
+                  </p>
+                </div>
               </div>
-              
-              <div>
-                <h3 className="text-2xl font-semibold mb-6 tracking-tight">
-                  {lang === 'KR' ? '기술 사양' : lang === 'EN' ? 'Technical Specifications' : '技術仕様'}
-                </h3>
-                <ul className="space-y-6">
-                  <li className={`border-b pb-4 ${isDark ? 'border-white/10 text-white/60' : 'border-gray-200 text-gray-600'}`}>
-                    <strong className={isDark ? 'text-white' : 'text-black'}>{lang === 'KR' ? '처리 엔진:' : lang === 'EN' ? 'Processing Engine:' : '処理エンジン：'}</strong> {lang === 'KR' ? '브라우저 내 네이티브 성능을 위한 고성능 웹 기반 엔진' : lang === 'EN' ? 'High-performance web-based engine for native-like performance in the browser.' : 'ブラウザでのネイティブのようなパフォーマンスのための高性能ウェブベースエンジン。'}
-                  </li>
-                  <li className={`border-b pb-4 ${isDark ? 'border-white/10 text-white/60' : 'border-gray-200 text-gray-600'}`}>
-                    <strong className={isDark ? 'text-white' : 'text-black'}>{lang === 'KR' ? '지원 형식:' : lang === 'EN' ? 'Supported Formats:' : 'サポートされている形式：'}</strong> MP4, MOV, PNG, JPG/JPEG {lang === 'KR' ? '시퀀스' : lang === 'EN' ? 'sequences' : 'シーケンス'}
-                  </li>
-                  <li className={`border-b pb-4 ${isDark ? 'border-white/10 text-white/60' : 'border-gray-200 text-gray-600'}`}>
-                    <strong className={isDark ? 'text-white' : 'text-black'}>{lang === 'KR' ? '데이터 프라이버시:' : lang === 'EN' ? 'Data Privacy:' : '데이터プライバシー：'}</strong> {lang === 'KR' ? '100% 로컬 처리. 서버 보관 없음. 외부 서버로 데이터가 전송되지 않습니다.' : lang === 'EN' ? '100% Local Processing. Zero server retention. No data is transmitted to external servers.' : '100％ローカル処理。サーバーの保持はゼロ。外部サーバーにデータは送信されません。'}
-                  </li>
-                </ul>
+            </div>
+
+            {/* 2. Perfect for AI Creators */}
+            <div className={`p-12 rounded-[2.5rem] ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+              <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-6">
+                Perfect for AI Creators
+              </h2>
+              <p className={`text-xl md:text-2xl leading-relaxed max-w-4xl ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
+                {lang === 'KR' ? 'Midjourney, Luma, Runway와 같은 AI 생성 모델을 다루는 창작자에게 바나나컷은 \'완벽한 에셋 파이프라인\'을 제공합니다. 크로마키 작업 후 결과물을 이미지로 받는 것을 넘어, 배경이 투명한 WebM 비디오로 추출하거나 게임 엔진용 스프라이트 시트(Sprite Sheet)로 즉시 병합하세요. AI 영상이 프로덕션급 게임/영상 에셋으로 재탄생합니다.' : 
+                 lang === 'EN' ? 'BananaCut offers a \'complete asset pipeline\' for creators using AI generation models like Midjourney, Luma, and Runway. Go beyond simple image sequences—export your chroma-keyed results as transparent WebM videos or merge them instantly into game-ready sprite sheets. Transform raw AI videos into production-grade assets.' : 
+                 'Midjourney、Luma、RunwayなどのAI生成モデルを扱うクリエイターに、BananaCutは「完璧なアセットパイプライン」を提供します。クロマキー作業後、背景が透明なWebMビデオとして書き出したり、ゲームエンジン用のスプライトシートに即座に結合したりできます。AI動画がプロ仕様のゲーム/映像アセットに生まれ変わります。'}
+              </p>
+            </div>
+
+            {/* 3. FAQ */}
+            <div>
+              <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-12">
+                {lang === 'KR' ? '자주 묻는 질문 (FAQ)' : lang === 'EN' ? 'Frequently Asked Questions (FAQ)' : 'よくある質問 (FAQ)'}
+              </h2>
+              <div className="space-y-8">
+                <div className={`pb-8 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+                  <h3 className="text-xl font-bold mb-3">
+                    {lang === 'KR' ? 'Q: 정말 100% 무료인가요?' : lang === 'EN' ? 'Q: Is it really 100% free?' : 'Q: 本当に100%無料ですか？'}
+                  </h3>
+                  <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                    {lang === 'KR' ? 'A: 네, 바나나컷은 크리에이터 생태계를 위해 만들어진 도구로, 모든 기능을 횟수 제한 없이 무료로 제공합니다.' : 
+                     lang === 'EN' ? 'A: Yes, BananaCut is a tool built for the creator ecosystem, providing all features for free with no usage limits.' : 
+                     'A: はい、BananaCutはクリエイターエコシステムのために作られたツールであり、すべての機能を回数制限なしで無料で提供します。'}
+                  </p>
+                </div>
+                <div className={`pb-8 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+                  <h3 className="text-xl font-bold mb-3">
+                    {lang === 'KR' ? 'Q: 제 파일이 서버에 저장되나요?' : lang === 'EN' ? 'Q: Are my files saved on a server?' : 'Q: 私のファイルはサーバーに保存されますか？'}
+                  </h3>
+                  <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                    {lang === 'KR' ? 'A: 아니요. 모든 프레임 처리와 영상 인코딩은 사용자의 기기(브라우저) 안에서만 이루어지며, 어떤 데이터도 외부로 전송되지 않습니다.' : 
+                     lang === 'EN' ? 'A: No. All frame processing and video encoding happens entirely within your device (browser), and no data is transmitted externally.' : 
+                     'A: いいえ。すべてのフレーム処理と動画エンコードはユーザーのデバイス（ブラウザ）内でのみ行われ、データが外部に送信されることはありません。'}
+                  </p>
+                </div>
+                <div className={`pb-8 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+                  <h3 className="text-xl font-bold mb-3">
+                    {lang === 'KR' ? 'Q: 어떤 파일을 지원하나요?' : lang === 'EN' ? 'Q: What files are supported?' : 'Q: どのファイル形式をサポートしていますか？'}
+                  </h3>
+                  <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                    {lang === 'KR' ? 'A: 업로드는 MP4, WEBM 비디오 및 PNG, JPG 시퀀스를 지원합니다. 작업 완료 후에는 투명도가 적용된 PNG 시퀀스(ZIP), 투명 WebM 비디오, 병합된 스프라이트 시트 이미지로 내보낼 수 있습니다.' : 
+                     lang === 'EN' ? 'A: We support MP4, WEBM videos, and PNG/JPG sequences for upload. You can export your final work as transparent PNG sequences (ZIP), transparent WebM videos, or merged sprite sheets.' : 
+                     'A: アップロードはMP4、WEBMビデオ、PNG/JPGシーケンスをサポートします。作業完了後は、透明なPNGシーケンス（ZIP）、透明なWebMビデオ、結合されたスプライトシート画像として書き出すことができます。'}
+                  </p>
+                </div>
+                <div className={`pb-8 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+                  <h3 className="text-xl font-bold mb-3">
+                    {lang === 'KR' ? 'Q: 고해상도 투명 비디오나 스프라이트 시트 생성도 브라우저에서 되나요?' : lang === 'EN' ? 'Q: Can high-resolution transparent videos and sprite sheets be generated in the browser?' : 'Q: 高解像度の透明ビデオやスプライトシートの生成もブラウザで可能ですか？'}
+                  </h3>
+                  <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                    {lang === 'KR' ? 'A: 네! 바나나컷에 탑재된 고성능 웹 엔진과 스마트 렌더링 기술을 통해, 무거운 영상 인코딩과 이미지 병합 작업도 별도의 서버 없이 브라우저 내에서 100% 로컬 처리됩니다.' : 
+                     lang === 'EN' ? 'A: Yes! Powered by BananaCut\'s high-performance web engine and smart rendering technology, heavy video encoding and image merging are processed 100% locally in your browser, without any external servers.' : 
+                     'A: はい！BananaCutに搭載された高性能ウェブエンジンとスマートレンダリング技術により、重い動画のエンコードや画像の結合も外部サーバーなしで、ブラウザ内で100%ローカル処理されます。'}
+                  </p>
+                </div>
               </div>
             </div>
           </section>
@@ -384,7 +450,7 @@ export default function LandingPage() {
         <div className="flex flex-col items-center justify-center text-center space-y-6 py-4">
           <div className="w-full bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative">
             <img 
-              src={teamImg} 
+              src="/images/team.jpg" 
               alt="Dalgrac Studio Team" 
               className="max-w-full h-auto object-contain"
               referrerPolicy="no-referrer"
