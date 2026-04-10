@@ -43,7 +43,8 @@ export default function RemovePage() {
     fps, setFps,
     exclusionMasks, setExclusionMasks,
     presets, setPresets,
-    flaggedIndices, setFlaggedIndices
+    flaggedIndices, setFlaggedIndices,
+    setShowSuccessModal
   } = useStudio();
   
   const [isExtracting, setIsExtracting] = useState(false);
@@ -755,6 +756,7 @@ export default function RemovePage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      setShowSuccessModal(true);
       
     } catch (error) {
       console.error("Processing failed:", error);

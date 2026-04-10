@@ -9,7 +9,8 @@ import {
   X,
   Mail,
   Shield,
-  Smartphone
+  Smartphone,
+  CheckCircle2
 } from 'lucide-react';
 import RemovePage from './pages/RemovePage';
 import RecoverPage from './pages/RecoverPage';
@@ -19,13 +20,14 @@ import GuidePage from './pages/GuidePage';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { LanguageProvider, useLanguage } from './LanguageContext';
 import { FFmpegProvider } from './FFmpegContext';
-import { StudioProvider } from './StudioContext';
+import { StudioProvider, useStudio } from './StudioContext';
 import { Modal } from './components/Modal';
 import { initGA, trackEvent, trackPageView } from './lib/analytics';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
   const { lang, setLang } = useLanguage();
+  const { showSuccessModal, setShowSuccessModal } = useStudio();
   const [showHelp, setShowHelp] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
@@ -517,6 +519,32 @@ function Layout({ children }: { children: React.ReactNode }) {
 
           <div className={`text-xs font-medium tracking-widest uppercase mt-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
             BY. DALGRACSTUDIO
+          </div>
+        </div>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title={lang === 'KR' ? '에셋이 완벽하게 준비되었습니다! 🍌' : lang === 'EN' ? 'Your Assets are Ready! 🍌' : 'アセットの準備が完了しました！ 🍌'}
+        icon={CheckCircle2}
+        lang={lang}
+        setLang={setLang}
+      >
+        <div className="flex flex-col items-center justify-center text-center space-y-6 py-6">
+          <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-500/20 flex items-center justify-center mb-2">
+            <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400 animate-bounce" />
+          </div>
+          
+          <div className={`text-sm md:text-base leading-relaxed ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
+            {lang === 'KR' ? (
+              <>방금 처리된 모든 데이터는 서버를 거치지 않고 오직 당신의 브라우저에서만 안전하게 생성되었습니다. 바나나컷과 함께해주셔서 감사합니다. 당신의 멋진 창작물을 응원합니다!<br /><br />— Dalgrac Studio 드림</>
+            ) : lang === 'EN' ? (
+              <>All your data was processed securely right inside your browser, with zero server uploads. Thank you for using BananaCut. We are cheering for your amazing creations!<br /><br />— From Dalgrac Studio</>
+            ) : (
+              <>先ほど処理されたすべてのデータはサーバーを経由せず、あなたのブラウザ内でのみ安全に生成されました。BananaCutをご利用いただきありがとうございます。あなたの素晴らしい創作活動を応援しています！<br /><br />— Dalgrac Studioより</>
+            )}
           </div>
         </div>
       </Modal>

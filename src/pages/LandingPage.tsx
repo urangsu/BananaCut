@@ -210,18 +210,18 @@ export default function LandingPage() {
           {/* Hero Section */}
           <section className="text-center space-y-8">
             <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight">
-              Remove Backgrounds <br />
+              Cut the Background. <br />
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
                 In Your Browser
               </span>
             </h1>
             <p className={`text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
               {lang === 'KR' ? (
-                <>빠르고 안전하게.<br />프레임 추출부터 배경 제거,<br />디테일 복구까지 한 번에.</>
+                <>서버 전송 없이, 빠르고 안전하게.<br />스마트 배경 제거부터 알파 복구,<br />투명 에셋 추출까지 한 번에.</>
               ) : lang === 'EN' ? (
-                <>Fast and secure.<br />Can extract frames, remove backgrounds,<br />and recover details.</>
+                <>Fast, secure, and zero server uploads.<br />From smart background removal and alpha recovery,<br />to exporting flawless transparent assets instantly.</>
               ) : (
-                <>高速で安全に。<br />フレーム抽出から背景削除、<br />ディテール復元までこれ一つで。</>
+                <>サーバー送信なしで、安全かつ迅速に。<br />スマート背景削除からアルファ復元、<br />透明アセットの抽出までこれ一つで。</>
               )}
             </p>
             <button 
