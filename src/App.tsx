@@ -74,7 +74,8 @@ function Layout({ children }: { children: React.ReactNode }) {
             <Eraser className="w-5 h-5" strokeWidth={1} />
             <div className="flex flex-col">
               <span>REMOVE</span>
-              <span className="text-[10px] opacity-60">(투명화)</span>
+              {lang === 'KR' && <span className="text-[10px] opacity-60">(투명화)</span>}
+              {lang === 'JP' && <span className="text-[10px] opacity-60">(透明化)</span>}
             </div>
           </NavLink>
 
@@ -92,7 +93,8 @@ function Layout({ children }: { children: React.ReactNode }) {
             <PaintBucket className="w-5 h-5" strokeWidth={1} />
             <div className="flex flex-col">
               <span>RECOVER</span>
-              <span className="text-[10px] opacity-60">(복구)</span>
+              {lang === 'KR' && <span className="text-[10px] opacity-60">(복구)</span>}
+              {lang === 'JP' && <span className="text-[10px] opacity-60">(復元)</span>}
             </div>
           </NavLink>
 
@@ -110,7 +112,8 @@ function Layout({ children }: { children: React.ReactNode }) {
             <Smartphone className="w-5 h-5" strokeWidth={1} />
             <div className="flex flex-col">
               <span>ASSET</span>
-              <span className="text-[10px] opacity-60">(에셋)</span>
+              {lang === 'KR' && <span className="text-[10px] opacity-60">(에셋)</span>}
+              {lang === 'JP' && <span className="text-[10px] opacity-60">(アセット)</span>}
             </div>
           </NavLink>
         </nav>
@@ -127,7 +130,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             }
           >
             <HelpCircle className="w-4 h-4" strokeWidth={1} />
-            Guide (도움말)
+            {lang === 'KR' ? 'Guide (도움말)' : lang === 'EN' ? 'Guide' : 'Guide (ヘルプ)'}
           </NavLink>
           <button 
             onClick={toggleTheme}
@@ -136,19 +139,29 @@ function Layout({ children }: { children: React.ReactNode }) {
             }`}
           >
             {isDark ? <Sun className="w-4 h-4" strokeWidth={1} /> : <Moon className="w-4 h-4" strokeWidth={1} />}
-            {isDark ? 'Light Mode' : 'Dark Mode'}
+            {isDark 
+              ? (lang === 'JP' ? 'ライトモード' : 'Light Mode') 
+              : (lang === 'JP' ? 'ダークモード' : 'Dark Mode')}
           </button>
 
           <div className={`flex flex-col items-center gap-3 pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
             <div className={`flex flex-col items-center gap-1 text-[11px] font-medium w-full ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
               <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center w-full">
-                <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors no-underline text-right">Guide</button>
+                <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors no-underline text-right">
+                  {lang === 'JP' ? 'ガイド' : 'Guide'}
+                </button>
                 <span className="opacity-20 text-center">|</span>
-                <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline text-left">Privacy</button>
+                <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline text-left">
+                  {lang === 'JP' ? 'プライバシー' : 'Privacy'}
+                </button>
 
-                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline text-right">Feedback</a>
+                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline text-right">
+                  {lang === 'JP' ? 'フィードバック' : 'Feedback'}
+                </a>
                 <span className="opacity-20 text-center">|</span>
-                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-start gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
+                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-start gap-1 font-medium text-yellow-600 dark:text-yellow-500">
+                  {lang === 'JP' ? 'サポート 🍌' : 'Support 🍌'}
+                </button>
               </div>
             </div>
             
@@ -221,19 +234,28 @@ function Layout({ children }: { children: React.ReactNode }) {
             ))}
           </div>
           <button onClick={toggleTheme} className="flex items-center gap-1 hover:text-blue-500 text-xs font-medium">
-            {isDark ? <Sun className="w-4 h-4" strokeWidth={1.5}/> : <Moon className="w-4 h-4" strokeWidth={1.5}/>} Theme
+            {isDark ? <Sun className="w-4 h-4" strokeWidth={1.5}/> : <Moon className="w-4 h-4" strokeWidth={1.5}/>} 
+            {lang === 'JP' ? 'テーマ' : 'Theme'}
           </button>
         </div>
         
         <div className="flex flex-col items-center gap-2 mb-4 w-full px-4">
           <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center text-[11px] font-medium w-full max-w-[240px]">
-            <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors text-right">Guide</button>
+            <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors text-right">
+              {lang === 'JP' ? 'ガイド' : 'Guide'}
+            </button>
             <span className="opacity-20 text-center">|</span>
-            <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors text-left">Privacy</button>
+            <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors text-left">
+              {lang === 'JP' ? 'プライバシー' : 'Privacy'}
+            </button>
             
-            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors text-right">Feedback</a>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors text-right">
+              {lang === 'JP' ? 'フィードバック' : 'Feedback'}
+            </a>
             <span className="opacity-20 text-center">|</span>
-            <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-start gap-1 font-bold">Support 🍌</button>
+            <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-start gap-1 font-bold">
+              {lang === 'JP' ? 'サポート 🍌' : 'Support 🍌'}
+            </button>
           </div>
         </div>
 

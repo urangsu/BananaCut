@@ -106,7 +106,7 @@ function ScratchOverlay({ isDark, lang, onReveal }: { isDark: boolean, lang: str
   };
 
   return (
-    <div className="absolute inset-0 touch-none">
+    <div className="absolute inset-0">
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full cursor-crosshair"
@@ -132,8 +132,18 @@ export default function LandingPage() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50 && !isRevealed) {
+        setIsRevealed(true);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isRevealed]);
+
   return (
-    <div className={`min-h-screen flex flex-col ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
+    <div className={`relative min-h-screen flex flex-col ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
       {/* Header */}
       <header className={`relative z-50 flex items-center justify-between p-6 border-b ${isDark ? 'bg-[#121212] border-white/10' : 'bg-white border-gray-200'}`}>
         <div className="flex flex-col">
@@ -187,14 +197,14 @@ export default function LandingPage() {
 
       {!isRemoved && (
         <div 
-          className={`fixed inset-0 z-40 transition-opacity duration-1000 ${isRevealed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          className={`absolute top-0 left-0 w-full h-screen z-40 transition-opacity duration-1000 ${isRevealed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           onTransitionEnd={() => isRevealed && setIsRemoved(true)}
         >
           <ScratchOverlay isDark={isDark} lang={lang} onReveal={() => setIsRevealed(true)} />
         </div>
       )}
 
-      <main className={`flex-1 ${!isRevealed ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+      <main className="flex-1 w-full">
         <div className="max-w-6xl mx-auto px-6 py-16 lg:py-24 space-y-24">
           
           {/* Hero Section */}
