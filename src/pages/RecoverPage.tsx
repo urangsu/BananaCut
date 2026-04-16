@@ -3,7 +3,6 @@ import { Upload, Download, Loader2, ZoomIn, ZoomOut, MousePointer2, Paintbrush, 
 import JSZip from 'jszip';
 import { useLanguage } from '../LanguageContext';
 import { useTheme } from '../ThemeContext';
-import { useStudio } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
 
 interface Frame {
@@ -22,7 +21,6 @@ interface Point {
 export default function RecoverPage() {
   const { lang } = useLanguage();
   const { theme } = useTheme();
-  const { setShowSuccessModal } = useStudio();
   const [frames, setFrames] = useState<Frame[]>([]);
   const [selectedFrames, setSelectedFrames] = useState<Set<string>>(new Set());
   const [currentFrameId, setCurrentFrameId] = useState<string | null>(null);
@@ -649,7 +647,6 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setShowSuccessModal(true);
       
     } catch (error) {
       console.error("Error exporting ZIP:", error);

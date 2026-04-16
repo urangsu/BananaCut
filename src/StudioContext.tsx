@@ -79,8 +79,6 @@ interface StudioContextType {
   setPresets: React.Dispatch<React.SetStateAction<Preset[]>>;
   flaggedIndices: number[];
   setFlaggedIndices: React.Dispatch<React.SetStateAction<number[]>>;
-  showSuccessModal: boolean;
-  setShowSuccessModal: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -108,7 +106,6 @@ export const StudioProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const saved = localStorage.getItem('ck_flaggedIndices');
     return saved ? JSON.parse(saved) : [];
   });
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Sync to localStorage
   useEffect(() => { localStorage.setItem('ck_charName', charName); }, [charName]);
@@ -126,8 +123,7 @@ export const StudioProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       fps, setFps,
       exclusionMasks, setExclusionMasks,
       presets, setPresets,
-      flaggedIndices, setFlaggedIndices,
-      showSuccessModal, setShowSuccessModal
+      flaggedIndices, setFlaggedIndices
     }}>
       {children}
     </StudioContext.Provider>

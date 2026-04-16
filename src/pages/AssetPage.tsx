@@ -8,7 +8,7 @@ import { Download, Film, LayoutGrid, Loader2, AlertTriangle } from 'lucide-react
 export default function AssetPage() {
   const { lang } = useLanguage();
   const { theme } = useTheme();
-  const { frames, setShowSuccessModal } = useStudio();
+  const { frames } = useStudio();
   const { ffmpeg, isLoaded: isFFmpegLoaded } = useFFmpeg();
 
   // Video Export State
@@ -252,7 +252,6 @@ export default function AssetPage() {
                   <a 
                     href={videoUrl} 
                     download="bananacut_transparent.webm"
-                    onClick={() => setShowSuccessModal(true)}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all bg-blue-600 text-white hover:bg-blue-700"
                   >
                     <Download className="w-5 h-5" />
@@ -345,7 +344,6 @@ export default function AssetPage() {
                   <a 
                     href={spriteUrl} 
                     download="bananacut_spritesheet.png"
-                    onClick={() => setShowSuccessModal(true)}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all bg-green-600 text-white hover:bg-green-700"
                   >
                     <Download className="w-5 h-5" />

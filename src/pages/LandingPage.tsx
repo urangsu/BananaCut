@@ -106,7 +106,7 @@ function ScratchOverlay({ isDark, lang, onReveal }: { isDark: boolean, lang: str
   };
 
   return (
-    <div className="absolute inset-0">
+    <div className="absolute inset-0 touch-none">
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full cursor-crosshair"
@@ -132,18 +132,8 @@ export default function LandingPage() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 50 && !isRevealed) {
-        setIsRevealed(true);
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [isRevealed]);
-
   return (
-    <div className={`relative min-h-screen flex flex-col ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
+    <div className={`min-h-screen flex flex-col ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
       {/* Header */}
       <header className={`relative z-50 flex items-center justify-between p-6 border-b ${isDark ? 'bg-[#121212] border-white/10' : 'bg-white border-gray-200'}`}>
         <div className="flex flex-col">
@@ -197,31 +187,31 @@ export default function LandingPage() {
 
       {!isRemoved && (
         <div 
-          className={`absolute top-0 left-0 w-full h-screen z-40 transition-opacity duration-1000 ${isRevealed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          className={`fixed inset-0 z-40 transition-opacity duration-1000 ${isRevealed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           onTransitionEnd={() => isRevealed && setIsRemoved(true)}
         >
           <ScratchOverlay isDark={isDark} lang={lang} onReveal={() => setIsRevealed(true)} />
         </div>
       )}
 
-      <main className="flex-1 w-full">
+      <main className={`flex-1 ${!isRevealed ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         <div className="max-w-6xl mx-auto px-6 py-16 lg:py-24 space-y-24">
           
           {/* Hero Section */}
           <section className="text-center space-y-8">
             <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight">
-              Cut the Background. <br />
+              Remove Backgrounds <br />
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
                 In Your Browser
               </span>
             </h1>
             <p className={`text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
               {lang === 'KR' ? (
-                <>서버 전송 없이, 빠르고 안전하게.<br />스마트 배경 제거부터 알파 복구,<br />투명 에셋 추출까지 한 번에.</>
+                <>빠르고 안전하게.<br />프레임 추출부터 배경 제거,<br />디테일 복구까지 한 번에.</>
               ) : lang === 'EN' ? (
-                <>Fast, secure, and zero server uploads.<br />From smart background removal and alpha recovery,<br />to exporting flawless transparent assets instantly.</>
+                <>Fast and secure.<br />Can extract frames, remove backgrounds,<br />and recover details.</>
               ) : (
-                <>サーバー送信なしで、安全かつ迅速に。<br />スマート背景削除からアルファ復元、<br />透明アセットの抽出までこれ一つで。</>
+                <>高速で安全に。<br />フレーム抽出から背景削除、<br />ディテール復元までこれ一つで。</>
               )}
             </p>
             <button 
@@ -253,7 +243,7 @@ export default function LandingPage() {
                   00:34 - Upload
                 </strong>
                 <p className={`leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
-                  {lang === 'KR' ? <>웹브라우저에 직접 영상을<br />업로드 합니다.</> : 
+                  {lang === 'KR' ? '웹브라우저에 직접 영상을 업로드 합니다.' : 
                    lang === 'EN' ? 'Upload videos directly to your web browser.' : 
                    'ウェブブラウザに直接動画をアップロードします。'}
                 </p>
@@ -263,7 +253,7 @@ export default function LandingPage() {
                   00:35 - REMOVE
                 </strong>
                 <p className={`leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
-                  {lang === 'KR' ? <>배경 색상을 선택하고 오차 범위를<br />조절하여 피사체를 즉시 추출합니다.</> : 
+                  {lang === 'KR' ? '배경 색상을 선택하고 오차 범위를 조절하여 피사체를 즉시 추출합니다.' : 
                    lang === 'EN' ? 'Select background color and adjust tolerance to extract subjects.' : 
                    '背景色を選択し、誤差範囲を調整して被写体を即座に抽出します。'}
                 </p>
@@ -273,7 +263,7 @@ export default function LandingPage() {
                   01:14 - RECOVER
                 </strong>
                 <p className={`leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
-                  {lang === 'KR' ? <>손상된 알파 채널을 스마트필 알고리즘으로<br />정교하게 복구합니다.</> : 
+                  {lang === 'KR' ? '손상된 알파 채널을 스마트 필 알고리즘으로 정교하게 복구합니다.' : 
                    lang === 'EN' ? 'Precisely recover damaged alpha channels with the Smart Fill algorithm.' : 
                    '損傷したアルファチャネルをスマートフィルで精巧に復元します。'}
                 </p>
@@ -307,7 +297,7 @@ export default function LandingPage() {
               </h3>
               <p className={isDark ? 'text-white/60' : 'text-gray-600'}>
                 {lang === 'KR' 
-                  ? <>파일에서 배경을 편하게 제거하세요.<br />허용 오차와 가장자리 부드러움을<br />직관적으로 조절할 수 있습니다.</> 
+                  ? '이미지 시퀀스나 비디오에서 단색 배경을 쉽게 제거하세요. 허용 오차와 가장자리 부드러움을 조절할 수 있습니다.' 
                   : lang === 'EN' 
                     ? 'Easily remove solid background colors from your image sequences or videos with adjustable tolerance and edge softening.' 
                     : '画像シーケンスやビデオから単色背景を簡単に削除します。許容誤差とエッジの柔らかさを調整できます。'}
@@ -324,7 +314,7 @@ export default function LandingPage() {
               </h3>
               <p className={isDark ? 'text-white/60' : 'text-gray-600'}>
                 {lang === 'KR' 
-                  ? <>실수로 너무 많이 지워졌나요?<br />스마트 채우기와 브러쉬 도구를 사용해<br />손실된 디테일을 복구하세요.</> 
+                  ? '실수로 너무 많이 지워졌나요? 스마트 채우기와 브러쉬 도구를 사용하여 반투명 영역의 손실된 디테일을 복구하세요.' 
                   : lang === 'EN' 
                     ? 'Accidentally removed too much? Use our smart fill and brush tools to recover lost details in semi-transparent areas.' 
                     : '誤って消しすぎましたか？スマートフィルとブラシツールを使用して、半透明領域の失われた詳細を復元します。'}
@@ -341,7 +331,7 @@ export default function LandingPage() {
               </h3>
               <p className={isDark ? 'text-white/60' : 'text-gray-600'}>
                 {lang === 'KR' 
-                  ? <>파일이 기기를 떠나지 않습니다.<br />모든 처리는 WebAssembly를 사용하여<br />브라우저 내에서 안전하게 수행됩니다.</> 
+                  ? '파일이 기기를 떠나지 않습니다. 모든 처리는 WebAssembly를 사용하여 브라우저 내에서 안전하게 수행됩니다.' 
                   : lang === 'EN' 
                     ? 'Your files never leave your device. All processing is done securely within your browser using WebAssembly.' 
                     : 'ファイルがデバイスから離れることはありません。すべての処理はWebAssemblyを使用してブラウザ内で安全に行われます。'}
@@ -360,7 +350,7 @@ export default function LandingPage() {
                 <div className="space-y-4">
                   <h3 className="text-2xl font-bold tracking-tight">100% Local Processing</h3>
                   <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {lang === 'KR' ? <>바나나컷은 고성능 웹 엔진 기반으로<br />모든 작업을 브라우저에서 처리합니다.<br />영상을 외부 서버에 업로드할 필요 없어,<br />사용자의 정보는 완벽하게 보호됩니다.</> : 
+                    {lang === 'KR' ? '바나나컷은 고성능 웹 엔진(WASM/FFmpeg)을 사용하여 모든 작업을 브라우저 내부에서 처리합니다. 무거운 4K 영상을 외부 서버에 업로드할 필요가 없으며, 사용자의 데이터 프라이버시는 완벽하게 보호됩니다.' : 
                      lang === 'EN' ? 'BananaCut uses a high-performance web engine (WASM/FFmpeg) to process everything inside your browser. No need to upload heavy 4K videos to external servers, and your data privacy is perfectly protected.' : 
                      'BananaCutは高性能ウェブエンジン（WASM/FFmpeg）を使用して、すべての作業をブラウザ内で処理します。重い4K動画を外部サーバーにアップロードする必要はなく、ユーザーのデータプライバシーは完全に保護されます。'}
                   </p>
@@ -368,7 +358,7 @@ export default function LandingPage() {
                 <div className="space-y-4">
                   <h3 className="text-2xl font-bold tracking-tight">Advanced Alpha Repair</h3>
                   <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {lang === 'KR' ? <>배경 제거를 넘어, 손상된 알파 채널을<br />SmartFill으로 복구해보세요.<br />프레임 단위의 수작업 로토스코핑 시간을<br />획기적으로 단축하세요.</> : 
+                    {lang === 'KR' ? '단순한 배경 제거를 넘어, 손상된 알파 채널을 복구하는 Smart Fill 알고리즘을 제공합니다. 프레임 단위의 수작업 로토스코핑 시간을 획기적으로 단축하세요.' : 
                      lang === 'EN' ? 'Beyond simple background removal, we provide a Smart Fill algorithm that repairs damaged alpha channels. Drastically reduce your frame-by-frame manual rotoscoping time.' : 
                      '単純な背景削除を超えて、損傷したアルファチャネルを復元するSmart Fillアルゴリズムを提供します。フレーム単位の手作業によるロトスコープの時間を劇的に短縮します。'}
                   </p>
@@ -376,7 +366,7 @@ export default function LandingPage() {
                 <div className="space-y-4">
                   <h3 className="text-2xl font-bold tracking-tight">Forever Free & No Limits</h3>
                   <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {lang === 'KR' ? <>이 모든 전문가급 기능을 100% 무료로<br />제공합니다. 워터마크도, 사용량 제한도,<br />번거로운 회원가입도 필요 없습니다.</> : 
+                    {lang === 'KR' ? '이 모든 전문가급 기능을 100% 무료로 제공합니다. 워터마크도, 사용량 제한도, 번거로운 회원가입도 필요 없습니다.' : 
                      lang === 'EN' ? 'We provide all these professional-grade features 100% free. No watermarks, no usage limits, and no cumbersome sign-ups required.' : 
                      'これらのプロフェッショナルレベルの機能をすべて完全無料で提供します。透かしも、使用制限も、面倒な会員登録も必要ありません。'}
                   </p>
@@ -390,7 +380,7 @@ export default function LandingPage() {
                 Perfect for AI Creators
               </h2>
               <p className={`text-xl md:text-2xl leading-relaxed max-w-4xl ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-                {lang === 'KR' ? <>NaNo Banana, Midjourney와 같은 AI 생성 모델을 다루는 창작자에게<br />바나나컷은 '완벽한 에셋 파이프라인'을 제공합니다.<br />크로마키 작업 후 결과물을 이미지로 받는 것을 넘어,<br />배경이 투명한 WebM 비디오로 추출하거나<br />게임 엔진용 스프라이트 시트(Sprite Sheet)로 즉시 병합하세요.<br />AI 영상이 프로덕션급 게임/영상 에셋으로 재탄생합니다.</> : 
+                {lang === 'KR' ? 'Midjourney, Luma, Runway와 같은 AI 생성 모델을 다루는 창작자에게 바나나컷은 \'완벽한 에셋 파이프라인\'을 제공합니다. 크로마키 작업 후 결과물을 이미지로 받는 것을 넘어, 배경이 투명한 WebM 비디오로 추출하거나 게임 엔진용 스프라이트 시트(Sprite Sheet)로 즉시 병합하세요. AI 영상이 프로덕션급 게임/영상 에셋으로 재탄생합니다.' : 
                  lang === 'EN' ? 'BananaCut offers a \'complete asset pipeline\' for creators using AI generation models like Midjourney, Luma, and Runway. Go beyond simple image sequences—export your chroma-keyed results as transparent WebM videos or merge them instantly into game-ready sprite sheets. Transform raw AI videos into production-grade assets.' : 
                  'Midjourney、Luma、RunwayなどのAI生成モデルを扱うクリエイターに、BananaCutは「完璧なアセットパイプライン」を提供します。クロマキー作業後、背景が透明なWebMビデオとして書き出したり、ゲームエンジン用のスプライトシートに即座に結合したりできます。AI動画がプロ仕様のゲーム/映像アセットに生まれ変わります。'}
               </p>
@@ -407,7 +397,7 @@ export default function LandingPage() {
                     {lang === 'KR' ? 'Q: 정말 100% 무료인가요?' : lang === 'EN' ? 'Q: Is it really 100% free?' : 'Q: 本当に100%無料ですか？'}
                   </h3>
                   <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {lang === 'KR' ? <>A: 네, 바나나컷은 크리에이터 생태계를 위해 만들어진 도구로,<br />&nbsp;&nbsp;&nbsp;&nbsp;모든 기능을 횟수 제한 없이 무료로 제공합니다.</> : 
+                    {lang === 'KR' ? 'A: 네, 바나나컷은 크리에이터 생태계를 위해 만들어진 도구로, 모든 기능을 횟수 제한 없이 무료로 제공합니다.' : 
                      lang === 'EN' ? 'A: Yes, BananaCut is a tool built for the creator ecosystem, providing all features for free with no usage limits.' : 
                      'A: はい、BananaCutはクリエイターエコシステムのために作られたツールであり、すべての機能を回数制限なしで無料で提供します。'}
                   </p>
@@ -417,7 +407,7 @@ export default function LandingPage() {
                     {lang === 'KR' ? 'Q: 제 파일이 서버에 저장되나요?' : lang === 'EN' ? 'Q: Are my files saved on a server?' : 'Q: 私のファイルはサーバーに保存されますか？'}
                   </h3>
                   <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {lang === 'KR' ? <>A: 아니요. 모든 프레임 처리와 영상 인코딩은<br />&nbsp;&nbsp;&nbsp;&nbsp;사용자의 기기(브라우저) 안에서만 이루어지며,<br />&nbsp;&nbsp;&nbsp;&nbsp;어떤 데이터도 외부로 전송되지 않습니다.</> : 
+                    {lang === 'KR' ? 'A: 아니요. 모든 프레임 처리와 영상 인코딩은 사용자의 기기(브라우저) 안에서만 이루어지며, 어떤 데이터도 외부로 전송되지 않습니다.' : 
                      lang === 'EN' ? 'A: No. All frame processing and video encoding happens entirely within your device (browser), and no data is transmitted externally.' : 
                      'A: いいえ。すべてのフレーム処理と動画エンコードはユーザーのデバイス（ブラウザ）内でのみ行われ、データが外部に送信されることはありません。'}
                   </p>
@@ -427,7 +417,7 @@ export default function LandingPage() {
                     {lang === 'KR' ? 'Q: 어떤 파일을 지원하나요?' : lang === 'EN' ? 'Q: What files are supported?' : 'Q: どのファイル形式をサポートしていますか？'}
                   </h3>
                   <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {lang === 'KR' ? <>A: 업로드는 MP4, WEBM 비디오 및 PNG, JPG 시퀀스를 지원합니다.<br />&nbsp;&nbsp;&nbsp;&nbsp;작업 완료 후에는 투명도가 적용된 PNG 시퀀스(ZIP),<br />&nbsp;&nbsp;&nbsp;&nbsp;투명 WebM 비디오, 병합된 스프라이트 시트 이미지로 내보낼 수 있습니다.</> : 
+                    {lang === 'KR' ? 'A: 업로드는 MP4, WEBM 비디오 및 PNG, JPG 시퀀스를 지원합니다. 작업 완료 후에는 투명도가 적용된 PNG 시퀀스(ZIP), 투명 WebM 비디오, 병합된 스프라이트 시트 이미지로 내보낼 수 있습니다.' : 
                      lang === 'EN' ? 'A: We support MP4, WEBM videos, and PNG/JPG sequences for upload. You can export your final work as transparent PNG sequences (ZIP), transparent WebM videos, or merged sprite sheets.' : 
                      'A: アップロードはMP4、WEBMビデオ、PNG/JPGシーケンスをサポートします。作業完了後は、透明なPNGシーケンス（ZIP）、透明なWebMビデオ、結合されたスプライトシート画像として書き出すことができます。'}
                   </p>
@@ -437,7 +427,7 @@ export default function LandingPage() {
                     {lang === 'KR' ? 'Q: 고해상도 투명 비디오나 스프라이트 시트 생성도 브라우저에서 되나요?' : lang === 'EN' ? 'Q: Can high-resolution transparent videos and sprite sheets be generated in the browser?' : 'Q: 高解像度の透明ビデオやスプライトシートの生成もブラウザで可能ですか？'}
                   </h3>
                   <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {lang === 'KR' ? <>A: 네! 바나나컷에 탑재된 고성능 웹 엔진과 스마트 렌더링 기술을 통해,<br />&nbsp;&nbsp;&nbsp;&nbsp;무거운 영상 인코딩과 이미지 병합 작업도<br />&nbsp;&nbsp;&nbsp;&nbsp;별도의 서버 없이 브라우저 내에서 100% 로컬 처리됩니다.</> : 
+                    {lang === 'KR' ? 'A: 네! 바나나컷에 탑재된 고성능 웹 엔진과 스마트 렌더링 기술을 통해, 무거운 영상 인코딩과 이미지 병합 작업도 별도의 서버 없이 브라우저 내에서 100% 로컬 처리됩니다.' : 
                      lang === 'EN' ? 'A: Yes! Powered by BananaCut\'s high-performance web engine and smart rendering technology, heavy video encoding and image merging are processed 100% locally in your browser, without any external servers.' : 
                      'A: はい！BananaCutに搭載された高性能ウェブエンジンとスマートレンダリング技術により、重い動画のエンコードや画像の結合も外部サーバーなしで、ブラウザ内で100%ローカル処理されます。'}
                   </p>
@@ -446,6 +436,25 @@ export default function LandingPage() {
             </div>
           </section>
         </div>
+
+        {/* Footer for Landing Page */}
+        <footer className={`w-full py-6 mt-12 border-t px-6 flex flex-col md:flex-row items-center justify-between gap-4 ${isDark ? 'border-white/10 text-white/40' : 'border-gray-200 text-gray-500'}`}>
+          <div className="text-xs font-medium">
+            © 2026 BananaCut | BY. DALGRACSTUDIO
+          </div>
+          
+          <div className="flex items-center gap-4 text-xs font-medium">
+            <a href="/guide" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Guide</a>
+            <span className="opacity-20">|</span>
+            <a href="/privacy" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Privacy</a>
+            <span className="opacity-20">|</span>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Feedback</a>
+            <span className="opacity-20">|</span>
+            <a href="/support" className="text-yellow-600 dark:text-yellow-500 hover:text-yellow-500 dark:hover:text-yellow-400 transition-colors flex items-center gap-1">
+              Support 🍌
+            </a>
+          </div>
+        </footer>
       </main>
 
       {/* GET APP Modal */}

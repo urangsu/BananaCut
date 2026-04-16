@@ -9,8 +9,7 @@ import {
   X,
   Mail,
   Shield,
-  Smartphone,
-  CheckCircle2
+  Smartphone
 } from 'lucide-react';
 import RemovePage from './pages/RemovePage';
 import RecoverPage from './pages/RecoverPage';
@@ -20,14 +19,13 @@ import GuidePage from './pages/GuidePage';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { LanguageProvider, useLanguage } from './LanguageContext';
 import { FFmpegProvider } from './FFmpegContext';
-import { StudioProvider, useStudio } from './StudioContext';
+import { StudioProvider } from './StudioContext';
 import { Modal } from './components/Modal';
 import { initGA, trackEvent, trackPageView } from './lib/analytics';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
   const { lang, setLang } = useLanguage();
-  const { showSuccessModal, setShowSuccessModal } = useStudio();
   const [showHelp, setShowHelp] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
@@ -76,8 +74,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <Eraser className="w-5 h-5" strokeWidth={1} />
             <div className="flex flex-col">
               <span>REMOVE</span>
-              {lang === 'KR' && <span className="text-[10px] opacity-60">(투명화)</span>}
-              {lang === 'JP' && <span className="text-[10px] opacity-60">(透明化)</span>}
+              <span className="text-[10px] opacity-60">(투명화)</span>
             </div>
           </NavLink>
 
@@ -95,8 +92,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <PaintBucket className="w-5 h-5" strokeWidth={1} />
             <div className="flex flex-col">
               <span>RECOVER</span>
-              {lang === 'KR' && <span className="text-[10px] opacity-60">(복구)</span>}
-              {lang === 'JP' && <span className="text-[10px] opacity-60">(復元)</span>}
+              <span className="text-[10px] opacity-60">(복구)</span>
             </div>
           </NavLink>
 
@@ -114,8 +110,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <Smartphone className="w-5 h-5" strokeWidth={1} />
             <div className="flex flex-col">
               <span>ASSET</span>
-              {lang === 'KR' && <span className="text-[10px] opacity-60">(에셋)</span>}
-              {lang === 'JP' && <span className="text-[10px] opacity-60">(アセット)</span>}
+              <span className="text-[10px] opacity-60">(에셋)</span>
             </div>
           </NavLink>
         </nav>
@@ -132,7 +127,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             }
           >
             <HelpCircle className="w-4 h-4" strokeWidth={1} />
-            {lang === 'KR' ? 'Guide (도움말)' : lang === 'EN' ? 'Guide' : 'Guide (ヘルプ)'}
+            Guide (도움말)
           </NavLink>
           <button 
             onClick={toggleTheme}
@@ -141,29 +136,19 @@ function Layout({ children }: { children: React.ReactNode }) {
             }`}
           >
             {isDark ? <Sun className="w-4 h-4" strokeWidth={1} /> : <Moon className="w-4 h-4" strokeWidth={1} />}
-            {isDark 
-              ? (lang === 'JP' ? 'ライトモード' : 'Light Mode') 
-              : (lang === 'JP' ? 'ダークモード' : 'Dark Mode')}
+            {isDark ? 'Light Mode' : 'Dark Mode'}
           </button>
 
           <div className={`flex flex-col items-center gap-3 pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
             <div className={`flex flex-col items-center gap-1 text-[11px] font-medium w-full ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
               <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center w-full">
-                <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors no-underline text-right">
-                  {lang === 'JP' ? 'ガイド' : 'Guide'}
-                </button>
+                <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors no-underline text-right">Guide</button>
                 <span className="opacity-20 text-center">|</span>
-                <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline text-left">
-                  {lang === 'JP' ? 'プライバシー' : 'Privacy'}
-                </button>
+                <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline text-left">Privacy</button>
 
-                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline text-right">
-                  {lang === 'JP' ? 'フィードバック' : 'Feedback'}
-                </a>
+                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline text-right">Feedback</a>
                 <span className="opacity-20 text-center">|</span>
-                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-start gap-1 font-medium text-yellow-600 dark:text-yellow-500">
-                  {lang === 'JP' ? 'サポート 🍌' : 'Support 🍌'}
-                </button>
+                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-start gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
               </div>
             </div>
             
@@ -236,28 +221,19 @@ function Layout({ children }: { children: React.ReactNode }) {
             ))}
           </div>
           <button onClick={toggleTheme} className="flex items-center gap-1 hover:text-blue-500 text-xs font-medium">
-            {isDark ? <Sun className="w-4 h-4" strokeWidth={1.5}/> : <Moon className="w-4 h-4" strokeWidth={1.5}/>} 
-            {lang === 'JP' ? 'テーマ' : 'Theme'}
+            {isDark ? <Sun className="w-4 h-4" strokeWidth={1.5}/> : <Moon className="w-4 h-4" strokeWidth={1.5}/>} Theme
           </button>
         </div>
         
         <div className="flex flex-col items-center gap-2 mb-4 w-full px-4">
           <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center text-[11px] font-medium w-full max-w-[240px]">
-            <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors text-right">
-              {lang === 'JP' ? 'ガイド' : 'Guide'}
-            </button>
+            <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors text-right">Guide</button>
             <span className="opacity-20 text-center">|</span>
-            <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors text-left">
-              {lang === 'JP' ? 'プライバシー' : 'Privacy'}
-            </button>
+            <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors text-left">Privacy</button>
             
-            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors text-right">
-              {lang === 'JP' ? 'フィードバック' : 'Feedback'}
-            </a>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors text-right">Feedback</a>
             <span className="opacity-20 text-center">|</span>
-            <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-start gap-1 font-bold">
-              {lang === 'JP' ? 'サポート 🍌' : 'Support 🍌'}
-            </button>
+            <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-start gap-1 font-bold">Support 🍌</button>
           </div>
         </div>
 
@@ -519,32 +495,6 @@ function Layout({ children }: { children: React.ReactNode }) {
 
           <div className={`text-xs font-medium tracking-widest uppercase mt-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
             BY. DALGRACSTUDIO
-          </div>
-        </div>
-      </Modal>
-
-      {/* Success Modal */}
-      <Modal
-        isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-        title={lang === 'KR' ? '에셋이 완벽하게 준비되었습니다! 🍌' : lang === 'EN' ? 'Your Assets are Ready! 🍌' : 'アセットの準備が完了しました！ 🍌'}
-        icon={CheckCircle2}
-        lang={lang}
-        setLang={setLang}
-      >
-        <div className="flex flex-col items-center justify-center text-center space-y-6 py-6">
-          <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-500/20 flex items-center justify-center mb-2">
-            <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400 animate-bounce" />
-          </div>
-          
-          <div className={`text-sm md:text-base leading-relaxed ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-            {lang === 'KR' ? (
-              <>방금 처리된 모든 데이터는 서버를 거치지 않고 오직 당신의 브라우저에서만 안전하게 생성되었습니다. 바나나컷과 함께해주셔서 감사합니다. 당신의 멋진 창작물을 응원합니다!<br /><br />— Dalgrac Studio 드림</>
-            ) : lang === 'EN' ? (
-              <>All your data was processed securely right inside your browser, with zero server uploads. Thank you for using BananaCut. We are cheering for your amazing creations!<br /><br />— From Dalgrac Studio</>
-            ) : (
-              <>先ほど処理されたすべてのデータはサーバーを経由せず、あなたのブラウザ内でのみ安全に生成されました。BananaCutをご利用いただきありがとうございます。あなたの素晴らしい創作活動を応援しています！<br /><br />— Dalgrac Studioより</>
-            )}
           </div>
         </div>
       </Modal>

@@ -96,72 +96,27 @@ export default function GuidePage() {
 
           {/* Detailed Guide Content */}
           <div className={`transition-all duration-500 ${activeTab === 'detailed' ? 'opacity-100 visible' : 'opacity-0 invisible absolute top-0 left-0 w-full'}`}>
-            <div className={`space-y-12 ${isDark ? 'text-white/80' : 'text-gray-800'}`}>
-              
+            <div className="space-y-16">
               <section>
-                <h2 className="text-3xl font-bold mb-6 tracking-tight">
-                  {lang === 'KR' ? '1. 바나나컷 소개 (Introduction)' : lang === 'EN' ? '1. Introduction' : '1. BananaCutの紹介'}
-                </h2>
-                <p className="leading-relaxed">
-                  {lang === 'KR' ? '바나나컷은 크리에이터, 3D 아티스트, 영상 편집자를 위해 설계된 100% 무료 웹 기반 에셋 팩토리입니다. 고성능 웹 기반 엔진을 활용하여 브라우저 환경에서 모든 프레임을 직접 처리합니다. 업로드 대기 시간 제로, 완벽한 데이터 보안, 무제한 사용을 보장합니다.' : 
-                   lang === 'EN' ? 'BananaCut is a 100% free web-based asset factory designed for creators, 3D artists, and video editors. Using a high-performance web engine, it processes every frame locally in your browser. Guaranteeing zero upload time, absolute data privacy, and unlimited usage.' : 
-                   'BananaCutは、クリエイター、3Dアーティスト、ビデオ編集者のために設計された100%無料のウェブベースのアセットファクトリーです。高性能ウェブエンジンを活用し、ブラウザ環境ですべてのフレームを直接処理します。アップロードの待ち時間ゼロ、完璧なデータセキュリティ、無制限の使用を保証します。'}
-                </p>
+                <h2 className="text-3xl font-bold mb-6 tracking-tight">{lang === 'KR' ? '1. 바나나컷 소개' : lang === 'EN' ? '1. Introduction' : '1. BananaCutの紹介'}</h2>
+                <div className={`space-y-4 leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-700'}`}>
+                  <p>{lang === 'KR' ? '바나나컷은 크리에이터, 3D 아티스트, 영상 편집자를 위해 설계된 100% 무료 웹 기반 도구입니다. 무거운 영상 파일을 원격 서버에 업로드해야 했던 기존의 클라우드 서비스들과 달리, 바나나컷은 웹 기반 엔진을 활용하여 브라우저 환경에서 모든 프레임을 직접 처리합니다. 업로드 대기 시간 제로, 완벽한 데이터 보안, 그리고 무제한 사용. 여러분의 작업물은 절대 컴퓨터 밖으로 나가지 않습니다. 그린 스크린 제거부터 손상된 알파 채널 복구까지, 필요한 기능들을 웹에서 바로 사용해 보세요.' : 
+                     lang === 'EN' ? 'BananaCut is a completely free web-based tool designed for creators, 3D artists, and video editors. Unlike traditional cloud services that require you to upload heavy video files to remote servers, BananaCut uses a web engine to process everything directly inside your browser. Zero upload times, absolute data privacy, and unlimited usage. Your files never leave your computer. From removing green screens to recovering damaged alpha channels, use the tools you need right in your web browser.' : 
+                     'BananaCutは、クリエイター、3Dアーティスト、ビデオ編集者のために設計された完全無料のウェブベースのツールです。重い動画ファイルをリモートサーバーにアップロードする必要がある従来のクラウドサービスとは異なり、BananaCutはウェブエンジンを使用し、ブラウザ内ですべてを直接処理します。アップロードの待ち時間はゼロ、完璧なデータプライバシー、そして無制限の利用。ファイルがコンピューターから外部に出ることは決してありません。グリーンスクリーンの除去から損傷したアルファチャネルの復元まで、必要な機能をブラウザですぐにお使いいただけます。'}</p>
+                </div>
               </section>
-
               <section>
-                <h2 className="text-3xl font-bold mb-6 tracking-tight">
-                  {lang === 'KR' ? '2. REMOVE: 스마트 크로마키 (Smart Extraction)' : lang === 'EN' ? '2. REMOVE: Smart Extraction' : '2. REMOVE: スマート抽出'}
-                </h2>
-                <p className="mb-4">{lang === 'KR' ? '단색 배경에서 피사체를 완벽하게 추출하는 핵심 작업 공간입니다.' : lang === 'EN' ? 'The core workspace for perfectly extracting subjects from solid backgrounds.' : '単色背景から被写体を完璧に抽出するコアワークスペースです。'}</p>
-                <ul className="space-y-3 list-disc pl-5">
-                  <li><strong>{lang === 'KR' ? '파일 업로드: ' : lang === 'EN' ? 'Upload: ' : 'ファイルアップロード: '}</strong>{lang === 'KR' ? '비디오(MP4, WEBM) 또는 이미지 시퀀스를 업로드하여 프레임 단위로 분리합니다.' : lang === 'EN' ? 'Load video (MP4, WEBM) or image sequences to separate them into frames.' : 'ビデオ（MP4、WEBM）または画像シーケンスをアップロードしてフレーム単位で分離します。'}</li>
-                  <li><strong>{lang === 'KR' ? '크로마키 (ChromaKey): ' : lang === 'EN' ? 'ChromaKey: ' : 'クロマキー: '}</strong>{lang === 'KR' ? '배경색(White, Green) 프리셋을 누르거나 컬러 피커로 직접 배경을 선택하여 투명화합니다.' : lang === 'EN' ? 'Click the White/Green presets or use the color picker to select the background to remove.' : '背景色（White、Green）のプリセットを押すか、カラーピッカーで直接背景を選択して透明化します。'}</li>
-                  <li><strong>{lang === 'KR' ? '제외 브러쉬 (Exclusion Brush): ' : lang === 'EN' ? 'Exclusion Brush: ' : '除外ブラシ: '}</strong>{lang === 'KR' ? '피사체 내부의 색상이 배경과 같아 지워질 경우, 브러쉬 아이콘을 켜고 해당 영역을 칠하면 투명화 대상에서 제외되어 원본이 완벽히 보존됩니다.' : lang === 'EN' ? 'If part of your subject is erased because it matches the background color, activate the brush icon and paint over the area to protect it from transparency.' : '被写体内部の色が背景と同じで消えてしまう場合、ブラシアイコンをオンにして該当領域を塗ることで透明化の対象から除外され、オリジナルが完璧に保持されます。'}</li>
-                  <li><strong>{lang === 'KR' ? 'Tolerance (허용 오차): ' : lang === 'EN' ? 'Tolerance: ' : '許容誤差 (Tolerance): '}</strong>{lang === 'KR' ? '값이 클수록 선택한 색상과 비슷한 계열의 색상까지 넓게 제거됩니다.' : lang === 'EN' ? 'Higher values remove a wider range of colors similar to the selected background.' : '値を大きくするほど、選択した色に近い類似色まで広く削除されます。'}</li>
-                  <li><strong>{lang === 'KR' ? 'Softness (가장자리 페더링): ' : lang === 'EN' ? 'Softness (Feathering): ' : 'エッジのぼかし (Softness): '}</strong>{lang === 'KR' ? '피사체와 배경의 경계면을 부드럽게 처리하여 계단 현상(Aliasing)을 방지합니다.' : lang === 'EN' ? 'Smoothes the edges between the subject and the background to prevent aliasing.' : '被写体と背景の境界線を滑らかに処理し、ジャギー（エイリアシング）を防ぎます。'}</li>
-                  <li><strong>{lang === 'KR' ? 'Enclosed Color (내부 빈틈): ' : lang === 'EN' ? 'Enclosed Color: ' : '内部の隙間 (Enclosed Color): '}</strong>{lang === 'KR' ? '팔과 몸통 사이 등, 캐릭터 내부의 닫힌 공간에 갇힌 배경색도 함께 제거합니다.' : lang === 'EN' ? 'Removes background colors trapped inside enclosed spaces, like between a character\'s arm and body.' : '腕と胴体の間など、キャラクター内部の閉じた空間に閉じ込められた背景色も一緒に削除します。'}</li>
-                </ul>
+                <h2 className="text-3xl font-bold mb-6 tracking-tight">{lang === 'KR' ? '2. REMOVE 도구: 스마트 크로마키' : lang === 'EN' ? '2. The REMOVE Tool: Smart Chroma Key' : '2. REMOVEツール：スマートクロマキー'}</h2>
+                <div className={`space-y-4 leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-700'}`}>
+                  <p>{lang === 'KR' ? 'REMOVE 페이지는 단색 배경에서 피사체를 추출하기 위한 기본 작업 공간입니다. 그린 스크린(크로마키) 및 흰색 배경 제거에 고도로 최적화되어 있습니다.' : lang === 'EN' ? 'The REMOVE page is your primary workspace for extracting subjects from solid backgrounds. It is heavily optimized for Green Screen (Chroma Key) and White Background removal.' : 'REMOVEページは、単色背景から被写体を抽出するための主要なワークスペースです。グリーンスクリーン（クロマキー）と白背景の削除に高度に最適化されています。'}</p>
+                </div>
               </section>
-
               <section>
-                <h2 className="text-3xl font-bold mb-6 tracking-tight">
-                  {lang === 'KR' ? '3. RECOVER: 디테일 복구 (Detail Restoration)' : lang === 'EN' ? '3. RECOVER: Detail Restoration' : '3. RECOVER: ディテール復元'}
-                </h2>
-                <p className="mb-4">{lang === 'KR' ? '자동 배경 제거 후 손실된 픽셀이나 아티팩트를 프레임 단위로 정교하게 복구합니다.' : lang === 'EN' ? 'Precisely recover lost pixels or artifacts frame-by-frame after automatic removal.' : '自動背景削除後に失われたピクセルやアーティファクトをフレーム単位で精巧に復元します。'}</p>
-                <ul className="space-y-3 list-disc pl-5">
-                  <li><strong>{lang === 'KR' ? '스마트 채우기 (Smart Fill): ' : lang === 'EN' ? 'Smart Fill: ' : 'スマートフィル: '}</strong>{lang === 'KR' ? '투명화 과정에서 잘못 지워진 반투명한 틈새나 픽셀 손실을 주변 색상을 분석하여 지능적으로 복구합니다.' : lang === 'EN' ? 'Intelligently restores semi-transparent gaps or lost details caused during the removal process by analyzing surrounding colors.' : '透明化の過程で誤って消去された半透明の隙間やピクセルの損失を、周囲の色を分析してインテリジェントに復元します。'}</li>
-                  <li><strong>{lang === 'KR' ? '수동 툴 (Brush/Lasso/Eraser): ' : lang === 'EN' ? 'Manual Tools (Brush/Lasso/Eraser): ' : '手動ツール (Brush/Lasso/Eraser): '}</strong>{lang === 'KR' ? '브러쉬로 직접 색을 칠하거나, 올가미(Lasso)로 영역을 지정해 복구하고, 불필요한 찌꺼기는 지우개로 제거합니다.' : lang === 'EN' ? 'Paint directly, select areas with the lasso to restore, and use the eraser to clean up unwanted artifacts.' : 'ブラシで直接色を塗ったり、投げ縄(Lasso)で領域を指定して復元し、不要なゴミは消しゴムで削除します。'}</li>
-                </ul>
+                <h2 className="text-3xl font-bold mb-6 tracking-tight">{lang === 'KR' ? '3. RECOVER 도구: 고급 알파 복구' : lang === 'EN' ? '3. The RECOVER Tool: Advanced Alpha Repair' : '3. RECOVERツール：高度なアルファ修復'}</h2>
+                <div className={`space-y-4 leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-700'}`}>
+                  <p>{lang === 'KR' ? '때로는 자동 배경 제거로 인해 피사체에 아티팩트나 구멍이 남을 수 있습니다. RECOVER 페이지는 전체 시퀀스에 걸쳐 이러한 문제를 복구할 수 있는 전문가급 도구를 제공합니다.' : lang === 'EN' ? 'Sometimes, automated background removal leaves artifacts or holes in your subject. The RECOVER page provides professional-grade tools to repair these issues across an entire sequence.' : '自動背景削除により、被写体にアーティファクトや穴が残る場合があります。RECOVERページは、シーケンス全体でこれらの問題を修復するためのプロフェッショナルグレードのツールを提供します。'}</p>
+                </div>
               </section>
-
-              <section>
-                <h2 className="text-3xl font-bold mb-6 tracking-tight">
-                  {lang === 'KR' ? '4. ASSET: 에셋 파이프라인 (Asset Export)' : lang === 'EN' ? '4. ASSET: Production Pipeline' : '4. ASSET: アセットパイプライン'}
-                </h2>
-                <p className="mb-4">{lang === 'KR' ? '추출된 프레임을 실제 프로덕션에서 즉시 사용할 수 있는 포맷으로 변환합니다.' : lang === 'EN' ? 'Convert extracted frames into ready-to-use formats for your production.' : '抽出されたフレームを実際のプロダクションで即座に使用できるフォーマットに変換します。'}</p>
-                <ul className="space-y-3 list-disc pl-5">
-                  <li><strong>{lang === 'KR' ? '투명 비디오 (WebM Export): ' : lang === 'EN' ? 'Transparent Video (WebM): ' : '透明ビデオ (WebM Export): '}</strong>{lang === 'KR' ? '배경이 제거된 시퀀스를 알파 채널(투명도)이 포함된 고화질 WebM 비디오로 인코딩하여 추출합니다.' : lang === 'EN' ? 'Encode your sequence into a high-quality WebM video with an embedded alpha channel (transparency).' : '背景が削除されたシーケンスを、アルファチャネル（透明度）が含まれた高品質のWebMビデオとしてエンコードして書き出します。'}</li>
-                  <li><strong>{lang === 'KR' ? '스프라이트 시트 (Sprite Sheet): ' : lang === 'EN' ? 'Sprite Sheet Generator: ' : 'スプライトシート (Sprite Sheet): '}</strong>{lang === 'KR' ? '개별 프레임들을 하나의 거대한 이미지 장표로 병합합니다. Auto-Crop(여백 자동 제거)과 Columns(가로 칸수) 조절을 통해 게임 엔진에 최적화된 에셋을 만드세요.' : lang === 'EN' ? 'Merge individual frames into a single atlas image. Use Auto-Crop and Column adjustments to create optimized assets for game engines.' : '個別のフレームを1つの巨大なアトラス画像に結合します。Auto-Crop（余白の自動削除）とColumns（横の列数）の調整により、ゲームエンジンに最適化されたアセットを作成します。'}</li>
-                </ul>
-              </section>
-
-              <section>
-                <h2 className="text-3xl font-bold mb-6 tracking-tight">
-                  {lang === 'KR' ? '5. 파워 유저를 위한 단축키 (Pro Shortcuts)' : lang === 'EN' ? '5. Pro Shortcuts' : '5. パワーユーザー向けショートカット'}
-                </h2>
-                <p className="mb-4">{lang === 'KR' ? '작업 속도를 10배 높여주는 필수 단축키입니다.' : lang === 'EN' ? 'Essential hotkeys to 10x your workflow speed.' : '作業速度を10倍に高める必須のショートカットキーです。'}</p>
-                <ul className="space-y-3 list-disc pl-5">
-                  <li><strong>{lang === 'KR' ? '화면 확대/축소: ' : lang === 'EN' ? 'Zoom In/Out: ' : '画面の拡大/縮小: '}</strong> <code className="bg-white/10 px-1 rounded">Ctrl/Cmd + Mouse Wheel</code></li>
-                  <li><strong>{lang === 'KR' ? '화면 맞춤/원본 크기: ' : lang === 'EN' ? 'Fit to Screen/Original: ' : '画面に合わせる/元のサイズ: '}</strong> {lang === 'KR' ? '캔버스 하단의 줌 비율(%) 텍스트 클릭' : lang === 'EN' ? 'Click the Zoom Percentage (%) text below the canvas' : 'キャンバス下部のズーム比率(%)テキストをクリック'}</li>
-                  <li><strong>{lang === 'KR' ? '스포이드 (컬러 픽업): ' : lang === 'EN' ? 'Eyedropper: ' : 'スポイト (色を取得): '}</strong> <code className="bg-white/10 px-1 rounded">Ctrl/Cmd + Click</code></li>
-                  <li><strong>{lang === 'KR' ? '브러쉬 크기 조절: ' : lang === 'EN' ? 'Brush Size: ' : 'ブラシサイズの調整: '}</strong> <code className="bg-white/10 px-1 rounded">[</code> {lang === 'KR' ? '(축소) / ' : lang === 'EN' ? '(Decrease) / ' : '(縮小) / '} <code className="bg-white/10 px-1 rounded">]</code> {lang === 'KR' ? '(확대)' : lang === 'EN' ? '(Increase)' : '(拡大)'}</li>
-                  <li><strong>{lang === 'KR' ? '프레임 다중 선택: ' : lang === 'EN' ? 'Multi-Select Frames: ' : 'フレームの複数選択: '}</strong> <code className="bg-white/10 px-1 rounded">Shift + Click</code> ({lang === 'KR' ? '타임라인에서' : lang === 'EN' ? 'on the timeline' : 'タイムライン上で'})</li>
-                  <li><strong>{lang === 'KR' ? '선택 구간 동시 적용: ' : lang === 'EN' ? 'Batch Apply: ' : '選択区間への同時適用: '}</strong> <code className="bg-white/10 px-1 rounded">Shift + Ctrl/Cmd + Paint</code> ({lang === 'KR' ? '칠한 내용을 선택된 모든 프레임에 일괄 적용' : lang === 'EN' ? 'Apply edits to all selected frames simultaneously' : '塗った内容を選択されたすべてのフレームに一括適用'})</li>
-                  <li><strong>{lang === 'KR' ? '시간/프레임 단위 전환: ' : lang === 'EN' ? 'Time/Frame Toggle: ' : '時間/フレーム単位の切り替え: '}</strong> {lang === 'KR' ? '타임라인 구간 설정의 [Time/Frame] 버튼 클릭' : lang === 'EN' ? 'Click the [Time/Frame] button in the timeline settings' : 'タイムライン区間設定の[Time/Frame]ボタンをクリック'}</li>
-                </ul>
-              </section>
-
             </div>
           </div>
 
