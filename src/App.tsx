@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, NavLink, useLocation, BrowserRouter } from 'react-router-dom';
+import { Routes, Route, NavLink, useLocation, BrowserRouter, Link } from 'react-router-dom';
 import { 
   Eraser, 
   PaintBucket, 
@@ -16,6 +16,8 @@ import RecoverPage from './pages/RecoverPage';
 import AssetPage from './pages/AssetPage';
 import LandingPage from './pages/LandingPage';
 import GuidePage from './pages/GuidePage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { LanguageProvider, useLanguage } from './LanguageContext';
 import { FFmpegProvider } from './FFmpegContext';
@@ -24,10 +26,10 @@ import { Modal } from './components/Modal';
 import { initGA, trackEvent, trackPageView } from './lib/analytics';
 
 function Layout({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
   const { isDark, toggleTheme } = useTheme();
   const { lang, setLang } = useLanguage();
   const [showHelp, setShowHelp] = useState(false);
-  const [showPrivacy, setShowPrivacy] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [showGetApp, setShowGetApp] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -144,11 +146,15 @@ function Layout({ children }: { children: React.ReactNode }) {
               <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center w-full">
                 <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors no-underline text-right">Guide</button>
                 <span className="opacity-20 text-center">|</span>
-                <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors no-underline text-left">Privacy</button>
-
-                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline text-right">Feedback</a>
+                <Link to="/privacy" className="hover:text-blue-500 transition-colors no-underline text-left">Privacy</Link>
+                
+                <Link to="/terms" className="hover:text-blue-500 transition-colors no-underline text-right">Terms</Link>
                 <span className="opacity-20 text-center">|</span>
-                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-start gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
+                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline text-left">Feedback</a>
+
+                <div className="col-span-3 flex justify-center mt-1">
+                  <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-start gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
+                </div>
               </div>
             </div>
             
@@ -229,11 +235,15 @@ function Layout({ children }: { children: React.ReactNode }) {
           <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center text-[11px] font-medium w-full max-w-[240px]">
             <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors text-right">Guide</button>
             <span className="opacity-20 text-center">|</span>
-            <button onClick={() => setShowPrivacy(true)} className="hover:text-blue-500 transition-colors text-left">Privacy</button>
+            <Link to="/privacy" className="hover:text-blue-500 transition-colors text-left">Privacy</Link>
             
-            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors text-right">Feedback</a>
+            <Link to="/terms" className="hover:text-blue-500 transition-colors text-right">Terms</Link>
             <span className="opacity-20 text-center">|</span>
-            <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-start gap-1 font-bold">Support 🍌</button>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors text-left">Feedback</a>
+
+            <div className="col-span-3 flex justify-center mt-1">
+              <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-start gap-1 font-bold">Support 🍌</button>
+            </div>
           </div>
         </div>
 
@@ -382,79 +392,6 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </Modal>
 
-      {/* Privacy Modal */}
-      <Modal
-        isOpen={showPrivacy}
-        onClose={() => setShowPrivacy(false)}
-        title={lang === 'KR' ? 'BananaCut 통합 정책 (Privacy & Terms)' : lang === 'EN' ? 'BananaCut Integrated Policy (Privacy & Terms)' : 'BananaCut 統合ポリシー (Privacy & Terms)'}
-        icon={Shield}
-        lang={lang}
-        setLang={setLang}
-      >
-        <div className="space-y-6 text-sm leading-relaxed max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-          {lang === 'KR' && (
-            <div className="space-y-6">
-              <section>
-                <h3 className="font-bold text-base mb-2">개인정보 처리방침 (Privacy Policy)</h3>
-                <div className="space-y-2 opacity-80">
-                  <p><strong>1. 데이터 처리:</strong> BananaCut은 모든 이미지 및 비디오 처리를 사용자의 브라우저 내에서 직접 수행합니다. 어떠한 원본 파일이나 편집 데이터도 서버로 전송하거나 저장하지 않습니다.</p>
-                  <p><strong>2. 쿠키 및 광고:</strong> 본 서비스는 Google AdSense를 통한 광고 송출 및 서비스 분석을 위해 쿠키를 사용합니다. 쿠키는 사용자의 브라우저에 저장되는 작은 텍스트 파일로, 맞춤형 광고 제공을 위해 사용될 수 있습니다.</p>
-                  <p><strong>3. 제3자 서비스:</strong> 후원(Ko-fi), 설문(Tally) 등 외부 서비스 이용 시 해당 플랫폼의 개인정보 정책이 적용됩니다.</p>
-                </div>
-              </section>
-              <section>
-                <h3 className="font-bold text-base mb-2">이용약관 (Terms of Service)</h3>
-                <div className="space-y-2 opacity-80">
-                  <p><strong>1. 저작권:</strong> 사용자는 본 서비스를 통해 처리하는 콘텐츠에 대한 정당한 권리를 보유해야 합니다. 결과물 사용으로 인해 발생하는 저작권 분쟁의 책임은 전적으로 사용자에게 있습니다.</p>
-                  <p><strong>2. 서비스 제공:</strong> 본 서비스는 '있는 그대로(As-Is)' 제공되며, 무상 서비스 특성상 예고 없이 기능이 변경되거나 중단될 수 있습니다.</p>
-                  <p><strong>3. 금지 행위:</strong> 서비스의 정상적인 운영을 방해하는 자동화된 접근, 스크래핑, 또는 시스템 부하 유발 행위를 금지합니다.</p>
-                </div>
-              </section>
-            </div>
-          )}
-          {lang === 'EN' && (
-            <div className="space-y-6">
-              <section>
-                <h3 className="font-bold text-base mb-2">Privacy Policy</h3>
-                <div className="space-y-2 opacity-80">
-                  <p><strong>1. Data Processing:</strong> BananaCut processes all images and videos directly within your browser. No original files or edited data are ever uploaded to or stored on our servers.</p>
-                  <p><strong>2. Cookies & Ads:</strong> We use cookies for Google AdSense to serve ads and analyze service usage. Cookies are small text files stored in your browser to provide personalized advertising experiences.</p>
-                  <p><strong>3. Third-party Services:</strong> Usage of external platforms like Ko-fi (Support) or Tally (Feedback) is subject to their respective privacy policies.</p>
-                </div>
-              </section>
-              <section>
-                <h3 className="font-bold text-base mb-2">Terms of Service</h3>
-                <div className="space-y-2 opacity-80">
-                  <p><strong>1. Copyright:</strong> Users must hold the necessary rights to the content processed through this service. Users bear full responsibility for any copyright issues arising from the results.</p>
-                  <p><strong>2. Service Provision:</strong> This service is provided 'As-Is.' As a free service, features may be changed or discontinued without prior notice.</p>
-                  <p><strong>3. Prohibited Acts:</strong> Automated access, scraping, or any activity that causes abnormal system load is strictly prohibited.</p>
-                </div>
-              </section>
-            </div>
-          )}
-          {lang === 'JP' && (
-            <div className="space-y-6">
-              <section>
-                <h3 className="font-bold text-base mb-2">個人情報処理方針</h3>
-                <div className="space-y-2 opacity-80">
-                  <p><strong>1. データ処理:</strong> BananaCutは、すべての画像およびビデオ処理をユーザーのブラウザ内で直接実行します。元のファイルや編集データがサーバーに送信または保存されることはありません。</p>
-                  <p><strong>2. クッキーと広告:</strong> Google AdSenseを通じた広告配信およびサービス分析のためにクッキーを使用します。クッキーはカスタマイズされた広告提供のために使用される場合があります。</p>
-                  <p><strong>3. 第三者サービス:</strong> 寄付(Ko-fi)やアンケート(Tally)などの外部サービスを利用する場合、各プラットフォームのポリシーが適用されます。</p>
-                </div>
-              </section>
-              <section>
-                <h3 className="font-bold text-base mb-2">利用規約</h3>
-                <div className="space-y-2 opacity-80">
-                  <p><strong>1. 著作権:</strong> ユーザーは、本サービスを通じて処理するコンテンツに対して正当な権利を保有している必要があります。結果物の使用により発生する著作権紛争の責任はユーザーに帰属します。</p>
-                  <p><strong>2. サービスの提供:</strong> 本サービスは「現状のまま(As-Is)」提供されます。無料サービスの特性上、予告なく機能が変更または中断される場合があります。</p>
-                  <p><strong>3. 禁止事項:</strong> サービスの正常な運営を妨げる自動アクセス、スクレイピング、またはシステム負荷を誘発する行為を禁止します。</p>
-                </div>
-              </section>
-            </div>
-          )}
-        </div>
-      </Modal>
-
       {/* GET APP Modal */}
       <Modal
         isOpen={showGetApp}
@@ -531,6 +468,8 @@ function App() {
                 <Route path="/recover" element={<Layout><RecoverPage /></Layout>} />
                 <Route path="/asset" element={<Layout><AssetPage /></Layout>} />
                 <Route path="/guide" element={<Layout><GuidePage /></Layout>} />
+                <Route path="/privacy" element={<Layout><PrivacyPage /></Layout>} />
+                <Route path="/terms" element={<Layout><TermsPage /></Layout>} />
               </Routes>
             </BrowserRouter>
           </StudioProvider>

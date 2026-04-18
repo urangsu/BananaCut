@@ -1,14 +1,13 @@
 import React from 'react';
 import { useTheme } from '../ThemeContext';
 import { useLanguage } from '../LanguageContext';
+import { Link } from 'react-router-dom';
 
 export const Footer = ({ 
   onShowHelp, 
-  onShowPrivacy, 
   onShowSupport 
 }: { 
   onShowHelp: () => void; 
-  onShowPrivacy: () => void; 
   onShowSupport: () => void;
 }) => {
   const { isDark } = useTheme();
@@ -23,7 +22,9 @@ export const Footer = ({
       <div className="flex items-center gap-4 text-xs font-medium">
         <button onClick={onShowHelp} className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Guide</button>
         <span className="opacity-20">|</span>
-        <button onClick={onShowPrivacy} className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Privacy</button>
+        <Link to="/privacy" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Privacy</Link>
+        <span className="opacity-20">|</span>
+        <Link to="/terms" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Terms</Link>
         <span className="opacity-20">|</span>
         <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Feedback</a>
         <span className="opacity-20">|</span>

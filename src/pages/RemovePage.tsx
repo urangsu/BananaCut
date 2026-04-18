@@ -80,6 +80,7 @@ export default function RemovePage() {
   const [brushSize, setBrushSize] = useState(30);
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
+  const lastPosRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     localStorage.setItem('ck_tolerance', tolerance.toString());
@@ -370,7 +371,37 @@ export default function RemovePage() {
     }
     
     setIsDrawing(true);
-    drawOnMask(e);
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+    
+    const updateStart = (w: number, h: number) => {
+      const ratio = Math.min(canvas.width / w, canvas.height / h);
+      const newW = Math.floor(w * ratio);
+      const newH = Math.floor(h * ratio);
+      const offsetX = (canvas.width - newW) / 2;
+      const offsetY = (canvas.height - newH) / 2;
+      
+      const ox = (cx - offsetX) / ratio;
+      const oy = (cy - offsetY) / ratio;
+      lastPosRef.current = { x: ox, y: oy };
+      setLastPos({ x: ox, y: oy });
+      performDraw(ox, oy, ox, oy, w, h);
+    };
+
+    if (imgDims) {
+      updateStart(imgDims.w, imgDims.h);
+    } else {
+      const img = new Image();
+      img.onload = () => {
+        setImgDims({ w: img.width, h: img.height });
+        updateStart(img.width, img.height);
+      };
+      img.src = frames[currentFrame];
+    }
   };
 
   const lastDrawRef = useRef(0);
@@ -395,10 +426,15 @@ export default function RemovePage() {
       
       const ox = (cx - offsetX) / ratio;
       const oy = (cy - offsetY) / ratio;
+      
+      const lx = lastPosRef.current.x;
+      const ly = lastPosRef.current.y;
+      
       setLastPos({ x: ox, y: oy });
+      lastPosRef.current = { x: ox, y: oy };
       
       if (isDrawing) {
-        performDraw(ox, oy, w, h);
+        performDraw(ox, oy, lx, ly, w, h);
       }
     };
 
@@ -421,38 +457,6 @@ export default function RemovePage() {
     setExclusionMasks(new Map(exclusionMasks));
   };
 
-  const drawOnMask = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current || frames.length === 0) return;
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-
-    const updateDraw = (w: number, h: number) => {
-      const ratio = Math.min(canvas.width / w, canvas.height / h);
-      const newW = Math.floor(w * ratio);
-      const newH = Math.floor(h * ratio);
-      const offsetX = (canvas.width - newW) / 2;
-      const offsetY = (canvas.height - newH) / 2;
-
-      const ox = (cx - offsetX) / ratio;
-      const oy = (cy - offsetY) / ratio;
-      
-      performDraw(ox, oy, w, h);
-    };
-
-    if (imgDims) {
-      updateDraw(imgDims.w, imgDims.h);
-    } else {
-      const img = new Image();
-      img.onload = () => {
-        setImgDims({ w: img.width, h: img.height });
-        updateDraw(img.width, img.height);
-      };
-      img.src = frames[currentFrame];
-    }
-  };
-
   const drawTickRef = useRef(0);
   const animationFrameRef = useRef<number>();
 
@@ -464,7 +468,7 @@ export default function RemovePage() {
     };
   }, []);
 
-  const performDraw = (ox: number, oy: number, imgW: number, imgH: number) => {
+  const performDraw = (ox: number, oy: number, px: number, py: number, imgW: number, imgH: number) => {
     let targetIndices: number[] = [];
     
     if (applyToSelectedRef.current) {
@@ -479,10 +483,34 @@ export default function RemovePage() {
     const ratio = Math.min(canvas.width / imgW, canvas.height / imgH);
     const oradius = (brushSize / 2) / ratio;
 
-    const startX = Math.max(0, Math.floor(ox - oradius));
-    const endX = Math.min(imgW, Math.ceil(ox + oradius));
-    const startY = Math.max(0, Math.floor(oy - oradius));
-    const endY = Math.min(imgH, Math.ceil(oy + oradius));
+    const minX = Math.max(0, Math.floor(Math.min(px, ox) - oradius));
+    const maxX = Math.min(imgW, Math.ceil(Math.max(px, ox) + oradius));
+    const minY = Math.max(0, Math.floor(Math.min(py, oy) - oradius));
+    const maxY = Math.min(imgH, Math.ceil(Math.max(py, oy) + oradius));
+
+    const offsetsToUpdate: number[] = [];
+    const dist = Math.hypot(ox - px, oy - py);
+    const steps = Math.max(1, Math.ceil(dist / Math.max(1, oradius / 3)));
+    const val = activeTool === 'brush' ? 1 : 0;
+
+    for (let y = minY; y < maxY; y++) {
+      for (let x = minX; x < maxX; x++) {
+        let inside = false;
+        for(let step = 0; step <= steps; step++) {
+          const t = steps === 0 ? 0 : step / steps;
+          const cx = px + t * (ox - px);
+          const cy = py + t * (oy - py);
+          const d = (x - cx)**2 + (y - cy)**2;
+          if (d <= oradius * oradius) {
+            inside = true;
+            break;
+          }
+        }
+        if (inside) {
+          offsetsToUpdate.push(y * imgW + x);
+        }
+      }
+    }
 
     targetIndices.forEach(idx => {
       let mask = exclusionMasks.get(idx);
@@ -491,13 +519,8 @@ export default function RemovePage() {
         exclusionMasks.set(idx, mask);
       }
 
-      for (let py = startY; py < endY; py++) {
-        for (let px = startX; px < endX; px++) {
-          const dist = Math.sqrt((px - ox) ** 2 + (py - oy) ** 2);
-          if (dist <= oradius) {
-            mask[py * imgW + px] = activeTool === 'brush' ? 1 : 0;
-          }
-        }
+      for (let i = 0; i < offsetsToUpdate.length; i++) {
+        mask[offsetsToUpdate[i]] = val;
       }
     });
 
