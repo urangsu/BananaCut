@@ -42,7 +42,13 @@ export default function RemovePage() {
   // Prewarm FFmpeg engine in the background when user enters RemovePage
   useEffect(() => {
     if (loadState === 'idle') {
-      loadFFmpeg().catch(console.error);
+      const start = () => loadFFmpeg().catch(console.error);
+      if (typeof requestIdleCallback !== 'undefined') {
+        const id = requestIdleCallback(start, { timeout: 1500 });
+        return () => cancelIdleCallback(id);
+      }
+      const id = setTimeout(start, 800);
+      return () => clearTimeout(id);
     }
   }, [loadState, loadFFmpeg]);
 
@@ -907,7 +913,7 @@ export default function RemovePage() {
       : (isDark ? 'border-white/20 hover:bg-white/5 hover:border-white/40' : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400')
   }`;
   const segmentBgClass = `border rounded-xl p-3 space-y-3 relative group transition-colors ${isDark ? 'bg-black/20 border-white/5' : 'bg-gray-50 border-gray-200'}`;
-  const segmentInputClass = `flex-1 border rounded-lg px-3 py-2 text-xs focus:outline-none transition-all ${isDark ? 'bg-black/40 border-white/10 focus:border-blue-500/50 text-white' : 'bg-white border-gray-200 focus:border-black text-gray-900'}`;
+  const segmentInputClass = `flex-1 min-w-0 w-full border rounded-lg px-2 py-2 text-xs focus:outline-none transition-all ${isDark ? 'bg-black/40 border-white/10 focus:border-blue-500/50 text-white' : 'bg-white border-gray-200 focus:border-black text-gray-900'}`;
   const segmentLabelClass = `block text-[10px] mb-1 uppercase tracking-tighter ${isDark ? 'text-white/40' : 'text-gray-500 font-bold'}`;
   const primaryBtnClass = `w-full font-medium py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:shadow-none ${
     isDark 
@@ -1487,12 +1493,12 @@ export default function RemovePage() {
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
-                        <div>
+                        <div className="min-w-0 flex flex-col">
                           <div className="flex justify-between items-center mb-1">
-                            <label className={segmentLabelClass}>{seg.useFrames ? 'START (f)' : 'START (s)'}</label>
+                            <label className={`${segmentLabelClass} truncate`}>{seg.useFrames ? 'START (f)' : 'START (s)'}</label>
                             <button 
                               onClick={() => updateSegment(idx, 'useFrames', !seg.useFrames)}
-                              className="text-[9px] bg-white/10 px-1 rounded"
+                              className="text-[9px] bg-white/10 px-1 rounded flex-shrink-0"
                             >
                               {seg.useFrames ? (lang === 'KR' ? 'Time' : lang === 'EN' ? 'Time' : '時間') : (lang === 'KR' ? 'Frame' : lang === 'EN' ? 'Frame' : 'フレーム')}
                             </button>
@@ -1505,9 +1511,9 @@ export default function RemovePage() {
                             className={segmentInputClass}
                           />
                         </div>
-                        <div>
+                        <div className="min-w-0 flex flex-col">
                           <div className="flex justify-between items-center mb-1">
-                            <label className={segmentLabelClass}>{seg.useFrames ? 'END (f)' : 'END (s)'}</label>
+                            <label className={`${segmentLabelClass} truncate`}>{seg.useFrames ? 'END (f)' : 'END (s)'}</label>
                           </div>
                           <input 
                             type="number" 

@@ -9,10 +9,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
+    "postinstall": "npx shx mkdir -p public/ffmpeg && npx shx cp -r node_modules/@ffmpeg/core-mt/dist/esm/ffmpeg-core.* public/ffmpeg/",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.6",
+    "@ffmpeg/core-mt": "^0.12.6",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@google/genai": "^1.29.0",
