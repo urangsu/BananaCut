@@ -1,7 +1,13 @@
+export interface HistoryItem {
+  frameId?: string;
+  undoUrl?: string;
+  redoUrl?: string;
+}
+
 export const revokeUrlsSafely = (
   urlsToRevoke: string[], 
   activeFrames: {rawUrl: string, processedUrl?: string}[], 
-  activeHistory: any[] = []
+  activeHistory: HistoryItem[][] = []
 ) => {
   const activeSet = new Set<string>();
   

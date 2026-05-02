@@ -5,11 +5,13 @@ import { Upload, Play, Square, Download, Settings, Loader2, Sliders, ChevronDown
 import JSZip from 'jszip';
 import { useTheme } from '../ThemeContext';
 import { useFFmpeg } from '../FFmpegContext';
-import { useStudio } from '../StudioContext';
+import { useStudio, BrushStroke } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
+import { revokeUrlsSafely } from '../utils/urlUtils';
 import { DownloadModal } from '../components/DownloadModal';
 import { useBatchJob } from '../hooks/useBatchJob';
 import { useLanguage } from '../LanguageContext';
+import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
 
 const GET_MIDDLE_NAME_OPTIONS = (lang: string) => [
   { id: "idle_sitting", desc: lang === 'KR' ? "자연스러운 호흡" : lang === 'EN' ? "Natural Breathing" : "自然な呼吸" },
@@ -41,7 +43,7 @@ export default function RemovePage() {
     charName, setCharName, 
     segments, setSegments, 
     fps, setFps,
-    exclusionMasks, setExclusionMasks,
+    exclusionStrokes, setExclusionStrokes,
     presets, setPresets,
     flaggedIndices, setFlaggedIndices
   } = useStudio();
@@ -51,6 +53,8 @@ export default function RemovePage() {
   const [isProcessingLocal, setIsProcessingLocal] = useState(false);
   const isProcessing = isExtracting || isBatchProcessing || isProcessingLocal;
   const setIsProcessing = setIsProcessingLocal;
+
+  const [failedItems, setFailedItems] = useState<number[]>([]);
   
   const [isDragging, setIsDragging] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -60,7 +64,7 @@ export default function RemovePage() {
 
   const processTargetFrames = async (targetIndices: number[]) => {
     if (targetIndices.length === 0) return;
-    
+    setFailedItems([]);
     const newFrames = [...frames];
     
     await startJob<number, void>({
@@ -84,7 +88,7 @@ export default function RemovePage() {
          
          ctx.drawImage(img, 0, 0);
          const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
-         const mask = exclusionMasks.get(idx);
+         const mask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, idx);
          applyChromaKey(imgData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, mask);
          ctx.putImageData(imgData, 0, 0);
          
@@ -98,8 +102,9 @@ export default function RemovePage() {
       onSuccess: () => {
         setFrames(newFrames);
       },
-      onPartialSuccess: () => {
+      onPartialSuccess: (_, failed) => {
         setFrames(newFrames);
+        setFailedItems(failed);
       }
     });
   };
@@ -112,12 +117,28 @@ export default function RemovePage() {
   const applyToSelectedRef = useRef(false);
   
   // Chroma Key Settings
-  const [chromaKeyColor, setChromaKeyColor] = useState<'White' | 'Green' | 'Picker'>('White');
-  const [pickedColor, setPickedColor] = useState<{r: number, g: number, b: number}>({r: 255, g: 255, b: 255});
+  const [chromaKeyColor, setChromaKeyColor] = useState<'White' | 'Green' | 'Picker'>(() => (localStorage.getItem('ck_chromaKeyColor') as any) || 'White');
+  const [pickedColor, setPickedColor] = useState<{r: number, g: number, b: number}>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('ck_pickedColor') || '');
+    } catch {
+      return {r: 255, g: 255, b: 255};
+    }
+  });
   const [isPickingColor, setIsPickingColor] = useState(false);
   const [tolerance, setTolerance] = useState(() => Number(localStorage.getItem('ck_tolerance')) || 30);
   const [softness, setSoftness] = useState(() => Number(localStorage.getItem('ck_softness')) || 20);
   const [enclosedTolerance, setEnclosedTolerance] = useState(() => Number(localStorage.getItem('ck_enclosedTolerance')) || 10);
+  
+  // Advanced Keying Settings
+  const [showAdvancedKeying, setShowAdvancedKeying] = useState(false);
+  const [keyingMode, setKeyingMode] = useState<'rgb' | 'hsv' | 'luma' | 'greenAdvanced'>(() => (localStorage.getItem('ck_keyingMode') as any) || 'greenAdvanced');
+  const [previewMode, setPreviewMode] = useState<'result' | 'original' | 'alpha' | 'checkerboard' | 'black' | 'white'>(() => (localStorage.getItem('ck_previewMode') as any) || 'result');
+  const [despill, setDespill] = useState(() => Number(localStorage.getItem('ck_despill')) || 0);
+  const [erode, setErode] = useState(() => Number(localStorage.getItem('ck_erode')) || 0);
+  const [dilate, setDilate] = useState(() => Number(localStorage.getItem('ck_dilate')) || 0);
+  const [feather, setFeather] = useState(() => Number(localStorage.getItem('ck_feather')) || 0);
+  const [alphaContrast, setAlphaContrast] = useState(() => Number(localStorage.getItem('ck_alphaContrast')) || 0);
   
   // UI State
   const [selectedPreset, setSelectedPreset] = useState<string>("");
@@ -148,13 +169,22 @@ export default function RemovePage() {
     localStorage.setItem('ck_softness', softness.toString());
     localStorage.setItem('ck_enclosedTolerance', enclosedTolerance.toString());
     localStorage.setItem('ck_charName', charName);
+    localStorage.setItem('ck_keyingMode', keyingMode);
+    localStorage.setItem('ck_previewMode', previewMode);
+    localStorage.setItem('ck_despill', despill.toString());
+    localStorage.setItem('ck_erode', erode.toString());
+    localStorage.setItem('ck_dilate', dilate.toString());
+    localStorage.setItem('ck_feather', feather.toString());
+    localStorage.setItem('ck_alphaContrast', alphaContrast.toString());
+    localStorage.setItem('ck_chromaKeyColor', chromaKeyColor);
+    localStorage.setItem('ck_pickedColor', JSON.stringify(pickedColor));
     
     if (isInitialMount.current) {
         isInitialMount.current = false;
     } else {
         markSelectedFramesDirty();
     }
-  }, [tolerance, softness, enclosedTolerance, charName, chromaKeyColor, pickedColor]);
+  }, [tolerance, softness, enclosedTolerance, charName, chromaKeyColor, pickedColor, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -199,9 +229,11 @@ export default function RemovePage() {
     setCurrentFrame(idx);
   };
 
+  const maskCacheRef = useRef<Map<number, { width: number, height: number, version: number, data: Uint8Array }>>(new Map());
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>();
   const lastDrawTime = useRef<number>(0);
+  const activeStrokeRef = useRef<BrushStroke | null>(null);
 
   useEffect(() => {
     if (!isPlaying || frames.length === 0) return;
@@ -218,116 +250,58 @@ export default function RemovePage() {
     return () => cancelAnimationFrame(requestRef.current!);
   }, [isPlaying, frames, fps]);
 
-  const applyChromaKey = (data: Uint8ClampedArray, width: number, height: number, tol: number, soft: number, enclosedTol: number, colorMode: 'White' | 'Green' | 'Picker', pickedColor: {r: number, g: number, b: number}, exclusionMask?: Uint8Array) => {
-    if (colorMode === 'Green') {
-      const threshold = (tol / 100) * 200; // Adjusted threshold for new distance formula
-      for (let i = 0; i < data.length; i += 4) {
-        if (exclusionMask && exclusionMask[i / 4] === 1) continue;
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        
-        // Euclidean distance from pure green (0, 255, 0)
-        const dist = Math.sqrt(r * r + (255 - g) * (255 - g) + b * b);
-        
-        // Greenness penalty: If G is not significantly larger than R and B, it's not green.
-        // This prevents other colors (like skin tones or white) from being removed.
-        const greennessPenalty = Math.max(0, Math.max(r, b) - g + 30) * 8;
-        
-        const finalDist = dist + greennessPenalty;
-        
-        if (finalDist < threshold) {
-          data[i + 3] = 0;
-        } else if (finalDist < threshold + soft) {
-          const alpha = ((finalDist - threshold) / soft) * 255;
-          data[i + 3] = Math.min(data[i + 3], alpha);
-        }
-      }
-      return;
-    }
-
-    const visited = new Uint8Array(width * height);
-    const stack: number[] = [];
+  const generateStrokeMask = (width: number, height: number, strokes: BrushStroke[], frameIndex: number): Uint8Array | undefined => {
+    const activeStrokes = strokes.filter(s => s.targetFrameIndexes.includes(frameIndex));
+    if (activeStrokes.length === 0) return undefined;
     
-    const getDist = (r: number, g: number, b: number) => {
-      if (colorMode === 'Picker') {
-        const dist = Math.sqrt((pickedColor.r - r) ** 2 + (pickedColor.g - g) ** 2 + (pickedColor.b - b) ** 2);
-        return dist * (100 / 441); // Scale to 0-100 to match tolerance
-      }
-      const lumaDist = Math.sqrt((255 - r) ** 2 + (255 - g) ** 2 + (255 - b) ** 2);
-      const satPenalty = (Math.max(r, g, b) - Math.min(r, g, b)) * 4; 
-      const brightness = (r + g + b) / 3;
-      const darkPenalty = brightness < 235 ? (235 - brightness) * 8 : 0; 
-      return lumaDist + satPenalty + darkPenalty;
-    };
-
-    const processPixel = (idx: number) => {
-      if (visited[idx]) return;
-      if (exclusionMask && exclusionMask[idx] === 1) return;
-      visited[idx] = 1;
+    let mask = maskCacheRef.current.get(frameIndex);
+    if (!mask || mask.width !== width || mask.height !== height || mask.version !== activeStrokes.length) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
       
-      const r = data[idx * 4];
-      const g = data[idx * 4 + 1];
-      const b = data[idx * 4 + 2];
-      const dist = getDist(r, g, b);
-      
-      if (dist <= tol) {
-        data[idx * 4 + 3] = 0; 
-        stack.push(idx); 
-      } else if (dist <= tol + soft) {
-        const alpha = ((dist - tol) / soft) * 255;
-        data[idx * 4 + 3] = Math.min(data[idx * 4 + 3], alpha);
-      }
-    };
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, width, height);
 
-    const margin = 2;
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (x < margin || x >= width - margin || y < margin || y >= height - margin) {
-          const idx = y * width + x;
-          if (!visited[idx]) {
-            if (exclusionMask && exclusionMask[idx] === 1) continue;
-            const r = data[idx * 4];
-            const g = data[idx * 4 + 1];
-            const b = data[idx * 4 + 2];
-            if (getDist(r, g, b) <= tol) {
-               processPixel(idx);
-            }
-          }
+      for (const stroke of activeStrokes) {
+        ctx.beginPath();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = stroke.brushSize;
+        ctx.strokeStyle = stroke.tool === 'eraser' ? 'black' : 'white';
+        
+        const pts = stroke.points;
+        if (pts.length === 0) continue;
+        if (pts.length === 1) {
+           ctx.fillStyle = ctx.strokeStyle;
+           ctx.arc(pts[0].x, pts[0].y, stroke.brushSize / 2, 0, Math.PI * 2);
+           ctx.fill();
+        } else {
+           ctx.moveTo(pts[0].x, pts[0].y);
+           for (let i = 1; i < pts.length; i++) {
+             ctx.lineTo(pts[i].x, pts[i].y);
+           }
+           ctx.stroke();
         }
       }
-    }
 
-    while (stack.length > 0) {
-      const idx = stack.pop()!;
-      const x = idx % width;
-      const y = Math.floor(idx / width);
-
-      if (y > 0) processPixel(idx - width); 
-      if (y < height - 1) processPixel(idx + width); 
-      if (x > 0) processPixel(idx - 1); 
-      if (x < width - 1) processPixel(idx + 1); 
-    }
-
-    if (enclosedTol > 0) {
-      for (let i = 0; i < data.length; i += 4) {
-        const idx = i / 4;
-        if (!visited[idx]) {
-          if (exclusionMask && exclusionMask[idx] === 1) continue;
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          const dist = getDist(r, g, b);
-
-          if (dist <= enclosedTol) {
-            data[i + 3] = 0;
-          } else if (dist <= enclosedTol + soft) {
-            const alpha = ((dist - enclosedTol) / soft) * 255;
-            data[i + 3] = Math.min(data[i + 3], alpha);
-          }
-        }
+      const imgData = ctx.getImageData(0, 0, width, height).data;
+      const maskData = new Uint8Array(width * height);
+      for (let i = 0; i < maskData.length; i++) {
+        maskData[i] = imgData[i * 4] > 128 ? 1 : 0;
       }
+      mask = { width, height, version: activeStrokes.length, data: maskData };
+      maskCacheRef.current.set(frameIndex, mask);
     }
+    return mask.data;
+  };
+
+  const applyChromaKey = (data: Uint8ClampedArray, width: number, height: number, tol: number, soft: number, enclosedTol: number, colorMode: 'White' | 'Green' | 'Picker', pickedColor: {r: number, g: number, b: number}, exclusionMask?: Uint8Array) => {
+    applyChromaKeyAdvanced(data, width, height, {
+      keyingMode, previewMode, tolerance: tol, softness: soft, enclosedTolerance: enclosedTol,
+      chromaKeyColor: colorMode, pickedColor, despill, erode, dilate, feather, alphaContrast
+    }, exclusionMask);
   };
 
   useEffect(() => {
@@ -376,8 +350,15 @@ export default function RemovePage() {
       
       if (!useProcessed) {
         const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
-        const currentMask = exclusionMasks.get(currentFrame);
-        applyChromaKey(imageData.data, img.width, img.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
+        
+        let mask = generateStrokeMask(img.width, img.height, exclusionStrokes, currentFrame);
+        if (activeStrokeRef.current && activeStrokeRef.current.targetFrameIndexes.includes(currentFrame)) {
+           // mix active stroke
+           const tempStrokes = [...exclusionStrokes, activeStrokeRef.current];
+           mask = generateStrokeMask(img.width, img.height, tempStrokes, currentFrame);
+        }
+
+        applyChromaKey(imageData.data, img.width, img.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, mask);
         tempCtx.putImageData(imageData, 0, 0);
       }
       
@@ -394,7 +375,7 @@ export default function RemovePage() {
     };
     const targetFrame = frames[currentFrame];
     img.src = (targetFrame.processedUrl && !targetFrame.dirty) ? targetFrame.processedUrl : targetFrame.rawUrl;
-  }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionMasks, isBrushActive, isPlaying, lastPos, brushSize, drawTick]);
+  }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionStrokes, isBrushActive, isPlaying, lastPos, brushSize, drawTick, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPlaying || frames.length === 0) return;
@@ -462,7 +443,23 @@ export default function RemovePage() {
       const oy = (cy - offsetY) / ratio;
       lastPosRef.current = { x: ox, y: oy };
       setLastPos({ x: ox, y: oy });
-      performDraw(ox, oy, ox, oy, w, h);
+      
+      let targetIndices: number[] = [];
+      if (applyToSelectedRef.current) {
+        targetIndices = Array.from(selectedFrames);
+      } else {
+        targetIndices = [currentFrame];
+      }
+
+      activeStrokeRef.current = {
+        id: Math.random().toString(36).substr(2, 9),
+        targetFrameIndexes: targetIndices,
+        tool: activeTool,
+        points: [{ x: ox, y: oy }],
+        brushSize: brushSize / ratio, // actual brush size scaled to image
+        createdAt: Date.now()
+      };
+      setDrawTick(t => t + 1);
     };
 
     if (imgDims) {
@@ -506,8 +503,13 @@ export default function RemovePage() {
       setLastPos({ x: ox, y: oy });
       lastPosRef.current = { x: ox, y: oy };
       
-      if (isDrawing) {
-        performDraw(ox, oy, lx, ly, w, h);
+      if (isDrawing && activeStrokeRef.current) {
+        // Only append if it moved far enough to avoid huge arrays
+        const lastP = activeStrokeRef.current.points[activeStrokeRef.current.points.length - 1];
+        if (Math.hypot(lastP.x - ox, lastP.y - oy) > 2) {
+          activeStrokeRef.current.points.push({ x: ox, y: oy });
+          setDrawTick(t => t + 1);
+        }
       }
     };
 
@@ -524,11 +526,15 @@ export default function RemovePage() {
   };
 
   const handlePointerUp = () => {
-    if (isDrawing) markSelectedFramesDirty();
+    if (isDrawing) {
+      if (activeStrokeRef.current) {
+        setExclusionStrokes(prev => [...prev, activeStrokeRef.current!]);
+        activeStrokeRef.current = null;
+      }
+      markSelectedFramesDirty();
+    }
     setIsDrawing(false);
     applyToSelectedRef.current = false;
-    // Commit to global state by creating a new Map reference
-    setExclusionMasks(new Map(exclusionMasks));
   };
 
   const drawTickRef = useRef(0);
@@ -542,86 +548,6 @@ export default function RemovePage() {
     };
   }, []);
 
-  const performDraw = (ox: number, oy: number, px: number, py: number, imgW: number, imgH: number) => {
-    let targetIndices: number[] = [];
-    
-    if (applyToSelectedRef.current) {
-      targetIndices = Array.from(selectedFrames);
-    } else {
-      targetIndices = [currentFrame];
-    }
-    
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ratio = Math.min(canvas.width / imgW, canvas.height / imgH);
-    const oradius = (brushSize / 2) / ratio;
-
-    const minX = Math.max(0, Math.floor(Math.min(px, ox) - oradius));
-    const maxX = Math.min(imgW, Math.ceil(Math.max(px, ox) + oradius));
-    const minY = Math.max(0, Math.floor(Math.min(py, oy) - oradius));
-    const maxY = Math.min(imgH, Math.ceil(Math.max(py, oy) + oradius));
-
-    const offsetsToUpdate: number[] = [];
-    const dist = Math.hypot(ox - px, oy - py);
-    const steps = Math.max(1, Math.ceil(dist / Math.max(1, oradius / 3)));
-    const val = activeTool === 'brush' ? 1 : 0;
-
-    for (let y = minY; y < maxY; y++) {
-      for (let x = minX; x < maxX; x++) {
-        let inside = false;
-        for(let step = 0; step <= steps; step++) {
-          const t = steps === 0 ? 0 : step / steps;
-          const cx = px + t * (ox - px);
-          const cy = py + t * (oy - py);
-          const d = (x - cx)**2 + (y - cy)**2;
-          if (d <= oradius * oradius) {
-            inside = true;
-            break;
-          }
-        }
-        if (inside) {
-          offsetsToUpdate.push(y * imgW + x);
-        }
-      }
-    }
-
-    const targetSet = new Set(targetIndices);
-    const maskRefs = new Map<Uint8Array, { isSharedOutside: boolean }>();
-    exclusionMasks.forEach((m, i) => {
-      if (!maskRefs.has(m)) {
-        maskRefs.set(m, { isSharedOutside: !targetSet.has(i) });
-      } else if (!targetSet.has(i)) {
-        maskRefs.get(m)!.isSharedOutside = true;
-      }
-    });
-
-    targetIndices.forEach(idx => {
-      let mask = exclusionMasks.get(idx);
-      if (!mask || mask.length !== imgW * imgH) {
-        mask = new Uint8Array(imgW * imgH);
-        exclusionMasks.set(idx, mask);
-      } else if (maskRefs.get(mask)?.isSharedOutside) {
-        // Clone for copy-on-write
-        mask = new Uint8Array(mask);
-        exclusionMasks.set(idx, mask);
-        // New mask is isolated now
-        maskRefs.set(mask, { isSharedOutside: false });
-      }
-
-      for (let i = 0; i < offsetsToUpdate.length; i++) {
-        mask[offsetsToUpdate[i]] = val;
-      }
-    });
-
-    if (!animationFrameRef.current) {
-      animationFrameRef.current = requestAnimationFrame(() => {
-        setDrawTick(t => t + 1);
-        animationFrameRef.current = undefined;
-      });
-    }
-  };
-
 
 
   const extractFrames = async (file: File, targetFps: number) => {
@@ -633,7 +559,7 @@ export default function RemovePage() {
     setIsExtracting(true);
     setFrames([]);
     setIsPlaying(false);
-    setExclusionMasks(new Map());
+    setExclusionStrokes([]);
     
     try {
       console.log("Starting frame extraction for:", file.name);
@@ -723,7 +649,7 @@ export default function RemovePage() {
 
   const processFile = async (file: File) => {
     setImgDims(null); // Reset dimensions for new file
-    setExclusionMasks(new Map());
+    setExclusionStrokes([]);
     if (file.type.startsWith('image/')) {
       const url = URL.createObjectURL(file);
       const img = new Image();
@@ -835,7 +761,7 @@ export default function RemovePage() {
           
           if (!frame.processedUrl || frame.dirty) {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const currentMask = exclusionMasks.get(i);
+            const currentMask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, i);
             applyChromaKey(imageData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
             ctx.putImageData(imageData, 0, 0);
           }
@@ -883,7 +809,7 @@ export default function RemovePage() {
           
           if (!frame.processedUrl || frame.dirty) {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const currentMask = exclusionMasks.get(i);
+            const currentMask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, i);
             applyChromaKey(imageData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
             ctx.putImageData(imageData, 0, 0);
           }
@@ -1185,10 +1111,11 @@ export default function RemovePage() {
                   </p>
                   <button 
                     onClick={() => {
-                      const newMasks = new Map(exclusionMasks);
                       const targetIndices = selectedFrames.has(currentFrame) ? Array.from(selectedFrames) : [currentFrame];
-                      targetIndices.forEach(idx => newMasks.delete(idx));
-                      setExclusionMasks(newMasks);
+                      setExclusionStrokes(prev => prev.map(s => ({
+                        ...s,
+                        targetFrameIndexes: s.targetFrameIndexes.filter(idx => !targetIndices.includes(idx))
+                      })).filter(s => s.targetFrameIndexes.length > 0));
                     }}
                     className={`mt-3 w-full py-1.5 text-[10px] font-bold uppercase tracking-wider rounded border transition-colors ${
                       isDark ? 'border-white/10 hover:bg-white/5 text-white/60' : 'border-gray-200 hover:bg-gray-50 text-gray-500'
@@ -1303,6 +1230,91 @@ export default function RemovePage() {
                 </p>
               </div>
 
+              {/* Advanced Keying Toggle */}
+              <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
+                <button
+                  onClick={() => setShowAdvancedKeying(!showAdvancedKeying)}
+                  className="flex items-center justify-between w-full p-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5 rounded transition"
+                >
+                   <span>{lang === 'KR' ? '고급 키잉 설정 (Advanced Keying)' : 'Advanced Keying Settings'}</span>
+                   <ChevronDown className={`w-4 h-4 transition-transform ${showAdvancedKeying ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showAdvancedKeying && (
+                  <div className="mt-4 space-y-4 px-2">
+                     <div>
+                       <label className={labelClass}>{lang === 'KR' ? '미리보기 (Preview)' : 'Preview Mode'}</label>
+                       <select 
+                         value={previewMode} 
+                         onChange={(e: any) => setPreviewMode(e.target.value)} 
+                         className={`w-full mt-1 text-sm p-1.5 rounded border ${isDark ? 'bg-black border-white/10 text-white' : 'bg-white border-gray-200'}`}
+                       >
+                         <option value="result">Result (결과물)</option>
+                         <option value="original">Original (원본)</option>
+                         <option value="alpha">Alpha Mask (알파 마스크)</option>
+                         <option value="checkerboard">Checkerboard (투명 배경)</option>
+                         <option value="black">Black Background</option>
+                         <option value="white">White Background</option>
+                       </select>
+                     </div>
+
+                     <div>
+                       <label className={labelClass}>{lang === 'KR' ? '키잉 알고리즘' : 'Algorithm'}</label>
+                       <select 
+                         value={keyingMode} 
+                         onChange={(e: any) => setKeyingMode(e.target.value)} 
+                         className={`w-full mt-1 text-sm p-1.5 rounded border ${isDark ? 'bg-black border-white/10 text-white' : 'bg-white border-gray-200'}`}
+                       >
+                         <option value="greenAdvanced">Advanced Green</option>
+                         <option value="rgb">RGB Exact</option>
+                         <option value="hsv">HSV Range</option>
+                         <option value="luma">Luma Base</option>
+                       </select>
+                     </div>
+
+                     <div>
+                       <div className="flex justify-between mb-1">
+                         <label className={labelClass}>{lang === 'KR' ? '스필 제거 (Despill)' : 'Despill'}</label>
+                         <span className={badgeClass}>{despill}</span>
+                       </div>
+                       <input type="range" min="0" max="100" value={despill} onChange={(e) => setDespill(Number(e.target.value))} className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`} />
+                     </div>
+
+                     <div>
+                       <div className="flex justify-between mb-1">
+                         <label className={labelClass}>{lang === 'KR' ? '수축 (Erode)' : 'Erode'}</label>
+                         <span className={badgeClass}>{erode}</span>
+                       </div>
+                       <input type="range" min="0" max="10" step="1" value={erode} onChange={(e) => setErode(Number(e.target.value))} className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`} />
+                     </div>
+
+                     <div>
+                       <div className="flex justify-between mb-1">
+                         <label className={labelClass}>{lang === 'KR' ? '확장 (Dilate)' : 'Dilate'}</label>
+                         <span className={badgeClass}>{dilate}</span>
+                       </div>
+                       <input type="range" min="0" max="10" step="1" value={dilate} onChange={(e) => setDilate(Number(e.target.value))} className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`} />
+                     </div>
+
+                     <div>
+                       <div className="flex justify-between mb-1">
+                         <label className={labelClass}>{lang === 'KR' ? '블러 페더 (Feather)' : 'Feather'}</label>
+                         <span className={badgeClass}>{feather}</span>
+                       </div>
+                       <input type="range" min="0" max="20" step="1" value={feather} onChange={(e) => setFeather(Number(e.target.value))} className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`} />
+                     </div>
+
+                     <div>
+                       <div className="flex justify-between mb-1">
+                         <label className={labelClass}>{lang === 'KR' ? '알파 대비 (Alpha Contrast)' : 'Alpha Contrast'}</label>
+                         <span className={badgeClass}>{alphaContrast}</span>
+                       </div>
+                       <input type="range" min="-100" max="100" step="1" value={alphaContrast} onChange={(e) => setAlphaContrast(Number(e.target.value))} className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`} />
+                     </div>
+                  </div>
+                )}
+              </div>
+
               {/* Batch Processing Controls */}
               <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
                 <label className={labelClass}>{lang === 'KR' ? '적용 (Apply Process)' : lang === 'EN' ? 'Apply Process' : '適用する'}</label>
@@ -1325,14 +1337,34 @@ export default function RemovePage() {
                   </button>
                   
                   {batchProgress >= 0 && (
-                    <div className="mt-2">
-                      <div className="flex justify-between text-xs mb-1">
-                        <span>{lang === 'KR' ? '진행률' : 'Progress'}</span>
-                        <span>{batchProgress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5">
-                        <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style={{ width: `${batchProgress}%` }}></div>
-                      </div>
+                    <div className="mt-2 text-sm border hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20 p-3 rounded flex flex-col gap-2">
+                       <div className="flex justify-between items-center w-full">
+                         <div className="flex flex-col">
+                           <span className="font-bold">{lang === 'KR' ? '진행률' : 'Progress'} ({batchProgress}%)</span>
+                         </div>
+                         <button 
+                           onClick={cancelJob}
+                           className="text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 px-2 py-1 rounded text-xs px-3 font-semibold transition"
+                         >
+                           {lang === 'KR' ? '취소' : 'Cancel'}
+                         </button>
+                       </div>
+                       <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
+                         <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style={{ width: `${batchProgress}%` }}></div>
+                       </div>
+                    </div>
+                  )}
+
+                  {failedItems.length > 0 && (
+                    <div className="mt-2 p-2 rounded bg-red-100 dark:bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs text-left">
+                       <span className="font-bold block mb-1">
+                         {lang === 'KR' ? `${failedItems.length}개의 항목 처리 실패:` : `${failedItems.length} items failed:`}
+                       </span>
+                       <div className="max-h-24 overflow-y-auto w-full custom-scrollbar">
+                         {failedItems.map((failIdx, i) => (
+                           <div key={i}>Frame {failIdx}</div>
+                         ))}
+                       </div>
                     </div>
                   )}
                 </div>
@@ -1531,6 +1563,12 @@ export default function RemovePage() {
                 if (confirmed) {
                   await processTargetFrames(dirtyIndices);
                   setShowDownloadModal(true);
+                } else {
+                  alert(lang === 'KR' 
+                    ? "처리되지 않은 프레임이 있습니다. 화면 위의 '적용' 버튼을 눌러 모든 프레임을 처리해야 내보낼 수 있습니다." 
+                    : lang === 'EN'
+                    ? "Unprocessed frames detected. You must apply settings to ALL frames to export."
+                    : "未処理のフレームがあります。 すべてのフレームを適用するまでエクスポートできません。");
                 }
                 return;
               }
@@ -1699,15 +1737,16 @@ export default function RemovePage() {
                 
                 <button 
                   onClick={() => {
-                    const currentMask = exclusionMasks.get(currentFrame);
-                    if (!currentMask || !imgDims) return;
-                    const { w, h } = imgDims;
-                    const newMasks = new Map(exclusionMasks);
-                    selectedFrames.forEach(idx => {
-                      if (idx === currentFrame) return;
-                      newMasks.set(idx, currentMask);
+                    setExclusionStrokes(prev => {
+                      return prev.map(s => {
+                        if (s.targetFrameIndexes.includes(currentFrame)) {
+                          const newTargets = new Set([...s.targetFrameIndexes, ...selectedFrames]);
+                          return { ...s, targetFrameIndexes: Array.from(newTargets) };
+                        } else {
+                          return { ...s, targetFrameIndexes: s.targetFrameIndexes.filter(idx => !selectedFrames.has(idx)) };
+                        }
+                      }).filter(s => s.targetFrameIndexes.length > 0);
                     });
-                    setExclusionMasks(newMasks);
                   }}
                   disabled={selectedFrames.size <= 1}
                   className={`text-[9px] px-2 py-0.5 rounded border transition-all flex items-center gap-1 ${

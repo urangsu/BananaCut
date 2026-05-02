@@ -13,6 +13,15 @@ export interface Preset {
   segments: Segment[];
 }
 
+export interface BrushStroke {
+  id: string;
+  targetFrameIndexes: number[];
+  tool: 'brush' | 'eraser';
+  points: { x: number; y: number }[];
+  brushSize: number;
+  createdAt: number;
+}
+
 export type StudioFrame = {
   id: string;
   rawUrl: string;
@@ -84,8 +93,8 @@ interface StudioContextType {
   setSegments: React.Dispatch<React.SetStateAction<Segment[]>>;
   fps: number;
   setFps: React.Dispatch<React.SetStateAction<number>>;
-  exclusionMasks: Map<number, Uint8Array>;
-  setExclusionMasks: React.Dispatch<React.SetStateAction<Map<number, Uint8Array>>>;
+  exclusionStrokes: BrushStroke[];
+  setExclusionStrokes: React.Dispatch<React.SetStateAction<BrushStroke[]>>;
   presets: Preset[];
   setPresets: React.Dispatch<React.SetStateAction<Preset[]>>;
   flaggedIndices: number[];
@@ -97,7 +106,7 @@ const StudioContext = createContext<StudioContextType | undefined>(undefined);
 export const StudioProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [frames, setFrames] = useState<StudioFrame[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [exclusionMasks, setExclusionMasks] = useState<Map<number, Uint8Array>>(new Map());
+  const [exclusionStrokes, setExclusionStrokes] = useState<BrushStroke[]>([]);
 
   // Persistent States
   const [charName, setCharName] = useState(() => localStorage.getItem('ck_charName') || 'sloth');
@@ -132,7 +141,7 @@ export const StudioProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       charName, setCharName,
       segments, setSegments,
       fps, setFps,
-      exclusionMasks, setExclusionMasks,
+      exclusionStrokes, setExclusionStrokes,
       presets, setPresets,
       flaggedIndices, setFlaggedIndices
     }}>

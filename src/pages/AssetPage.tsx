@@ -3,13 +3,20 @@ import { useLanguage } from '../LanguageContext';
 import { useTheme } from '../ThemeContext';
 import { useStudio } from '../StudioContext';
 import { useFFmpeg } from '../FFmpegContext';
-import { Download, Film, LayoutGrid, Loader2, AlertTriangle } from 'lucide-react';
+import { Download, Film, LayoutGrid, Loader2, AlertTriangle, AlertCircle } from 'lucide-react';
+import { useBatchJob } from '../hooks/useBatchJob';
+import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
 
 export default function AssetPage() {
   const { lang } = useLanguage();
   const { theme } = useTheme();
-  const { frames, fps } = useStudio();
+  const { frames, setFrames, fps, exclusionStrokes } = useStudio();
   const { ffmpeg, isLoaded: isFFmpegLoaded } = useFFmpeg();
+  const { isProcessing: isBatchProcessing, progress: batchProgress, startJob, cancelJob } = useBatchJob();
+
+  const [showDirtyModal, setShowDirtyModal] = useState(false);
+  const [dirtyAction, setDirtyAction] = useState<(() => Promise<void>) | null>(null);
+  const [failedItems, setFailedItems] = useState<number[]>([]);
 
   // Video Export State
   const [isVideoProcessing, setIsVideoProcessing] = useState(false);
@@ -28,8 +35,78 @@ export default function AssetPage() {
 
   const isDark = theme === 'dark';
 
+  const processDirtyFrames = async (dirtyIndices: number[]) => {
+    setFailedItems([]);
+    const newFrames = [...frames];
+    
+    // Load config from localStorage
+    const params = {
+      keyingMode: (localStorage.getItem('ck_keyingMode') as any) || 'greenAdvanced',
+      previewMode: (localStorage.getItem('ck_previewMode') as any) || 'result',
+      tolerance: Number(localStorage.getItem('ck_tolerance')) || 30,
+      softness: Number(localStorage.getItem('ck_softness')) || 20,
+      enclosedTolerance: Number(localStorage.getItem('ck_enclosedTolerance')) || 10,
+      chromaKeyColor: (localStorage.getItem('ck_chromaKeyColor') as any) || 'White',
+      pickedColor: JSON.parse(localStorage.getItem('ck_pickedColor') || '{"r":255,"g":255,"b":255}'),
+      despill: Number(localStorage.getItem('ck_despill')) || 0,
+      erode: Number(localStorage.getItem('ck_erode')) || 0,
+      dilate: Number(localStorage.getItem('ck_dilate')) || 0,
+      feather: Number(localStorage.getItem('ck_feather')) || 0,
+      alphaContrast: Number(localStorage.getItem('ck_alphaContrast')) || 0,
+    };
+
+    await startJob<number, void>({
+      items: dirtyIndices,
+      delayMs: 0,
+      processItem: async (idx, resultIndex) => {
+         const frame = newFrames[idx];
+         const img = new Image();
+         img.src = frame.rawUrl;
+         await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+         
+         const canvas = document.createElement('canvas');
+         canvas.width = img.width;
+         canvas.height = img.height;
+         const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+         ctx.drawImage(img, 0, 0);
+         
+         const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
+         const mask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, idx);
+         applyChromaKeyAdvanced(imgData.data, canvas.width, canvas.height, params, mask);
+         ctx.putImageData(imgData, 0, 0);
+         
+         const blob = await new Promise<Blob|null>(resolve => canvas.toBlob(resolve, 'image/png'));
+         if (blob) {
+           const newUrl = URL.createObjectURL(blob);
+           if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
+           newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
+         }
+      },
+      onSuccess: () => setFrames(newFrames),
+      onPartialSuccess: (_, failed) => {
+        setFrames(newFrames);
+        setFailedItems(failed);
+      }
+    });
+  };
+
+  const checkDirtyAndRun = (runAction: () => Promise<void>) => {
+    const dirtyIndices = frames.map((f, i) => (!f.processedUrl || f.dirty) ? i : -1).filter(i => i !== -1);
+    if (dirtyIndices.length > 0) {
+      setDirtyAction(() => async () => {
+         await processDirtyFrames(dirtyIndices);
+         if (failedItems.length === 0) {
+            runAction();
+         }
+      });
+      setShowDirtyModal(true);
+      return;
+    }
+    runAction();
+  };
+
   // --- Feature A: Transparent Video Export ---
-  const handleExportVideo = async () => {
+  const executeExportVideo = async () => {
     if (!ffmpeg || !isFFmpegLoaded || frames.length === 0) return;
     
     setIsVideoProcessing(true);
@@ -80,8 +157,10 @@ export default function AssetPage() {
     }
   };
 
+  const handleExportVideo = () => checkDirtyAndRun(executeExportVideo);
+
   // --- Feature B: Sprite Sheet Generator ---
-  const handleExportSprite = async () => {
+  const executeExportSprite = async () => {
     if (frames.length === 0) return;
     
     setIsSpriteProcessing(true);
@@ -224,6 +303,8 @@ export default function AssetPage() {
       setIsSpriteProcessing(false);
     }
   };
+
+  const handleExportSprite = () => checkDirtyAndRun(executeExportSprite);
 
   return (
     <div className={`flex-1 overflow-y-auto p-4 lg:p-8 ${isDark ? 'bg-[#121212] text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -423,6 +504,73 @@ export default function AssetPage() {
           </div>
         )}
       </div>
+
+      {/* Dirty Frames Modal */}
+      {showDirtyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className={`p-6 rounded-2xl max-w-sm w-full mx-auto shadow-2xl relative ${isDark ? 'bg-[#1a1a1a] text-white' : 'bg-white text-gray-900'}`}>
+            <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+              <AlertCircle className="w-6 h-6 text-yellow-500" />
+              {lang === 'KR' ? '미적용 프레임 확인' : lang === 'EN' ? 'Unprocessed Frames' : '未適用フレームの確認'}
+            </h3>
+            <p className={`text-sm mb-6 ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+              {lang === 'KR' 
+                ? '크로마키가 적용되지 않은(dirty) 프레임이 있습니다. 다운로드 전에 모든 프레임에 설정을 렌더링해야 합니다.'
+                : lang === 'EN'
+                ? 'There are unprocessed (dirty) frames. All frames must be rendered with your settings before exporting.'
+                : 'クロマキーが適用されていない(dirty)フレームがあります。ダウンロードする前に、すべてのフレームに設定をレンダリングする必要があります。'}
+            </p>
+
+            {isBatchProcessing ? (
+              <div className="space-y-4">
+                <div className="flex justify-between text-sm">
+                  <span>{lang === 'KR' ? '렌더링 중...' : lang === 'EN' ? 'Rendering...' : 'レンダリング中...'}</span>
+                  <span>{batchProgress}%</span>
+                </div>
+                <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-gray-200'}`}>
+                  <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${batchProgress}%` }} />
+                </div>
+                {failedItems.length > 0 && (
+                  <p className="text-xs text-red-500">Failed frames: {failedItems.join(', ')}</p>
+                )}
+                <button
+                  onClick={cancelJob}
+                  className="w-full mt-2 py-2.5 rounded-xl font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none dark:border-white/20 dark:text-gray-300 dark:hover:bg-white/5 active:bg-gray-200 dark:active:bg-white/10"
+                >
+                  {lang === 'KR' ? '작업 취소' : lang === 'EN' ? 'Cancel Job' : 'キャンセル'}
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    setShowDirtyModal(false);
+                    setDirtyAction(null);
+                  }}
+                  className={`flex-1 py-2.5 rounded-xl font-medium transition-colors ${
+                    isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                  }`}
+                >
+                  {lang === 'KR' ? '취소' : lang === 'EN' ? 'Cancel' : 'キャンセル'}
+                </button>
+                <button 
+                  onClick={async () => {
+                    if (dirtyAction) {
+                       await dirtyAction();
+                       setShowDirtyModal(false);
+                    }
+                  }}
+                  className={`flex-1 py-2.5 rounded-xl font-medium transition-colors ${
+                    isDark ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  {lang === 'KR' ? '적용 및 계속' : lang === 'EN' ? 'Process & Continue' : '適用して続行'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
