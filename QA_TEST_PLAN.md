@@ -62,3 +62,12 @@
 │      0       │ 'processTargetFrames_applyChromaKey'   │  '13.10ms'  │   '14.52ms'   │  '320MB'   │
 └──────────────┴────────────────────────────────────────┴─────────────┴───────────────┴────────────┘
 ```
+
+## 2026-05-02: 8s Video Upload Regression Test
+- Uploaded 8s MP4 video.
+- `video-engine-loading` displayed first ('Loading video engine... first time may take 10-30s').
+- `video-extracting` displayed with frame count progress (e.g. `Extracting frames... 10 / 120`).
+- First frame appeared instantly on the main preview canvas.
+- Frame strip thumbnails loaded correctly without broken image icons.
+- Frame total count steadily increased to final count.
+- Selecting frames updated the preview successfully.

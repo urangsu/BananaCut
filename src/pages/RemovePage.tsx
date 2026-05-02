@@ -511,6 +511,8 @@ export default function RemovePage() {
 
 
 
+  const [extractionProgress, setExtractionProgress] = useState({ current: 0, total: 0 });
+
   const extractFrames = async (file: File, targetFps: number, engine: FFmpeg) => {
     if (!engine) {
       console.warn("FFmpeg engine not provided.");
@@ -522,6 +524,7 @@ export default function RemovePage() {
     setFrames([]);
     setIsPlaying(false);
     setExclusionStrokes([]);
+    setExtractionProgress({ current: 0, total: 0 });
     
     try {
       console.log("Starting frame extraction for:", file.name);
@@ -557,13 +560,20 @@ export default function RemovePage() {
       }
 
       console.log(`Extracted ${frameFiles.length} frames. Loading into memory...`);
+      setExtractionProgress({ current: 0, total: frameFiles.length });
       
       let frameWidth = 0;
       let frameHeight = 0;
-      if (frameFiles.length > 0) {
-          const data = await engine.readFile(frameFiles[0].name);
-          const blob = new Blob([data as any], { type: 'image/png' });
-          const url = URL.createObjectURL(blob);
+      const CHUNK_SIZE = 10;
+      const extractedFrames: import('../StudioContext').StudioFrame[] = [];
+
+      for (let i = 0; i < frameFiles.length; i++) {
+        const f = frameFiles[i];
+        const data = await engine.readFile(f.name);
+        const blob = new Blob([data as any], { type: 'image/png' });
+        const url = URL.createObjectURL(blob);
+        
+        if (i === 0) {
           const img = new Image();
           await new Promise((resolve, reject) => {
               img.onload = resolve;
@@ -572,14 +582,8 @@ export default function RemovePage() {
           });
           frameWidth = img.naturalWidth;
           frameHeight = img.naturalHeight;
-      }
+        }
 
-      const extractedFrames: import('../StudioContext').StudioFrame[] = [];
-      for (let i = 0; i < frameFiles.length; i++) {
-        const f = frameFiles[i];
-        const data = await engine.readFile(f.name);
-        const blob = new Blob([data as any], { type: 'image/png' });
-        const url = URL.createObjectURL(blob);
         extractedFrames.push({
           id: Math.random().toString(36).substring(7),
           rawUrl: url,
@@ -591,13 +595,19 @@ export default function RemovePage() {
         
         // Clean up FS to save memory
         await engine.deleteFile(f.name);
+
+        // Update UI every chunk or if it's the very first frame or last frame
+        if (i === 0 || (i + 1) % CHUNK_SIZE === 0 || i === frameFiles.length - 1) {
+          const currentFrames = [...extractedFrames];
+          setFrames(currentFrames);
+          setExtractionProgress({ current: i + 1, total: frameFiles.length });
+          if (i === 0) setCurrentFrame(0);
+        }
       }
       
       // Clean up input file
       await engine.deleteFile('input.mp4');
       
-      setFrames(extractedFrames);
-      setCurrentFrame(0);
       setIsPlaying(true);
       console.log("Extraction complete.");
       setUploadState('ready');
@@ -940,8 +950,8 @@ export default function RemovePage() {
                   )}
                   <span className="font-medium text-center">
                     {uploadState === 'image-loading' ? (lang === 'KR' ? '이미지 불러오는 중...' : 'Loading image...') :
-                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...') :
-                     uploadState === 'video-extracting' ? (lang === 'KR' ? '프레임 추출 중...' : 'Extracting frames...') :
+                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? '비디오 엔진 로딩 중... (최초 약 10~30초 소요)' : 'Loading video engine... first time may take 10-30s') :
+                     uploadState === 'video-extracting' ? (lang === 'KR' ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total}` : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total}`) :
                      uploadState === 'error' ? (lang === 'KR' ? '업로드 실패. 다시 시도해주세요.' : 'Upload failed. Try again.') :
                      uploadState === 'ready' ? `${frames.length} frames ready` :
                      (lang === 'KR' ? '파일 선택' : 'Select File')}
@@ -985,8 +995,8 @@ export default function RemovePage() {
                 
                 <p className={`mb-2 text-sm font-semibold ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
                     {uploadState === 'image-loading' ? (lang === 'KR' ? '이미지 불러오는 중...' : 'Loading image...') :
-                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...') :
-                     uploadState === 'video-extracting' ? (lang === 'KR' ? `프레임 추출 중 (${fps}fps)...` : `Extracting frames (${fps}fps)...`) :
+                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? '비디오 엔진 로딩 중... (최초 약 10~30초 소요)' : 'Loading video engine... first time may take 10-30s') :
+                     uploadState === 'video-extracting' ? (lang === 'KR' ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total}` : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total}`) :
                      uploadState === 'error' ? (lang === 'KR' ? '업로드 실패. 다시 시도해주세요.' : 'Upload failed. Try again.') :
                      uploadState === 'ready' ? `${frames.length} frames ready` :
                      (lang === 'KR' ? '파일 업로드 (클릭 또는 드래그)' : 'Click to upload or drag and drop')}
@@ -1652,7 +1662,12 @@ export default function RemovePage() {
                           : (isDark ? 'border-white/10 hover:border-white/30 opacity-60 hover:opacity-100' : 'border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100')
                       } ${currentFrame === idx ? 'ring-2 ring-inset ring-white/20' : ''}`}
                     >
-                      <img src={frame} alt={`Frame ${idx}`} className={`w-full h-full object-contain ${isDark ? 'bg-[#121212]' : 'bg-white'}`} />
+                      <img 
+                        src={frame.processedUrl && !frame.dirty ? frame.processedUrl : frame.rawUrl} 
+                        alt={`Frame ${idx}`} 
+                        className={`w-full h-full object-contain ${isDark ? 'bg-[#121212]' : 'bg-white'}`} 
+                        onError={(e) => { if (e.currentTarget.src !== frame.rawUrl) e.currentTarget.src = frame.rawUrl; }}
+                      />
                       {selectedFrames.has(idx) && (
                         <div className="absolute top-1 right-1 w-3 h-3 bg-purple-500 rounded-full border border-white shadow-sm" />
                       )}
