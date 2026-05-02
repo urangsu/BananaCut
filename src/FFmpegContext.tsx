@@ -62,20 +62,45 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           const start = Date.now();
           logDebug(`[FFmpeg] Loading from ${sourceName} ${baseURL} start...`);
 
-          const [coreURL, wasmURL] = await Promise.all([
+          const checkFile = async (url: string, expectedType: string) => {
+            try {
+              const res = await fetch(url, { method: 'HEAD' });
+              if (!res.ok) {
+                throw new Error(`HTTP ${res.status} ${res.statusText}`);
+              }
+              const contentType = res.headers.get('content-type');
+              if (contentType && !contentType.includes(expectedType)) {
+                logDebug(`[FFmpeg] Warning: Expected ${expectedType} for ${url}, got ${contentType}`);
+              }
+            } catch (e: any) {
+              throw new Error(`Failed to reach ${url}: ${e.message}`);
+            }
+          };
+
+          // Pre-flight checks
+          await Promise.all([
+            checkFile(`${baseURL}/ffmpeg-core.js`, 'javascript'),
+            checkFile(`${baseURL}/ffmpeg-core.wasm`, 'wasm'),
+            checkFile(`${baseURL}/ffmpeg-core.worker.js`, 'javascript'),
+          ]);
+
+          const [coreURL, wasmURL, workerURL] = await Promise.all([
             toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
+            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+            toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript')
           ]);
 
           await ffmpegInstance.load({
             coreURL,
-            wasmURL
+            wasmURL,
+            workerURL
           });
 
           logDebug(`[FFmpeg] Selected Source: ${sourceName}. Loaded in ${Date.now() - start}ms`);
         };
 
         const totalStart = Date.now();
+        let lastErrorMsg = '';
         try {
           await loadWithTimeout(
             () => loadCoreFromBase(localBaseURL, 'local'),
@@ -83,7 +108,8 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             'local domain'
           );
         } catch (localError: any) {
-          logDebug(`[FFmpeg] Local load failed: ${localError?.message || localError}`);
+          lastErrorMsg = localError?.message || String(localError);
+          logDebug(`[FFmpeg] Local load failed: ${lastErrorMsg}`);
           try {
              await loadWithTimeout(
               () => loadCoreFromBase('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm', 'jsdelivr'),
@@ -91,7 +117,8 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
               'jsdelivr'
             );
           } catch (jsdelivrError: any) {
-            logDebug(`[FFmpeg] jsdelivr load failed: ${jsdelivrError?.message || jsdelivrError}`);
+            lastErrorMsg = jsdelivrError?.message || String(jsdelivrError);
+            logDebug(`[FFmpeg] jsdelivr load failed: ${lastErrorMsg}`);
             try {
               await loadWithTimeout(
                 () => loadCoreFromBase('https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm', 'unpkg'),
@@ -99,8 +126,9 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 'unpkg'
               );
             } catch (unpkgError: any) {
-              logDebug(`[FFmpeg] unpkg load failed: ${unpkgError?.message || unpkgError}`);
-              throw new Error('All FFmpeg load sources failed.');
+              lastErrorMsg = unpkgError?.message || String(unpkgError);
+              logDebug(`[FFmpeg] unpkg load failed: ${lastErrorMsg}`);
+              throw new Error(`All FFmpeg load sources failed. Last error: ${lastErrorMsg}`);
             }
           }
         }
@@ -110,9 +138,14 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setLoadState('loaded');
         loadingPromiseRef.current = null;
         return ffmpegInstance;
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load FFmpeg:", err);
-        setError("비디오 엔진 로딩 실패 (Video engine loading failed)");
+        const isDebug = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
+        if (isDebug) {
+          setError(`비디오 엔진 로딩 실패 (Video engine loading failed)\nDetailed Error:\n${err?.message || err}`);
+        } else {
+          setError("비디오 엔진 로딩 실패 (Video engine loading failed)");
+        }
         setLoadState('error');
         loadingPromiseRef.current = null;
         return null;

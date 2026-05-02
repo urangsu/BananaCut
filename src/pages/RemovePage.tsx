@@ -971,7 +971,22 @@ export default function RemovePage() {
                      (lang === 'KR' ? '파일 선택' : 'Select File')}
                   </span>
                   <span className="text-xs opacity-60">MP4, MOV, PNG</span>
-                  {ffmpegError && uploadState === 'error' && <span className="text-xs text-red-500 mt-2">{ffmpegError}</span>}
+                  {ffmpegError && uploadState === 'error' && (
+                    <div className="mt-2 text-center w-full">
+                      <div className="text-[10px] text-red-500 whitespace-pre-wrap max-w-full overflow-hidden truncate">{ffmpegError}</div>
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setUploadState('idle');
+                          retryFFmpeg();
+                        }}
+                        className="mt-1 text-[10px] px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-600 dark:text-red-400 rounded transition-colors"
+                      >
+                        {lang === 'KR' ? '다시 로드' : 'Retry'}
+                      </button>
+                    </div>
+                  )}
                 </label>
               </div>
             </div>
@@ -1018,7 +1033,22 @@ export default function RemovePage() {
                 <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
                   {uploadState === 'error' ? (lang === 'KR' ? '비디오 대신 이미지를 업로드해보세요.' : 'Try a PNG sequence instead.') : 'MP4, MOV or PNG'}
                 </p>
-                {ffmpegError && uploadState === 'error' && <p className="mt-2 text-xs text-red-500">{ffmpegError}</p>}
+                {ffmpegError && uploadState === 'error' && (
+                  <div className="mt-3 flex flex-col items-center">
+                    <pre className="text-[10px] text-red-500 max-w-full overflow-x-auto whitespace-pre-wrap text-left bg-red-500/10 p-2 rounded border border-red-500/20">{ffmpegError}</pre>
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setUploadState('idle');
+                        retryFFmpeg();
+                      }}
+                      className="mt-2 text-xs px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-600 dark:text-red-400 rounded-md transition-colors font-medium border border-red-500/20"
+                    >
+                      {lang === 'KR' ? '엔진 다시 로드' : 'Retry Engine Load'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             
