@@ -49,7 +49,9 @@ export default function RemovePage() {
     flaggedIndices, setFlaggedIndices
   } = useStudio();
   
-  const [isExtracting, setIsExtracting] = useState(false);
+  type UploadState = 'idle' | 'image-loading' | 'video-engine-loading' | 'video-extracting' | 'ready' | 'error';
+  const [uploadState, setUploadState] = useState<UploadState>('idle');
+  const isExtracting = uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading';
   const { isProcessing: isBatchProcessing, progress: batchProgress, startJob, cancelJob } = useBatchJob();
   const [isProcessingLocal, setIsProcessingLocal] = useState(false);
   const isProcessing = isExtracting || isBatchProcessing || isProcessingLocal;
@@ -512,10 +514,11 @@ export default function RemovePage() {
   const extractFrames = async (file: File, targetFps: number, engine: FFmpeg) => {
     if (!engine) {
       console.warn("FFmpeg engine not provided.");
+      setUploadState('error');
       return;
     }
     
-    setIsExtracting(true);
+    setUploadState('video-extracting');
     setFrames([]);
     setIsPlaying(false);
     setExclusionStrokes([]);
@@ -597,12 +600,10 @@ export default function RemovePage() {
       setCurrentFrame(0);
       setIsPlaying(true);
       console.log("Extraction complete.");
-      
+      setUploadState('ready');
     } catch (error) {
       console.error("Error extracting frames:", error);
-      alert(lang === 'KR' ? "프레임 추출 실패. 콘솔을 확인해주세요." : lang === 'EN' ? "Failed to extract frames. Check console for details." : "フレームの抽出に失敗しました。詳細はコンソールを確認してください。");
-    } finally {
-      setIsExtracting(false);
+      setUploadState('error');
     }
   };
 
@@ -610,6 +611,7 @@ export default function RemovePage() {
     setImgDims(null); // Reset dimensions for new file
     setExclusionStrokes([]);
     if (file.type.startsWith('image/')) {
+      setUploadState('image-loading');
       const url = URL.createObjectURL(file);
       const img = new Image();
       await new Promise((resolve, reject) => {
@@ -628,15 +630,18 @@ export default function RemovePage() {
       setCurrentFrame(0);
       setIsPlaying(false);
       setVideoFile(file);
+      setUploadState('ready');
       return;
     }
     
     if (file.type.includes('video/mp4') || file.type.includes('video/quicktime')) {
+      setUploadState('video-engine-loading');
       let currentFFmpeg = ffmpeg;
       if (loadState !== 'loaded' || !currentFFmpeg) {
         currentFFmpeg = await loadFFmpeg();
       }
       if (!currentFFmpeg) {
+        setUploadState('error');
         return; // handle error UI
       }
       setVideoFile(file);
@@ -645,12 +650,15 @@ export default function RemovePage() {
     }
     
     alert(lang === 'KR' ? "MP4, MOV 또는 PNG 파일을 업로드해주세요." : lang === 'EN' ? "Please upload an MP4, MOV, or PNG file." : "MP4、MOV、またはPNGファイルをアップロードしてください。");
+    setUploadState('idle');
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
     await processFile(file);
+    input.value = '';
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -920,18 +928,26 @@ export default function RemovePage() {
                   onChange={handleFileUpload}
                   className="hidden" 
                   id="file-upload-mobile"
-                  disabled={isExtracting}
+                  disabled={uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading'}
                 />
-                <label htmlFor="file-upload-mobile" className={`cursor-pointer flex flex-col items-center gap-2 ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
-                  {isExtracting ? (
+                <label htmlFor="file-upload-mobile" className={`cursor-pointer flex flex-col items-center gap-2 ${(uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading') ? 'opacity-50 pointer-events-none' : ''}`}>
+                  {(uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading') ? (
                     <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-gray-600'}`} />
+                  ) : uploadState === 'error' ? (
+                    <Upload className={`w-8 h-8 ${isDark ? 'text-red-400' : 'text-red-500'}`} strokeWidth={1.5} />
                   ) : (
                     <Upload className={`w-8 h-8 ${isDark ? 'text-white/60' : 'text-gray-400'}`} strokeWidth={1.5} />
                   )}
-                  <span className="font-medium">{isExtracting ? (lang === 'KR' ? 'Processing...' : lang === 'EN' ? 'Processing...' : '処理中...') : (lang === 'KR' ? 'Select File' : lang === 'EN' ? 'Select File' : 'ファイルを選択')}</span>
+                  <span className="font-medium text-center">
+                    {uploadState === 'image-loading' ? (lang === 'KR' ? '이미지 불러오는 중...' : 'Loading image...') :
+                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...') :
+                     uploadState === 'video-extracting' ? (lang === 'KR' ? '프레임 추출 중...' : 'Extracting frames...') :
+                     uploadState === 'error' ? (lang === 'KR' ? '업로드 실패. 다시 시도해주세요.' : 'Upload failed. Try again.') :
+                     uploadState === 'ready' ? `${frames.length} frames ready` :
+                     (lang === 'KR' ? '파일 선택' : 'Select File')}
+                  </span>
                   <span className="text-xs opacity-60">MP4, MOV, PNG</span>
-                  {loadState === 'loading' && <span className="text-xs text-blue-400 mt-2">{lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...'}</span>}
-                  {ffmpegError && <span className="text-xs text-red-500 mt-2">{ffmpegError}</span>}
+                  {ffmpegError && uploadState === 'error' && <span className="text-xs text-red-500 mt-2">{ffmpegError}</span>}
                 </label>
               </div>
             </div>
@@ -956,27 +972,33 @@ export default function RemovePage() {
               onDrop={handleDrop}
             >
               <label className="absolute inset-0 w-full h-full cursor-pointer">
-                <input type="file" className="hidden" accept="video/mp4,video/quicktime,image/png" onChange={handleFileUpload} disabled={isExtracting} />
+                <input type="file" className="hidden" accept="video/mp4,video/quicktime,image/png" onChange={handleFileUpload} disabled={uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading'} />
               </label>
-              <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
-                {isExtracting ? (
+              <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none px-4 text-center">
+                {(uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading') ? (
                   <Loader2 className={`w-8 h-8 mb-3 animate-spin ${isDark ? 'text-blue-400' : 'text-gray-600'}`} />
+                ) : uploadState === 'error' ? (
+                  <Upload className={`w-8 h-8 mb-3 transition-colors ${isDark ? 'text-red-400' : 'text-red-500'}`} strokeWidth={1.5} />
                 ) : (
                   <Upload className={`w-8 h-8 mb-3 transition-colors ${isDragging ? accentIconClass : (isDark ? 'text-white/40' : 'text-gray-400')}`} strokeWidth={1.5} />
                 )}
-                <p className={`mb-2 text-sm ${isDark ? 'text-white/70' : 'text-gray-600'}`}><span className="font-semibold">{lang === 'KR' ? 'Click to upload' : lang === 'EN' ? 'Click to upload' : 'クリックしてアップロード'}</span> {lang === 'KR' ? 'or drag and drop' : lang === 'EN' ? 'or drag and drop' : 'またはドラッグ＆ドロップ'}</p>
-                <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>MP4, MOV or PNG</p>
-                {loadState === 'loading' && <p className="mt-2 text-xs text-blue-400">{lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...'}</p>}
-                {ffmpegError && <p className="mt-2 text-xs text-red-500">{ffmpegError}</p>}
+                
+                <p className={`mb-2 text-sm font-semibold ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                    {uploadState === 'image-loading' ? (lang === 'KR' ? '이미지 불러오는 중...' : 'Loading image...') :
+                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...') :
+                     uploadState === 'video-extracting' ? (lang === 'KR' ? `프레임 추출 중 (${fps}fps)...` : `Extracting frames (${fps}fps)...`) :
+                     uploadState === 'error' ? (lang === 'KR' ? '업로드 실패. 다시 시도해주세요.' : 'Upload failed. Try again.') :
+                     uploadState === 'ready' ? `${frames.length} frames ready` :
+                     (lang === 'KR' ? '파일 업로드 (클릭 또는 드래그)' : 'Click to upload or drag and drop')}
+                </p>
+                <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                  {uploadState === 'error' ? (lang === 'KR' ? '비디오 대신 이미지를 업로드해보세요.' : 'Try a PNG sequence instead.') : 'MP4, MOV or PNG'}
+                </p>
+                {ffmpegError && uploadState === 'error' && <p className="mt-2 text-xs text-red-500">{ffmpegError}</p>}
               </div>
             </div>
             
-            {isExtracting && (
-              <div className={`mt-4 flex items-center gap-3 p-3 rounded-lg text-sm ${isDark ? 'text-blue-400 bg-blue-500/10' : 'text-black bg-gray-100'}`}>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {lang === 'KR' ? `Extracting frames at ${fps}fps...` : lang === 'EN' ? `Extracting frames at ${fps}fps...` : `フレーム抽出中 (${fps}fps)...`}
-              </div>
-            )}
+
           </div>
 
           <div className={`order-3 ${panelClass}`}>
@@ -1449,7 +1471,7 @@ export default function RemovePage() {
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <div className="flex justify-between items-center mb-1">
-                            <label className={segmentLabelClass}>{seg.useFrames ? (lang === 'KR' ? 'Start (f)' : lang === 'EN' ? 'Start (f)' : '開始 (f)') : (lang === 'KR' ? 'Start (s)' : lang === 'EN' ? 'Start (s)' : '開始 (s)')} <span className="font-normal">{seg.useFrames ? (lang === 'KR' ? '(시작 프레임)' : lang === 'EN' ? '(Start Frame)' : '(開始フレーム)') : (lang === 'KR' ? '(시작 초)' : lang === 'EN' ? '(Start Second)' : '(開始秒)')}</span></label>
+                            <label className={segmentLabelClass}>{seg.useFrames ? 'START (f)' : 'START (s)'}</label>
                             <button 
                               onClick={() => updateSegment(idx, 'useFrames', !seg.useFrames)}
                               className="text-[9px] bg-white/10 px-1 rounded"
@@ -1466,7 +1488,9 @@ export default function RemovePage() {
                           />
                         </div>
                         <div>
-                          <label className={segmentLabelClass}>{seg.useFrames ? (lang === 'KR' ? 'End (f)' : lang === 'EN' ? 'End (f)' : '終了 (f)') : (lang === 'KR' ? 'End (s)' : lang === 'EN' ? 'End (s)' : '終了 (s)')} <span className="font-normal">{seg.useFrames ? (lang === 'KR' ? '(종료 프레임)' : lang === 'EN' ? '(End Frame)' : '(終了フレーム)') : (lang === 'KR' ? '(종료 초)' : lang === 'EN' ? '(End Second)' : '(終了秒)')}</span></label>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className={segmentLabelClass}>{seg.useFrames ? 'END (f)' : 'END (s)'}</label>
+                          </div>
                           <input 
                             type="number" 
                             step={seg.useFrames ? "1" : "0.1"}

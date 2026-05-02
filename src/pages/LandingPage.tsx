@@ -226,33 +226,30 @@ export default function LandingPage() {
 
           {/* Video Demo Section (For Users & Bots) */}
           <section className="max-w-5xl mx-auto space-y-6">
-            <div className={`aspect-video rounded-3xl flex items-center justify-center border overflow-hidden relative shadow-2xl ${isDark ? 'bg-black border-white/10' : 'bg-black border-gray-200'}`}>
-              {!iframeError ? (
-                <iframe 
-                  src="https://www.youtube.com/embed/rTOB6sX-zA8?start=34&autoplay=1&mute=1&loop=1&playlist=rTOB6sX-zA8" 
-                  className="w-full h-full object-cover"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allowFullScreen
-                  title="BananaCut Demo"
-                  onError={() => setIframeError(true)}
-                ></iframe>
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-gray-100 dark:bg-black/50">
-                  <PlaySquare className="w-16 h-16 mb-4 text-blue-500 opacity-80" />
-                  <p className="mb-6 max-w-sm text-lg text-gray-600 dark:text-gray-300">
-                    {lang === 'KR' ? '동영상을 불러올 수 없습니다. 원본 사이트에서 시청해주세요.' : lang === 'EN' ? 'Unable to load the video. Please watch it on the original site.' : '動画を読み込めませんでした。元のサイトでご覧ください。'}
-                  </p>
-                  <a 
-                    href="https://www.youtube.com/watch?v=rTOB6sX-zA8&t=34s" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors flex items-center gap-2"
-                  >
-                    Watch on YouTube
-                  </a>
-                </div>
-              )}
+            <div className={`aspect-video rounded-3xl flex items-center justify-center border overflow-hidden relative shadow-2xl group ${isDark ? 'bg-[#0a0a0a] border-white/10' : 'bg-gray-100 border-gray-200'}`}>
+              <img 
+                src="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg" 
+                alt="BananaCut Demo Thumbnail" 
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors pointer-events-none" />
+              <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+                <a 
+                  href="https://www.youtube.com/watch?v=rTOB6sX-zA8&t=34s" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-all flex items-center gap-3 shadow-[0_0_40px_rgba(220,38,38,0.5)] group-hover:scale-110 group-hover:shadow-[0_0_60px_rgba(220,38,38,0.8)] pointer-events-auto"
+                >
+                  <PlaySquare className="w-6 h-6" />
+                  {lang === 'KR' ? 'YouTube에서 데모 보기' : lang === 'EN' ? 'Watch demo on YouTube' : 'YouTubeでデモを見る'}
+                </a>
+                <p className={`mt-6 text-sm font-medium px-4 py-2 rounded-full backdrop-blur-md ${isDark ? 'text-white/80 bg-black/40' : 'text-gray-900 bg-white/60'}`}>
+                  {lang === 'KR' ? '클릭하면 새 탭에서 열립니다.' : lang === 'EN' ? 'Opens in a new tab.' : 'クリックすると新しいタブで開きます。'}
+                </p>
+              </div>
             </div>
             
             {/* Text description for SEO/Bots */}
