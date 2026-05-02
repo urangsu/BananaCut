@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { fetchFile } from '@ffmpeg/util';
 import { Upload, Play, Square, Download, Settings, Loader2, Sliders, ChevronDown, Brush, Eraser, MousePointer2, X, Flag, Pipette } from 'lucide-react';
 import JSZip from 'jszip';
 import { useTheme } from '../ThemeContext';
@@ -497,7 +497,6 @@ export default function RemovePage() {
     applyToSelectedRef.current = false;
   };
 
-  const drawTickRef = useRef(0);
   const animationFrameRef = useRef<number>();
 
   useEffect(() => {

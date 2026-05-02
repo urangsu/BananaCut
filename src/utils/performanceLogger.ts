@@ -1,13 +1,14 @@
+/// <reference types="vite/client" />
 export class PerfLogger {
   static measures = new Map<string, { start: number, times: number[] }>();
 
   static start(name: string) {
-    if (process.env.NODE_ENV !== 'development') return;
+    if (!import.meta.env.DEV) return;
     this.measures.set(name, { start: performance.now(), times: this.measures.get(name)?.times || [] });
   }
 
   static end(name: string) {
-    if (process.env.NODE_ENV !== 'development') return;
+    if (!import.meta.env.DEV) return;
     const measure = this.measures.get(name);
     if (!measure) return;
     const duration = performance.now() - measure.start;
