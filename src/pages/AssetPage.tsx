@@ -35,7 +35,7 @@ export default function AssetPage() {
 
   const isDark = theme === 'dark';
 
-  const processDirtyFrames = async (dirtyIndices: number[]) => {
+  const processDirtyFrames = async (dirtyIndices: number[]): Promise<number[]> => {
     setFailedItems([]);
     const newFrames = [...frames];
     
@@ -55,38 +55,47 @@ export default function AssetPage() {
       alphaContrast: Number(localStorage.getItem('ck_alphaContrast')) || 0,
     };
 
-    await startJob<number, void>({
-      items: dirtyIndices,
-      delayMs: 0,
-      processItem: async (idx, resultIndex) => {
-         const frame = newFrames[idx];
-         const img = new Image();
-         img.src = frame.rawUrl;
-         await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
-         
-         const canvas = document.createElement('canvas');
-         canvas.width = img.width;
-         canvas.height = img.height;
-         const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-         ctx.drawImage(img, 0, 0);
-         
-         const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
-         const mask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, idx);
-         applyChromaKeyAdvanced(imgData.data, canvas.width, canvas.height, params, mask);
-         ctx.putImageData(imgData, 0, 0);
-         
-         const blob = await new Promise<Blob|null>(resolve => canvas.toBlob(resolve, 'image/png'));
-         if (blob) {
-           const newUrl = URL.createObjectURL(blob);
-           if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
-           newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
-         }
-      },
-      onSuccess: () => setFrames(newFrames),
-      onPartialSuccess: (_, failed) => {
-        setFrames(newFrames);
-        setFailedItems(failed);
-      }
+    return new Promise((resolve) => {
+      startJob<number, void>({
+        items: dirtyIndices,
+        delayMs: 0,
+        processItem: async (idx, resultIndex) => {
+           const frame = newFrames[idx];
+           const img = new Image();
+           img.src = frame.rawUrl;
+           await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+           
+           const canvas = document.createElement('canvas');
+           canvas.width = img.width;
+           canvas.height = img.height;
+           const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+           ctx.drawImage(img, 0, 0);
+           
+           const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
+           const mask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, idx);
+           applyChromaKeyAdvanced(imgData.data, canvas.width, canvas.height, params, mask);
+           ctx.putImageData(imgData, 0, 0);
+           
+           const blob = await new Promise<Blob|null>(resolve => canvas.toBlob(resolve, 'image/png'));
+           if (blob) {
+             const newUrl = URL.createObjectURL(blob);
+             if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
+             newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
+           }
+        },
+        onSuccess: () => {
+          setFrames(newFrames);
+          resolve([]);
+        },
+        onPartialSuccess: (_, failed) => {
+          setFrames(newFrames);
+          setFailedItems(failed);
+          resolve(failed);
+        },
+        onError: () => {
+          resolve(dirtyIndices);
+        }
+      });
     });
   };
 
@@ -94,8 +103,8 @@ export default function AssetPage() {
     const dirtyIndices = frames.map((f, i) => (!f.processedUrl || f.dirty) ? i : -1).filter(i => i !== -1);
     if (dirtyIndices.length > 0) {
       setDirtyAction(() => async () => {
-         await processDirtyFrames(dirtyIndices);
-         if (failedItems.length === 0) {
+         const failed = await processDirtyFrames(dirtyIndices);
+         if (failed.length === 0) {
             runAction();
          }
       });
@@ -236,7 +245,17 @@ export default function AssetPage() {
       const finalHeight = rows * maxHeight + (rows + 1) * spacing;
       
       const metadata = {
-        frames: [] as any[],
+        frames: [] as Array<{
+          name: string;
+          x: number;
+          y: number;
+          w: number;
+          h: number;
+          sourceX?: number;
+          sourceY?: number;
+          sourceW?: number;
+          sourceH?: number;
+        }>,
         meta: {
           fps,
           columns: cols,

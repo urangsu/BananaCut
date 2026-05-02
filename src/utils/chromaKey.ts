@@ -78,8 +78,26 @@ export function applyChromaKeyAdvanced(data: Uint8ClampedArray, width: number, h
       if (keyingMode === 'rgb') {
          dist = Math.sqrt((0 - r)**2 + (255 - g)**2 + (0 - b)**2);
       } else if (keyingMode === 'hsv') {
-         const max = Math.max(r, g, b), min = Math.min(r, g, b);
-         dist = (255 - g) + (max - min) * 0.5;
+         const rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
+         const max = Math.max(rNorm, gNorm, bNorm), min = Math.min(rNorm, gNorm, bNorm);
+         const d = max - min;
+         let h = 0;
+         if (max !== min) {
+           switch (max) {
+             case rNorm: h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0); break;
+             case gNorm: h = (bNorm - rNorm) / d + 2; break;
+             case bNorm: h = (rNorm - gNorm) / d + 4; break;
+           }
+           h /= 6;
+         }
+         
+         let hDist = Math.abs(h - 1/3);
+         if (hDist > 0.5) hDist = 1 - hDist;
+         
+         const s = max === 0 ? 0 : d / max;
+         const v = max;
+         
+         dist = (hDist * 3 * 255) + ((1 - s) * 100) + ((1 - v) * 50);
       } else if (keyingMode === 'luma') {
          dist = Math.abs(g - ((r+b)/2)); 
          dist = 255 - dist * 2;
