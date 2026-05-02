@@ -29,13 +29,20 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           console.log("[FFmpeg Log]", message);
         });
         
-        // Use a more reliable CDN or multiple fallbacks if needed
-        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-        
-        await ffmpegInstance.load({
-          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-        });
+        try {
+          // Attempt local load first
+          await ffmpegInstance.load({
+            coreURL: '/ffmpeg/ffmpeg-core.js',
+            wasmURL: '/ffmpeg/ffmpeg-core.wasm'
+          });
+        } catch (localErr) {
+          console.log("[FFmpeg] Local load failed, falling back to CDN", localErr);
+          const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+          await ffmpegInstance.load({
+            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+          });
+        }
         
         if (isMounted) {
           setFFmpeg(ffmpegInstance);

@@ -3,15 +3,8 @@ import { Upload, Download, Loader2, ZoomIn, ZoomOut, MousePointer2, Paintbrush, 
 import JSZip from 'jszip';
 import { useLanguage } from '../LanguageContext';
 import { useTheme } from '../ThemeContext';
+import { useStudio, StudioFrame } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
-
-interface Frame {
-  id: string;
-  file: File;
-  url: string;
-  name: string;
-  modifiedDataUrl?: string;
-}
 
 interface Point {
   x: number;
@@ -21,7 +14,7 @@ interface Point {
 export default function RecoverPage() {
   const { lang } = useLanguage();
   const { theme } = useTheme();
-  const [frames, setFrames] = useState<Frame[]>([]);
+  const { frames, setFrames } = useStudio();
   const [selectedFrames, setSelectedFrames] = useState<Set<string>>(new Set());
   const [currentFrameId, setCurrentFrameId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -40,6 +33,22 @@ export default function RecoverPage() {
   const [activeTool, setActiveTool] = useState<'brush' | 'lasso' | 'eraser'>('brush');
   const [fillColor, setFillColor] = useState(() => localStorage.getItem('recover_fillColor') || '#ffffff');
   const [brushSize, setBrushSize] = useState(() => Number(localStorage.getItem('recover_brushSize')) || 20);
+  const [alphaThreshold, setAlphaThreshold] = useState(() => Number(localStorage.getItem('recover_alphaThreshold')) || 200);
+  
+  // History
+  type HistoryEntry = { frameId: string, undoUrl: string | undefined, redoUrl: string | undefined }[];
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyPointer, setHistoryPointer] = useState(-1);
+
+  const pushToHistory = useCallback((entry: HistoryEntry) => {
+    setHistory(prev => {
+      const newHist = prev.slice(0, historyPointer + 1);
+      newHist.push(entry);
+      if (newHist.length > 20) newHist.shift();
+      return newHist;
+    });
+    setHistoryPointer(prev => Math.min(19, prev + 1));
+  }, [historyPointer]);
   
   // Drawing State
   const [isDrawing, setIsDrawing] = useState(false);
@@ -56,7 +65,8 @@ export default function RecoverPage() {
     localStorage.setItem('recover_canvasHeight', canvasHeight.toString());
     localStorage.setItem('recover_fillColor', fillColor);
     localStorage.setItem('recover_brushSize', brushSize.toString());
-  }, [canvasWidth, canvasHeight, fillColor, brushSize]);
+    localStorage.setItem('recover_alphaThreshold', alphaThreshold.toString());
+  }, [canvasWidth, canvasHeight, fillColor, brushSize, alphaThreshold]);
 
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -103,14 +113,17 @@ export default function RecoverPage() {
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
     
-    const newFrames: Frame[] = [];
-    Array.from(files).forEach(file => {
+    const newFrames: StudioFrame[] = [];
+    const startIndex = frames.length;
+    Array.from(files).forEach((file, index) => {
       if (file.type.startsWith('image/')) {
         newFrames.push({
           id: Math.random().toString(36).substring(7),
-          file,
-          url: URL.createObjectURL(file),
-          name: file.name
+          rawUrl: URL.createObjectURL(file),
+          width: 0,
+          height: 0,
+          name: file.name,
+          sourceIndex: startIndex + index
         });
       }
     });
@@ -121,13 +134,20 @@ export default function RecoverPage() {
       img.onload = () => {
         const width = img.naturalWidth;
         const height = img.naturalHeight;
+        // set dimensions to all new frames
+        newFrames.forEach(f => {
+          f.width = width;
+          f.height = height;
+        });
         setCanvasWidth(width);
         setCanvasHeight(height);
         setDetectedResolution({ width, height });
         setShowResolutionToast(true);
         setTimeout(() => setShowResolutionToast(false), 3000);
+        
+        setFrames(prev => [...prev, ...newFrames]);
       };
-      img.src = firstFrame.url;
+      img.src = firstFrame.rawUrl;
 
       setFrames(prev => [...prev, ...newFrames]);
       if (!currentFrameId) {
@@ -215,7 +235,7 @@ export default function RecoverPage() {
       }
     };
 
-    const sourceUrl = frame.modifiedDataUrl || frame.url;
+    const sourceUrl = frame.processedUrl ?? frame.rawUrl;
     
     if (imageCache.current.has(sourceUrl)) {
       drawImageToCanvas(imageCache.current.get(sourceUrl)!);
@@ -316,8 +336,8 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
           if (isEraser) {
             data[pixelIndex + 3] = 0;
           } else {
-            // 스마트 채우기: 투명한 곳(알파값이 200 미만인 곳)에만 색을 채워 캐릭터 본체를 보호합니다.
-            if (data[pixelIndex + 3] < 200) {
+            // 스마트 채우기: 투명한 곳(알파값이 설정된 임계값 미만인 곳)에만 색을 채워 캐릭터 본체를 보호합니다.
+            if (data[pixelIndex + 3] < alphaThreshold) {
               data[pixelIndex] = rgb.r;
               data[pixelIndex + 1] = rgb.g;
               data[pixelIndex + 2] = rgb.b;
@@ -357,7 +377,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
         if (maskData[i + 3] > 0) {
           if (isEraser) {
             data[i + 3] = 0;
-          } else if (data[i + 3] < 200) {
+          } else if (data[i + 3] < alphaThreshold) {
             data[i] = rgb.r;
             data[i + 1] = rgb.g;
             data[i + 2] = rgb.b;
@@ -371,17 +391,51 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
 
   const applyToAllRef = useRef(false);
 
+  const handleUndo = useCallback(() => {
+    if (historyPointer < 0) return;
+    setHistoryPointer(p => p - 1);
+    setFrames(prev => prev.map(f => {
+      const edit = history[historyPointer].find(e => e.frameId === f.id);
+      if (edit) {
+        return { ...f, processedUrl: edit.undoUrl };
+      }
+      return f;
+    }));
+  }, [history, historyPointer, setFrames]);
+
+  const handleRedo = useCallback(() => {
+    if (historyPointer >= history.length - 1) return;
+    setHistoryPointer(p => p + 1);
+    setFrames(prev => prev.map(f => {
+      const edit = history[historyPointer + 1].find(e => e.frameId === f.id);
+      if (edit) {
+        return { ...f, processedUrl: edit.redoUrl };
+      }
+      return f;
+    }));
+  }, [history, historyPointer, setFrames]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === '[') {
         setBrushSize(prev => Math.max(1, prev - 5));
       } else if (e.key === ']') {
         setBrushSize(prev => Math.min(100, prev + 5));
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleUndo, handleRedo]);
 
   const performBatchFill = async (targetFrameIds: string[], mask: boolean[] | null, brushPath: Point[] | null, isEraser: boolean = false) => {
     const updates = new Map<string, string>();
@@ -396,7 +450,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
       const currentFrame = frames.find(f => f.id === frameId);
       if (!currentFrame) continue;
 
-      const sourceUrl = currentFrame.modifiedDataUrl || currentFrame.url;
+      const sourceUrl = currentFrame.processedUrl ?? currentFrame.rawUrl;
       
       let img = imageCache.current.get(sourceUrl);
       if (!img) {
@@ -418,17 +472,29 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
       imageData = applyFillToImageData(imageData, mask, brushPath, isEraser);
       tempCtx.putImageData(imageData, 0, 0);
 
-      const newUrl = tempCanvas.toDataURL('image/png');
-      updates.set(frameId, newUrl);
+      const blob = await new Promise<Blob | null>(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+      if (blob) {
+        const newUrl = URL.createObjectURL(blob);
+        updates.set(frameId, newUrl);
+      }
 
       if (i > 0 && i % 5 === 0) {
         await new Promise(resolve => setTimeout(resolve, 0));
       }
     }
 
-    setFrames(prev => prev.map(f => 
-      updates.has(f.id) ? { ...f, modifiedDataUrl: updates.get(f.id)! } : f
-    ));
+    const historyEntry = targetFrameIds.map(id => {
+      const frame = frames.find(f => f.id === id);
+      return { frameId: id, undoUrl: frame?.processedUrl, redoUrl: updates.get(id) };
+    });
+    pushToHistory(historyEntry);
+
+    setFrames(prev => prev.map(f => {
+      if (updates.has(f.id)) {
+        return { ...f, processedUrl: updates.get(f.id)! };
+      }
+      return f;
+    }));
   };
 
   const performFill = async (frameId: string, mask: boolean[] | null, brushPath: Point[] | null, isEraser: boolean = false) => {
@@ -454,7 +520,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
     for (const frameId of targetFrames) {
       const frame = frames.find(f => f.id === frameId);
       if (!frame) continue;
-      const sourceUrl = frame.modifiedDataUrl || frame.url;
+      const sourceUrl = frame.processedUrl ?? frame.rawUrl;
       let img = imageCache.current.get(sourceUrl);
       if (!img) {
         img = await new Promise<HTMLImageElement>((resolve) => {
@@ -471,7 +537,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
       const imageData = tempCtx.getImageData(0, 0, canvasWidth, canvasHeight);
       const data = imageData.data;
       for (let i = 0; i < data.length; i += 4) {
-        if (data[i + 3] < 200) {
+        if (data[i + 3] < alphaThreshold) {
           data[i] = rgb.r;
           data[i + 1] = rgb.g;
           data[i + 2] = rgb.b;
@@ -479,10 +545,27 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
         }
       }
       tempCtx.putImageData(imageData, 0, 0);
-      updates.set(frameId, tempCanvas.toDataURL('image/png'));
+      const blob = await new Promise<Blob | null>(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+      if (blob) {
+        updates.set(frameId, URL.createObjectURL(blob));
+      }
+      
+      // Yield to main thread
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
 
-    setFrames(prev => prev.map(f => updates.has(f.id) ? { ...f, modifiedDataUrl: updates.get(f.id)! } : f));
+    const historyEntry = targetFrames.map(id => {
+      const frame = frames.find(f => f.id === id);
+      return { frameId: id, undoUrl: frame?.processedUrl, redoUrl: updates.get(id) };
+    });
+    pushToHistory(historyEntry);
+
+    setFrames(prev => prev.map(f => {
+      if (updates.has(f.id)) {
+        return { ...f, processedUrl: updates.get(f.id)! };
+      }
+      return f;
+    }));
     setIsProcessing(false);
     trackEvent('Fill_All');
   };
@@ -498,7 +581,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
       } else {
         const frame = frames.find(f => f.id === currentFrameId);
         if (frame) {
-          const sourceUrl = frame.modifiedDataUrl || frame.url;
+          const sourceUrl = frame.processedUrl ?? frame.rawUrl;
           const img = imageCache.current.get(sourceUrl);
           if (img) {
             const tempCanvas = document.createElement('canvas');
@@ -625,7 +708,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
       const zip = new JSZip();
       
       for (const frame of frames) {
-        const sourceUrl = frame.modifiedDataUrl || frame.url;
+        const sourceUrl = frame.processedUrl ?? frame.rawUrl;
         const response = await fetch(sourceUrl);
         const blob = await response.blob();
         
@@ -670,17 +753,37 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
           <p className={`${textSecondary} mt-2 text-sm`}>{lang === 'KR' ? 'Smart Alpha Fill & Sequence Recovery' : lang === 'EN' ? 'Smart Alpha Fill & Sequence Recovery' : 'スマートアルファ塗りつぶし＆シーケンス復旧'}</p>
         </div>
         {frames.length > 0 && (
-          <button 
-            onClick={clearFrames}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              theme === 'dark' 
-                ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' 
-                : 'bg-red-50 text-red-600 hover:bg-red-100'
-            }`}
-          >
-            <Trash2 className="w-4 h-4" />
-            {lang === 'KR' ? 'Clear All' : lang === 'EN' ? 'Clear All' : 'すべてクリア'}
-          </button>
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center rounded-lg p-1 mr-4 ${theme === 'dark' ? 'bg-white/5 border border-white/10' : 'bg-gray-100 border border-gray-200'}`}>
+              <button 
+                onClick={handleUndo}
+                disabled={historyPointer < 0}
+                className={`p-1.5 rounded-md transition-colors disabled:opacity-30 ${theme === 'dark' ? 'hover:bg-white/10 text-white' : 'hover:bg-white text-gray-900 bg-transparent'}`}
+                title="Undo (Ctrl+Z)"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={handleRedo}
+                disabled={historyPointer >= history.length - 1}
+                className={`p-1.5 rounded-md transition-colors disabled:opacity-30 ${theme === 'dark' ? 'hover:bg-white/10 text-white' : 'hover:bg-white text-gray-900 bg-transparent'}`}
+                title="Redo (Ctrl+Y)"
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+            </div>
+            <button 
+              onClick={clearFrames}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' 
+                  : 'bg-red-50 text-red-600 hover:bg-red-100'
+              }`}
+            >
+              <Trash2 className="w-4 h-4" />
+              {lang === 'KR' ? 'Clear All' : lang === 'EN' ? 'Clear All' : 'すべてクリア'}
+            </button>
+          </div>
         )}
       </header>
 
@@ -922,6 +1025,21 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                 </div>
               )}
 
+              <div className={`p-4 rounded-xl border mb-4 ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex justify-between items-center mb-2">
+                  <label className={`block text-[10px] ${textMuted} uppercase tracking-tighter`}>{lang === 'KR' ? 'Alpha Threshold' : lang === 'EN' ? 'Alpha Threshold' : 'アルファしきい値'}</label>
+                  <span className={`text-xs font-mono font-bold ${theme === 'dark' ? 'text-white/80' : 'text-black'}`}>{alphaThreshold}</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="255" 
+                  value={alphaThreshold}
+                  onChange={(e) => setAlphaThreshold(Number(e.target.value))}
+                  className={`w-full ${theme === 'dark' ? 'accent-white' : 'accent-black'}`}
+                />
+              </div>
+
               <button 
                 onClick={applyToAllSelected}
                 className={`w-full border font-medium py-2.5 rounded-lg text-sm transition-all flex flex-col items-center justify-center gap-0.5 ${
@@ -1069,7 +1187,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
                         : 'border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={frame.modifiedDataUrl || frame.url} alt={frame.name} className={`w-full h-full object-contain ${theme === 'dark' ? 'bg-[#121212]' : 'bg-white'}`} />
+                  <img src={frame.processedUrl ?? frame.rawUrl} alt={frame.name} className={`w-full h-full object-contain ${theme === 'dark' ? 'bg-[#121212]' : 'bg-white'}`} />
                   <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm p-1">
                     <p className="text-[9px] text-white/80 truncate text-center font-mono">{frame.name}</p>
                   </div>

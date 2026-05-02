@@ -8,7 +8,7 @@ import { Download, Film, LayoutGrid, Loader2, AlertTriangle } from 'lucide-react
 export default function AssetPage() {
   const { lang } = useLanguage();
   const { theme } = useTheme();
-  const { frames } = useStudio();
+  const { frames, fps } = useStudio();
   const { ffmpeg, isLoaded: isFFmpegLoaded } = useFFmpeg();
 
   // Video Export State
@@ -20,8 +20,10 @@ export default function AssetPage() {
   const [columns, setColumns] = useState<number>(4);
   const [spacing, setSpacing] = useState<number>(0);
   const [autoCrop, setAutoCrop] = useState<boolean>(true);
+  const [alphaThreshold, setAlphaThreshold] = useState<number>(10);
   const [isSpriteProcessing, setIsSpriteProcessing] = useState(false);
   const [spriteUrl, setSpriteUrl] = useState<string | null>(null);
+  const [spriteJson, setSpriteJson] = useState<string | null>(null);
   const [spriteWarning, setSpriteWarning] = useState<string | null>(null);
 
   const isDark = theme === 'dark';
@@ -38,7 +40,7 @@ export default function AssetPage() {
       // Write frames to FFmpeg FS
       for (let i = 0; i < frames.length; i++) {
         const frame = frames[i];
-        const url = frame.modifiedDataUrl || frame.url;
+        const url = frame.processedUrl ?? frame.rawUrl;
         const response = await fetch(url);
         const buffer = await response.arrayBuffer();
         await ffmpeg.writeFile(`frame_${i.toString().padStart(4, '0')}.png`, new Uint8Array(buffer));
@@ -51,7 +53,7 @@ export default function AssetPage() {
       // Encode to WebM with alpha channel
       // -c:v libvpx-vp9 -pix_fmt yuva420p -auto-alt-ref 0
       await ffmpeg.exec([
-        '-framerate', '30',
+        '-framerate', fps.toString(),
         '-i', 'frame_%04d.png',
         '-c:v', 'libvpx-vp9',
         '-pix_fmt', 'yuva420p',
@@ -84,6 +86,7 @@ export default function AssetPage() {
     
     setIsSpriteProcessing(true);
     setSpriteUrl(null);
+    setSpriteJson(null);
     setSpriteWarning(null);
 
     try {
@@ -93,7 +96,7 @@ export default function AssetPage() {
           const img = new Image();
           img.onload = () => resolve(img);
           img.onerror = reject;
-          img.src = frame.modifiedDataUrl || frame.url;
+          img.src = frame.processedUrl ?? frame.rawUrl;
         });
       }));
 
@@ -121,7 +124,7 @@ export default function AssetPage() {
             for (let y = 0; y < img.height; y++) {
               for (let x = 0; x < img.width; x++) {
                 const alpha = data[(y * img.width + x) * 4 + 3];
-                if (alpha > 0) {
+                if (alpha > alphaThreshold) {
                   hasPixel = true;
                   if (x < minX) minX = x;
                   if (x > maxX) maxX = x;
@@ -152,6 +155,18 @@ export default function AssetPage() {
 
       const finalWidth = cols * maxWidth + (cols + 1) * spacing;
       const finalHeight = rows * maxHeight + (rows + 1) * spacing;
+      
+      const metadata = {
+        frames: [] as any[],
+        meta: {
+          fps,
+          columns: cols,
+          rows,
+          spacing,
+          width: finalWidth,
+          height: finalHeight
+        }
+      };
 
       if (finalWidth > 8192 || finalHeight > 8192) {
         setSpriteWarning(lang === 'KR' ? '경고: 캔버스 크기가 8192px를 초과하여 일부 브라우저에서 깨질 수 있습니다.' : lang === 'EN' ? 'Warning: Canvas size exceeds 8192px, which may cause rendering issues in some browsers.' : '警告: キャンバスサイズが8192pxを超えているため、一部のブラウザで表示が崩れる可能性があります。');
@@ -174,12 +189,27 @@ export default function AssetPage() {
           const dy = spacing + row * (maxHeight + spacing) + (maxHeight - box.h) / 2;
 
           ctx.drawImage(img, box.x, box.y, box.w, box.h, dx, dy, box.w, box.h);
+          
+          metadata.frames.push({
+            name: frames[index].name || `frame_${index.toString().padStart(4, '0')}`,
+            x: Math.floor(dx),
+            y: Math.floor(dy),
+            w: box.w,
+            h: box.h,
+            sourceX: box.x,
+            sourceY: box.y,
+            sourceW: box.w,
+            sourceH: box.h
+          });
         });
 
         canvas.toBlob((blob) => {
           if (blob) {
             const url = URL.createObjectURL(blob);
             setSpriteUrl(url);
+            
+            const jsonBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+            setSpriteJson(URL.createObjectURL(jsonBlob));
           }
           setIsSpriteProcessing(false);
           // Free memory
@@ -325,6 +355,24 @@ export default function AssetPage() {
                     {lang === 'KR' ? 'Auto-Crop (투명 여백 자동 제거)' : lang === 'EN' ? 'Auto-Crop (Trim transparent edges)' : 'Auto-Crop (透明な余白を自動削除)'}
                   </span>
                 </label>
+                
+                {autoCrop && (
+                  <div className="pl-6">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className={`text-xs font-medium ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                        {lang === 'KR' ? '알파 임계값 (Alpha Threshold)' : lang === 'EN' ? 'Alpha Threshold' : 'アルファしきい値'}
+                      </label>
+                      <span className={`text-xs font-mono ${isDark ? 'text-white/80' : 'text-gray-700'}`}>{alphaThreshold}</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" max="255" 
+                      value={alphaThreshold}
+                      onChange={(e) => setAlphaThreshold(Number(e.target.value))}
+                      className="w-full accent-green-500"
+                    />
+                  </div>
+                )}
               </div>
 
               {spriteWarning && (
@@ -341,14 +389,26 @@ export default function AssetPage() {
                     {lang === 'KR' ? '처리 중...' : lang === 'EN' ? 'Processing...' : '処理中...'}
                   </div>
                 ) : spriteUrl ? (
-                  <a 
-                    href={spriteUrl} 
-                    download="bananacut_spritesheet.png"
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all bg-green-600 text-white hover:bg-green-700"
-                  >
-                    <Download className="w-5 h-5" />
-                    {lang === 'KR' ? 'PNG 다운로드' : lang === 'EN' ? 'Download PNG' : 'PNG ダウンロード'}
-                  </a>
+                  <div className="flex flex-col gap-2">
+                    <a 
+                      href={spriteUrl} 
+                      download="bananacut_spritesheet.png"
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all bg-green-600 text-white hover:bg-green-700"
+                    >
+                      <Download className="w-5 h-5" />
+                      {lang === 'KR' ? 'PNG 다운로드' : lang === 'EN' ? 'Download PNG' : 'PNG ダウンロード'}
+                    </a>
+                    {spriteJson && (
+                      <a 
+                        href={spriteJson} 
+                        download="bananacut_spritesheet.json"
+                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${isDark ? 'bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}
+                      >
+                        <Download className="w-5 h-5" />
+                        {lang === 'KR' ? 'JSON (메타데이터) 다운로드' : lang === 'EN' ? 'Download JSON (Metadata)' : 'JSON ダウンロード'}
+                      </a>
+                    )}
+                  </div>
                 ) : (
                   <button 
                     onClick={handleExportSprite}

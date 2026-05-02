@@ -48,6 +48,7 @@ export default function RemovePage() {
   
   const [isExtracting, setIsExtracting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(-1);
   const [isDragging, setIsDragging] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
@@ -82,12 +83,29 @@ export default function RemovePage() {
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
   const lastPosRef = useRef({ x: 0, y: 0 });
 
+  const isInitialMount = useRef(true);
+
+  const markSelectedFramesDirty = () => {
+    setFrames(prev => prev.map((f, i) => {
+      if (selectedFrames.has(i) && f.processedUrl && !f.dirty) {
+        return { ...f, dirty: true };
+      }
+      return f;
+    }));
+  };
+
   useEffect(() => {
     localStorage.setItem('ck_tolerance', tolerance.toString());
     localStorage.setItem('ck_softness', softness.toString());
     localStorage.setItem('ck_enclosedTolerance', enclosedTolerance.toString());
     localStorage.setItem('ck_charName', charName);
-  }, [tolerance, softness, enclosedTolerance, charName]);
+    
+    if (isInitialMount.current) {
+        isInitialMount.current = false;
+    } else {
+        markSelectedFramesDirty();
+    }
+  }, [tolerance, softness, enclosedTolerance, charName, chromaKeyColor, pickedColor]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -296,6 +314,9 @@ export default function RemovePage() {
       const offsetX = (canvas.width - newW) / 2;
       const offsetY = (canvas.height - newH) / 2;
       
+      const targetFrame = frames[currentFrame];
+      const useProcessed = targetFrame.processedUrl && !targetFrame.dirty;
+      
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = img.width;
       tempCanvas.height = img.height;
@@ -304,10 +325,12 @@ export default function RemovePage() {
       
       tempCtx.drawImage(img, 0, 0);
       
-      const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
-      const currentMask = exclusionMasks.get(currentFrame);
-      applyChromaKey(imageData.data, img.width, img.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
-      tempCtx.putImageData(imageData, 0, 0);
+      if (!useProcessed) {
+        const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
+        const currentMask = exclusionMasks.get(currentFrame);
+        applyChromaKey(imageData.data, img.width, img.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
+        tempCtx.putImageData(imageData, 0, 0);
+      }
       
       ctx.drawImage(tempCanvas, offsetX, offsetY, newW, newH);
 
@@ -320,7 +343,8 @@ export default function RemovePage() {
         ctx.stroke();
       }
     };
-    img.src = frames[currentFrame];
+    const targetFrame = frames[currentFrame];
+    img.src = (targetFrame.processedUrl && !targetFrame.dirty) ? targetFrame.processedUrl : targetFrame.rawUrl;
   }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionMasks, isBrushActive, isPlaying, lastPos, brushSize, drawTick]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -358,7 +382,7 @@ export default function RemovePage() {
           }
         }
       };
-      img.src = frames[currentFrame];
+      img.src = frames[currentFrame].rawUrl;
       return;
     }
 
@@ -400,7 +424,7 @@ export default function RemovePage() {
         setImgDims({ w: img.width, h: img.height });
         updateStart(img.width, img.height);
       };
-      img.src = frames[currentFrame];
+      img.src = frames[currentFrame].rawUrl;
     }
   };
 
@@ -446,11 +470,12 @@ export default function RemovePage() {
         setImgDims({ w: img.width, h: img.height });
         updatePos(img.width, img.height);
       };
-      img.src = frames[currentFrame];
+      img.src = frames[currentFrame].rawUrl;
     }
   };
 
   const handlePointerUp = () => {
+    if (isDrawing) markSelectedFramesDirty();
     setIsDrawing(false);
     applyToSelectedRef.current = false;
     // Commit to global state by creating a new Map reference
@@ -532,6 +557,64 @@ export default function RemovePage() {
     }
   };
 
+  const processTargetFrames = async (targetIndices: number[]) => {
+    if (targetIndices.length === 0) return;
+    setIsProcessing(true);
+    setBatchProgress(0);
+    
+    // Configurable chunk size
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+    const chunkSize = extendsChunkSize ? (isMobile ? 5 : 10) : 5;
+    const newFrames = [...frames];
+    const targetSet = new Set(targetIndices);
+    
+    let processedCount = 0;
+    
+    for (let i = 0; i < targetIndices.length; i += chunkSize) {
+      const chunk = targetIndices.slice(i, i + chunkSize);
+      
+      await new Promise(resolve => setTimeout(resolve, 0)); // yield to main thread
+      
+      for (const idx of chunk) {
+         const frame = newFrames[idx];
+         
+         const img = new Image();
+         img.src = frame.rawUrl;
+         await new Promise((resolve, reject) => { 
+           img.onload = resolve; 
+           img.onerror = reject; 
+         });
+         
+         const canvas = document.createElement('canvas');
+         canvas.width = img.width;
+         canvas.height = img.height;
+         const ctx = canvas.getContext('2d', { willReadFrequently: true });
+         if (!ctx) continue;
+         
+         ctx.drawImage(img, 0, 0);
+         const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
+         const mask = exclusionMasks.get(idx);
+         applyChromaKey(imgData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, mask);
+         ctx.putImageData(imgData, 0, 0);
+         
+         const blob = await new Promise<Blob|null>(resolve => canvas.toBlob(resolve, 'image/png'));
+         if (blob) {
+           const newUrl = URL.createObjectURL(blob);
+           if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
+           newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
+         }
+      }
+      processedCount += chunk.length;
+      setBatchProgress(Math.round((processedCount / targetIndices.length) * 100));
+    }
+    
+    setFrames(newFrames);
+    setIsProcessing(false);
+    setBatchProgress(-1);
+  };
+
+  const extendsChunkSize = true; // For configuration later if needed
+
   const extractFrames = async (file: File, targetFps: number) => {
     if (!ffmpeg) {
       console.warn("FFmpeg not loaded yet.");
@@ -577,12 +660,37 @@ export default function RemovePage() {
       }
 
       console.log(`Extracted ${frameFiles.length} frames. Loading into memory...`);
-      const extractedFrames: string[] = [];
-      for (const f of frameFiles) {
+      
+      let frameWidth = 0;
+      let frameHeight = 0;
+      if (frameFiles.length > 0) {
+          const data = await ffmpeg.readFile(frameFiles[0].name);
+          const blob = new Blob([data], { type: 'image/png' });
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = url;
+          });
+          frameWidth = img.naturalWidth;
+          frameHeight = img.naturalHeight;
+      }
+
+      const extractedFrames: import('../StudioContext').StudioFrame[] = [];
+      for (let i = 0; i < frameFiles.length; i++) {
+        const f = frameFiles[i];
         const data = await ffmpeg.readFile(f.name);
         const blob = new Blob([data], { type: 'image/png' });
         const url = URL.createObjectURL(blob);
-        extractedFrames.push(url);
+        extractedFrames.push({
+          id: Math.random().toString(36).substring(7),
+          rawUrl: url,
+          width: frameWidth,
+          height: frameHeight,
+          name: f.name,
+          sourceIndex: i
+        });
         
         // Clean up FS to save memory
         await ffmpeg.deleteFile(f.name);
@@ -609,7 +717,20 @@ export default function RemovePage() {
     setExclusionMasks(new Map());
     if (file.type.startsWith('image/')) {
       const url = URL.createObjectURL(file);
-      setFrames([url]);
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = url;
+      });
+      setFrames([{
+          id: Math.random().toString(36).substring(7),
+          rawUrl: url,
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          name: file.name,
+          sourceIndex: 0
+      }]);
       setCurrentFrame(0);
       setIsPlaying(false);
       setVideoFile(file);
@@ -688,8 +809,9 @@ export default function RemovePage() {
         });
 
         for (let i = 0; i < frames.length; i++) {
+          const frame = frames[i];
           const img = new Image();
-          img.src = frames[i];
+          img.src = frame.processedUrl && !frame.dirty ? frame.processedUrl : frame.rawUrl;
           await new Promise((resolve) => {
             img.onload = resolve;
           });
@@ -701,11 +823,13 @@ export default function RemovePage() {
           if (!ctx) continue;
           
           ctx.drawImage(img, 0, 0);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           
-          const currentMask = exclusionMasks.get(i);
-          applyChromaKey(imageData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
-          ctx.putImageData(imageData, 0, 0);
+          if (!frame.processedUrl || frame.dirty) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const currentMask = exclusionMasks.get(i);
+            applyChromaKey(imageData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
+            ctx.putImageData(imageData, 0, 0);
+          }
           
           gif.addFrame(canvas, { delay: 1000 / fps });
         }
@@ -733,8 +857,9 @@ export default function RemovePage() {
         const endIdx = frames.length === 1 ? 1 : Math.min(Math.floor(seg.end * fps), frames.length);
         
         for (let i = startIdx; i < endIdx; i++) {
+          const frame = frames[i];
           const img = new Image();
-          img.src = frames[i];
+          img.src = frame.processedUrl && !frame.dirty ? frame.processedUrl : frame.rawUrl;
           await new Promise((resolve) => {
             img.onload = resolve;
           });
@@ -746,11 +871,13 @@ export default function RemovePage() {
           if (!ctx) continue;
           
           ctx.drawImage(img, 0, 0);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           
-          const currentMask = exclusionMasks.get(i);
-          applyChromaKey(imageData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
-          ctx.putImageData(imageData, 0, 0);
+          if (!frame.processedUrl || frame.dirty) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const currentMask = exclusionMasks.get(i);
+            applyChromaKey(imageData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
+            ctx.putImageData(imageData, 0, 0);
+          }
           
           const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
           if (blob) {
@@ -762,7 +889,7 @@ export default function RemovePage() {
       
       if (type === 'withRaw') {
         for (let i = 0; i < frames.length; i++) {
-          const response = await fetch(frames[i]);
+          const response = await fetch(frames[i].processedUrl ?? frames[i].rawUrl);
           const blob = await response.blob();
           const frameNum = String(i + 1).padStart(3, '0');
           zip.file(`${charName}_raw_${frameNum}.png`, blob);
@@ -1167,6 +1294,41 @@ export default function RemovePage() {
                 </p>
               </div>
 
+              {/* Batch Processing Controls */}
+              <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
+                <label className={labelClass}>{lang === 'KR' ? '적용 (Apply Process)' : lang === 'EN' ? 'Apply Process' : '適用する'}</label>
+                <div className="flex flex-col gap-2 mt-2">
+                  <button 
+                    onClick={() => processTargetFrames(Array.from(selectedFrames))}
+                    disabled={selectedFrames.size === 0 || isProcessing}
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2"
+                  >
+                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    {lang === 'KR' ? `선택 항목 적용 (${selectedFrames.size})` : lang === 'EN' ? `Process Selected (${selectedFrames.size})` : `選択を適用 (${selectedFrames.size})`}
+                  </button>
+                  <button 
+                    onClick={() => processTargetFrames(Array.from({ length: frames.length }, (_, i) => i))}
+                    disabled={frames.length === 0 || isProcessing}
+                    className={`w-full py-2 font-bold rounded-lg transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2 ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-200 hover:bg-gray-300 text-black'}`}
+                  >
+                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    {lang === 'KR' ? `전체 적용 (${frames.length})` : lang === 'EN' ? `Process All (${frames.length})` : `すべて適用 (${frames.length})`}
+                  </button>
+                  
+                  {batchProgress >= 0 && (
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>{lang === 'KR' ? '진행률' : 'Progress'}</span>
+                        <span>{batchProgress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5">
+                        <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style={{ width: `${batchProgress}%` }}></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
                 <div className="flex justify-between items-center mb-1.5">
                   <label className={labelClass}>{lang === 'KR' ? 'Extraction FPS (추출 프레임)' : lang === 'EN' ? 'Extraction FPS' : '抽出FPS'}</label>
@@ -1344,9 +1506,20 @@ export default function RemovePage() {
           </div>
 
           <button 
-            onClick={() => setShowDownloadModal(true)}
+            onClick={() => {
+              const notProcessed = frames.filter(f => !f.processedUrl || f.dirty).length;
+              if (notProcessed > 0) {
+                alert(lang === 'KR' 
+                  ? `${notProcessed}개의 프레임이 적용되지 않았습니다. '전체 적용'을 먼저 클릭해주세요.` 
+                  : lang === 'EN' 
+                  ? `${notProcessed} frames are not processed. Please click 'Process All' first.` 
+                  : `${notProcessed} フレームが適用されていません。まず「すべて適用」をクリックしてください。`);
+                return;
+              }
+              setShowDownloadModal(true);
+            }}
             disabled={frames.length === 0 || isProcessing}
-            className={`order-5 ${primaryBtnClass}`}
+            className={`order-5 border-2 ${primaryBtnClass}`}
           >
             {isProcessing ? (
               <>

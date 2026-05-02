@@ -4,7 +4,7 @@ export interface Segment {
   name: string;
   start: number;
   end: number;
-  useFrames?: boolean; // New field
+  useFrames?: boolean;
 }
 
 export interface Preset {
@@ -12,6 +12,17 @@ export interface Preset {
   name: string;
   segments: Segment[];
 }
+
+export type StudioFrame = {
+  id: string;
+  rawUrl: string;
+  processedUrl?: string;
+  width: number;
+  height: number;
+  name?: string;
+  sourceIndex: number;
+  dirty?: boolean;
+};
 
 const DEFAULT_PRESETS: Preset[] = [
   {
@@ -63,8 +74,8 @@ const DEFAULT_PRESETS: Preset[] = [
 ];
 
 interface StudioContextType {
-  frames: string[];
-  setFrames: React.Dispatch<React.SetStateAction<string[]>>;
+  frames: StudioFrame[];
+  setFrames: React.Dispatch<React.SetStateAction<StudioFrame[]>>;
   videoFile: File | null;
   setVideoFile: React.Dispatch<React.SetStateAction<File | null>>;
   charName: string;
@@ -84,7 +95,7 @@ interface StudioContextType {
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
 export const StudioProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [frames, setFrames] = useState<string[]>([]);
+  const [frames, setFrames] = useState<StudioFrame[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [exclusionMasks, setExclusionMasks] = useState<Map<number, Uint8Array>>(new Map());
 
