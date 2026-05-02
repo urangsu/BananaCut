@@ -1508,7 +1508,7 @@ export default function RemovePage() {
                             step={seg.useFrames ? "1" : "0.1"}
                             value={seg.start}
                             onChange={(e) => updateSegment(idx, 'start', parseFloat(e.target.value))}
-                            className={segmentInputClass}
+                            className={`${segmentInputClass} max-w-[96px]`}
                           />
                         </div>
                         <div className="min-w-0 flex flex-col">
@@ -1520,7 +1520,7 @@ export default function RemovePage() {
                             step={seg.useFrames ? "1" : "0.1"}
                             value={seg.end}
                             onChange={(e) => updateSegment(idx, 'end', parseFloat(e.target.value))}
-                            className={segmentInputClass}
+                            className={`${segmentInputClass} max-w-[96px]`}
                           />
                         </div>
                       </div>

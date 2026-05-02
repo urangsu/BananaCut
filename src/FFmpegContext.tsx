@@ -56,37 +56,37 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           });
         };
 
-        const localLoad = async () => {
-          const start = Date.now();
-          logDebug(`[FFmpeg] Loading from local start...`);
-          await ffmpegInstance.load({
-            coreURL: '/ffmpeg/ffmpeg-core.js',
-            wasmURL: '/ffmpeg/ffmpeg-core.wasm',
-            workerURL: '/ffmpeg/ffmpeg-core.worker.js'
-          });
-          logDebug(`[FFmpeg] Selected Source: Local. Loaded in ${Date.now() - start}ms`);
-        };
+        const localBaseURL = `${window.location.origin}/ffmpeg`;
 
-        const fallbackLoad = async (baseURL: string) => {
+        const loadCoreFromBase = async (baseURL: string, sourceName: string) => {
           const start = Date.now();
-          logDebug(`[FFmpeg] Loading from fallback ${baseURL} start...`);
-          const [coreURL, wasmURL, workerURL] = await Promise.all([
+          logDebug(`[FFmpeg] Loading from ${sourceName} ${baseURL} start...`);
+
+          const [coreURL, wasmURL] = await Promise.all([
             toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-            toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript')
+            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
           ]);
-          await ffmpegInstance.load({ coreURL, wasmURL, workerURL });
-          logDebug(`[FFmpeg] Selected Source: Fallback ${baseURL}. Loaded in ${Date.now() - start}ms`);
+
+          await ffmpegInstance.load({
+            coreURL,
+            wasmURL
+          });
+
+          logDebug(`[FFmpeg] Selected Source: ${sourceName}. Loaded in ${Date.now() - start}ms`);
         };
 
         const totalStart = Date.now();
         try {
-          await loadWithTimeout(localLoad, 20000, 'local domain');
+          await loadWithTimeout(
+            () => loadCoreFromBase(localBaseURL, 'local'),
+            20000,
+            'local domain'
+          );
         } catch (localError: any) {
           logDebug(`[FFmpeg] Local load failed: ${localError?.message || localError}`);
           try {
-            await loadWithTimeout(
-              () => fallbackLoad('https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/esm'),
+             await loadWithTimeout(
+              () => loadCoreFromBase('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm', 'jsdelivr'),
               25000,
               'jsdelivr'
             );
@@ -94,7 +94,7 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             logDebug(`[FFmpeg] jsdelivr load failed: ${jsdelivrError?.message || jsdelivrError}`);
             try {
               await loadWithTimeout(
-                () => fallbackLoad('https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm'),
+                () => loadCoreFromBase('https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm', 'unpkg'),
                 25000,
                 'unpkg'
               );

@@ -78,4 +78,5 @@
 - FFmpeg context prewarned successfully in the background (`/ffmpeg/ffmpeg-core.wasm` loaded).
 - Uploaded PNG sequence correctly, previewing image sequentially.
 - Uploaded MP4 correctly.
+- Loading indicator transitions to `video-extracting` within 20 seconds; otherwise marks as failed.
 - Background Network Tab verified that `/ffmpeg/ffmpeg-core.wasm` is serving from the same domain locally as primary source without fallback execution.
