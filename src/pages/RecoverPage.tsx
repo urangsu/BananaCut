@@ -753,6 +753,11 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">RECOVER <span className={`${textMuted} text-xl font-normal`}>{lang === 'KR' ? '(복구)' : lang === 'EN' ? '(Recover)' : '(復旧)'}</span></h1>
           <p className={`${textSecondary} mt-2 text-sm`}>{lang === 'KR' ? 'Smart Alpha Fill & Sequence Recovery' : lang === 'EN' ? 'Smart Alpha Fill & Sequence Recovery' : 'スマートアルファ塗りつぶし＆シーケンス復旧'}</p>
+          {frames.length > 0 && (
+            <p className="mt-2 text-xs font-medium text-blue-500">
+              {lang === 'KR' ? `Remove에서 처리한 ${frames.length} 프레임을 이어서 복구합니다.` : `Continuing recovery for ${frames.length} frames from Remove.`}
+            </p>
+          )}
         </div>
         {frames.length > 0 && (
           <div className="flex items-center gap-2">
@@ -795,7 +800,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
         {frames.length === 0 && (
           <div className="w-full flex flex-col items-center justify-center flex-1 lg:hidden">
             <div className={`w-full max-w-md border rounded-2xl p-6 ${panelBg}`}>
-              <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <h2 className={`text-lg font-medium mb-2 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 <Upload className={`w-5 h-5 ${theme === 'dark' ? 'text-blue-400' : 'text-black'}`} />
                 {lang === 'KR' ? (
                   <div className="flex flex-col">
@@ -804,6 +809,9 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
                   </div>
                 ) : lang === 'EN' ? 'Upload Sequence' : 'シーケンスをアップロード'}
               </h2>
+              <p className="text-xs text-blue-500 mb-4 whitespace-pre-wrap text-center">
+                {lang === 'KR' ? '⚠️ 새 이미지를 업로드하면\n현재 공유된 프레임이 모두 지워집니다.' : '⚠️ Uploading new images will\nclear all shared frames.'}
+              </p>
               
               <div 
                 className={`relative flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-xl transition-all ${
@@ -829,6 +837,9 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
                 <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
                   <Upload className={`w-10 h-10 mb-3 transition-colors ${isDragging ? 'text-blue-500' : textMuted}`} />
                   <p className={`mb-2 text-base ${textSecondary} text-center px-4`}><span className="font-semibold">{lang === 'KR' ? 'Click' : lang === 'EN' ? 'Click' : 'クリック'}</span> {lang === 'KR' ? 'or drag PNG/JPG sequences' : lang === 'EN' ? 'or drag PNG/JPG sequences' : 'またはPNG/JPGシーケンスをドラッグ'}</p>
+                  <p className="text-xs text-blue-500 font-medium px-4 text-center mt-1">
+                    {lang === 'KR' ? '(주의: 새 작업 시작)' : '(Warning: Starts a new project)'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -864,6 +875,9 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
               <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
                 <Upload className={`w-8 h-8 mb-3 transition-colors ${isDragging ? 'text-blue-500' : textMuted}`} strokeWidth={1.5} />
                 <p className={`mb-2 text-sm ${textSecondary} text-center px-4`}><span className="font-semibold">{lang === 'KR' ? 'Click' : lang === 'EN' ? 'Click' : 'クリック'}</span> {lang === 'KR' ? 'or drag PNG/JPG sequences' : lang === 'EN' ? 'or drag PNG/JPG sequences' : 'またはPNG/JPGシーケンスをドラッグ'}</p>
+                <p className="text-xs text-blue-500 font-medium px-4 text-center mt-1">
+                  {lang === 'KR' ? '(주의: 새 작업 시작)' : '(Warning: Starts a new project)'}
+                </p>
               </div>
             </div>
           </div>
@@ -1089,9 +1103,9 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
         {/* Right Panel: Canvas & Filmstrip (Order 1) */}
         <div className={`order-1 w-full lg:flex-1 flex flex-col min-w-0 border-b lg:border-none overflow-hidden lg:overflow-visible ${panelBg} lg:bg-transparent lg:order-2 ${frames.length > 0 ? 'pb-2 lg:pb-0 pt-2 lg:pt-0 lg:relative lg:z-auto' : 'hidden lg:flex'}`}>
           
-          <div className="sticky top-0 z-40 w-full bg-inherit">
+          <div className="sticky top-0 z-40 w-full bg-inherit flex-1 flex flex-col min-h-0">
             {/* Canvas Header */}
-            <div className={`h-auto lg:h-14 flex flex-col lg:flex-row items-center justify-between p-2 lg:px-4 gap-3 lg:gap-2 shrink-0 ${theme === 'dark' ? 'bg-black/20 lg:bg-transparent' : 'bg-gray-50 lg:bg-transparent'}`}>
+            <div className={`h-auto lg:h-14 shrink-0 flex flex-col lg:flex-row items-center justify-between p-2 lg:px-4 gap-3 lg:gap-2 ${theme === 'dark' ? 'bg-black/20 lg:bg-transparent' : 'bg-gray-50 lg:bg-transparent'}`}>
               <div className="flex items-center justify-between lg:justify-start gap-2 w-full lg:w-auto">
                 <div className="flex items-center gap-1 lg:gap-3 w-full lg:w-auto justify-between lg:justify-center">
                   <span className={`text-[10px] lg:text-xs font-mono px-2 py-1 rounded-md ${theme === 'dark' ? 'bg-white/10 text-white/70' : 'bg-gray-200 text-gray-700'}`}>
@@ -1141,7 +1155,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
             {/* Canvas Area */}
             <div 
               ref={containerRef}
-              className={`w-full lg:flex-1 overflow-auto relative flex items-start justify-center pt-4 lg:pt-8 h-[23dvh] max-h-[23dvh] lg:h-auto lg:max-h-none lg:relative lg:top-auto lg:z-auto ${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}
+              className={`w-full flex-1 overflow-auto relative flex ${frames.length === 0 ? 'items-center' : 'items-start pt-4 lg:pt-8'} justify-center h-[23dvh] max-h-[23dvh] lg:h-auto lg:max-h-none lg:min-h-0 lg:relative lg:top-auto lg:z-auto ${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}
             >
               {showResolutionToast && detectedResolution && (
                 <div className="absolute top-4 right-4 z-50 bg-black/80 text-white text-[10px] px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm transition-opacity duration-300">
@@ -1149,9 +1163,34 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
                 </div>
               )}
               {frames.length === 0 ? (
-                <div className={`flex flex-col items-center gap-3 mt-10 ${theme === 'dark' ? 'text-white/30' : 'text-gray-400'}`}>
-                  <MousePointer2 className="w-12 h-12 opacity-20" />
-                  <p className="text-sm">{lang === 'KR' ? 'Upload PNG sequences to start recovering' : lang === 'EN' ? 'Upload PNG sequences to start recovering' : 'PNGシーケンスをアップロードして復旧を開始'}</p>
+                <div 
+                  className={`flex flex-col items-center justify-center p-12 w-full max-w-lg mx-4 border-2 border-dashed rounded-2xl transition-all cursor-pointer ${
+                    isDragging 
+                      ? 'border-blue-500 bg-blue-500/10' 
+                      : theme === 'dark'
+                        ? 'border-white/10 text-white/30 hover:bg-white/5 hover:border-white/20'
+                        : 'border-gray-300 text-gray-400 hover:bg-gray-50'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <label className="absolute inset-0 w-full h-full cursor-pointer">
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept="image/png,image/jpeg,image/jpg" 
+                      multiple 
+                      onChange={(e) => handleFiles(e.target.files)} 
+                    />
+                  </label>
+                  <div className="flex flex-col items-center pointer-events-none">
+                    <Upload className="w-12 h-12 mb-4 opacity-50" />
+                    <p className="text-base font-medium text-center mb-2">{lang === 'KR' ? 'PNG/JPG 시퀀스 업로드' : lang === 'EN' ? 'Upload PNG/JPG sequences' : 'PNG/JPGシーケンスをアップロード'}</p>
+                    <p className="text-sm text-center opacity-70">
+                      {lang === 'KR' ? '좌측 패널에서 파일을 업로드하거나 이곳에 드래그하세요.' : lang === 'EN' ? 'Upload files from the left panel or drag them here.' : '左のパネルからファイルをアップロードするか、ここにドラッグしてください。'}
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div 

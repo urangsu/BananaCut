@@ -1,11 +1,14 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useRef } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { toBlobURL } from '@ffmpeg/util';
 
+export type FFmpegState = 'idle' | 'loading' | 'loaded' | 'error';
+
 interface FFmpegContextType {
   ffmpeg: FFmpeg | null;
-  isLoaded: boolean;
+  loadState: FFmpegState;
   error: string | null;
+  loadFFmpeg: () => Promise<FFmpeg | null>;
   retry: () => void;
 }
 
@@ -13,58 +16,54 @@ const FFmpegContext = createContext<FFmpegContextType | undefined>(undefined);
 
 export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [ffmpeg, setFFmpeg] = useState<FFmpeg | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadState, setLoadState] = useState<FFmpegState>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
+  const loadingPromiseRef = useRef<Promise<FFmpeg | null> | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    const loadFFmpeg = async () => {
+  const loadFFmpeg = async (): Promise<FFmpeg | null> => {
+    if (loadState === 'loaded' && ffmpeg) return ffmpeg;
+    if (loadingPromiseRef.current) return loadingPromiseRef.current;
+
+    setLoadState('loading');
+    setError(null);
+
+    const promise = (async () => {
       try {
-        setIsLoaded(false);
-        setError(null);
         const ffmpegInstance = new FFmpeg();
         
         ffmpegInstance.on('log', ({ message }) => {
           console.log("[FFmpeg Log]", message);
         });
         
-        try {
-          // Attempt local load first
-          await ffmpegInstance.load({
-            coreURL: '/ffmpeg/ffmpeg-core.js',
-            wasmURL: '/ffmpeg/ffmpeg-core.wasm'
-          });
-        } catch (localErr) {
-          console.log("[FFmpeg] Local load failed, falling back to CDN", localErr);
-          const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-          await ffmpegInstance.load({
-            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-          });
-        }
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+        await ffmpegInstance.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        });
         
-        if (isMounted) {
-          setFFmpeg(ffmpegInstance);
-          setIsLoaded(true);
-        }
+        setFFmpeg(ffmpegInstance);
+        setLoadState('loaded');
+        loadingPromiseRef.current = null;
+        return ffmpegInstance;
       } catch (err) {
         console.error("Failed to load FFmpeg:", err);
-        if (isMounted) {
-          setError("BananaCut 엔진을 불러오지 못했습니다. 인터넷 연결을 확인하거나 잠시 후 다시 시도해주세요.");
-          setIsLoaded(false);
-        }
+        setError("비디오 엔진 로딩 실패 (Video engine loading failed)");
+        setLoadState('error');
+        loadingPromiseRef.current = null;
+        return null;
       }
-    };
-    
-    loadFFmpeg();
-    return () => { isMounted = false; };
-  }, [retryCount]);
+    })();
 
-  const retry = () => setRetryCount(prev => prev + 1);
+    loadingPromiseRef.current = promise;
+    return promise;
+  };
+
+  const retry = () => {
+    loadFFmpeg();
+  };
 
   return (
-    <FFmpegContext.Provider value={{ ffmpeg, isLoaded, error, retry }}>
+    <FFmpegContext.Provider value={{ ffmpeg, loadState, error, loadFFmpeg, retry }}>
       {children}
     </FFmpegContext.Provider>
   );

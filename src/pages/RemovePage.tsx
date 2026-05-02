@@ -37,7 +37,7 @@ export default function RemovePage() {
   const { isDark } = useTheme();
   const { lang } = useLanguage();
   const MIDDLE_NAME_OPTIONS = GET_MIDDLE_NAME_OPTIONS(lang);
-  const { ffmpeg, isLoaded, error: ffmpegError, retry: retryFFmpeg } = useFFmpeg();
+  const { ffmpeg, loadState, error: ffmpegError, retry: retryFFmpeg, loadFFmpeg } = useFFmpeg();
   const { 
     frames, setFrames, 
     videoFile, setVideoFile, 
@@ -660,7 +660,7 @@ export default function RemovePage() {
     e.preventDefault();
     setIsDragging(false);
     
-    if (isExtracting || !isLoaded) return;
+    if (isExtracting) return;
     
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
@@ -896,51 +896,32 @@ export default function RemovePage() {
                 Upload File <span className="text-sm font-normal opacity-60">(파일 업로드)</span>
               </h2>
               
-              {!isLoaded ? (
-                <div className={`flex flex-col items-center justify-center gap-4 p-8 rounded-xl ${isDark ? 'text-white/50 bg-black/20' : 'text-gray-500 bg-gray-100'}`}>
-                  {ffmpegError ? (
-                    <>
-                      <p className="text-sm text-center text-red-400">{ffmpegError}</p>
-                      <button 
-                        onClick={retryFFmpeg}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-                      >
-                        {lang === 'KR' ? '다시 시도 (Retry)' : lang === 'EN' ? 'Retry' : '再試行'}
-                      </button>
-                    </>
+              <div 
+                className={dropzoneClass}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <input 
+                  type="file" 
+                  accept="video/mp4,video/quicktime,image/png" 
+                  onChange={handleFileUpload}
+                  className="hidden" 
+                  id="file-upload-mobile"
+                  disabled={isExtracting}
+                />
+                <label htmlFor="file-upload-mobile" className={`cursor-pointer flex flex-col items-center gap-2 ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
+                  {isExtracting ? (
+                    <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-gray-600'}`} />
                   ) : (
-                    <>
-                      <Loader2 className="w-6 h-6 animate-spin" />
-                      <span className="text-base">{lang === 'KR' ? 'BananaCut 엔진 로딩 중...' : lang === 'EN' ? 'Loading BananaCut Engine..' : 'BananaCutエンジンを読み込み中..'}</span>
-                    </>
+                    <Upload className={`w-8 h-8 ${isDark ? 'text-white/60' : 'text-gray-400'}`} strokeWidth={1.5} />
                   )}
-                </div>
-              ) : (
-                <div 
-                  className={dropzoneClass}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  <input 
-                    type="file" 
-                    accept="video/mp4,video/quicktime,image/png" 
-                    onChange={handleFileUpload}
-                    className="hidden" 
-                    id="file-upload-mobile"
-                    disabled={isExtracting}
-                  />
-                  <label htmlFor="file-upload-mobile" className={`cursor-pointer flex flex-col items-center gap-2 ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {isExtracting ? (
-                      <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-gray-600'}`} />
-                    ) : (
-                      <Upload className={`w-8 h-8 ${isDark ? 'text-white/60' : 'text-gray-400'}`} strokeWidth={1.5} />
-                    )}
-                    <span className="font-medium">{isExtracting ? (lang === 'KR' ? 'Extracting...' : lang === 'EN' ? 'Extracting...' : '抽出中...') : (lang === 'KR' ? 'Select File' : lang === 'EN' ? 'Select File' : 'ファイルを選択')}</span>
-                    <span className="text-xs opacity-60">MP4, MOV, PNG</span>
-                  </label>
-                </div>
-              )}
+                  <span className="font-medium">{isExtracting ? (lang === 'KR' ? 'Processing...' : lang === 'EN' ? 'Processing...' : '処理中...') : (lang === 'KR' ? 'Select File' : lang === 'EN' ? 'Select File' : 'ファイルを選択')}</span>
+                  <span className="text-xs opacity-60">MP4, MOV, PNG</span>
+                  {loadState === 'loading' && <span className="text-xs text-blue-400 mt-2">{lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...'}</span>}
+                  {ffmpegError && <span className="text-xs text-red-500 mt-2">{ffmpegError}</span>}
+                </label>
+              </div>
             </div>
           </div>
         )}
@@ -956,42 +937,27 @@ export default function RemovePage() {
               </div>
             </h2>
             
-            {!isLoaded ? (
-              <div className={`flex flex-col items-center gap-3 p-6 rounded-xl ${isDark ? 'text-white/50 bg-black/20' : 'text-gray-500 bg-gray-100'}`}>
-                {ffmpegError ? (
-                  <>
-                    <p className="text-xs text-center text-red-400">{ffmpegError}</p>
-                    <button 
-                      onClick={retryFFmpeg}
-                      className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 transition-colors"
-                    >
-                      {lang === 'KR' ? '다시 시도 (Retry)' : lang === 'EN' ? 'Retry' : '再試行'}
-                    </button>
-                  </>
+            <div 
+              className={dropzoneClass}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <label className="absolute inset-0 w-full h-full cursor-pointer">
+                <input type="file" className="hidden" accept="video/mp4,video/quicktime,image/png" onChange={handleFileUpload} disabled={isExtracting} />
+              </label>
+              <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
+                {isExtracting ? (
+                  <Loader2 className={`w-8 h-8 mb-3 animate-spin ${isDark ? 'text-blue-400' : 'text-gray-600'}`} />
                 ) : (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="text-sm">{lang === 'KR' ? 'BananaCut 엔진 로딩 중...' : lang === 'EN' ? 'Loading BananaCut Engine..' : 'BananaCutエンジンを読み込み中..'}</span>
-                  </>
-                )}
-              </div>
-            ) : (
-              <div 
-                className={dropzoneClass}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <label className="absolute inset-0 w-full h-full cursor-pointer">
-                  <input type="file" className="hidden" accept="video/mp4,video/quicktime,image/png" onChange={handleFileUpload} disabled={isExtracting} />
-                </label>
-                <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
                   <Upload className={`w-8 h-8 mb-3 transition-colors ${isDragging ? accentIconClass : (isDark ? 'text-white/40' : 'text-gray-400')}`} strokeWidth={1.5} />
-                  <p className={`mb-2 text-sm ${isDark ? 'text-white/70' : 'text-gray-600'}`}><span className="font-semibold">{lang === 'KR' ? 'Click to upload' : lang === 'EN' ? 'Click to upload' : 'クリックしてアップロード'}</span> {lang === 'KR' ? 'or drag and drop' : lang === 'EN' ? 'or drag and drop' : 'またはドラッグ＆ドロップ'}</p>
-                  <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>MP4, MOV or PNG</p>
-                </div>
+                )}
+                <p className={`mb-2 text-sm ${isDark ? 'text-white/70' : 'text-gray-600'}`}><span className="font-semibold">{lang === 'KR' ? 'Click to upload' : lang === 'EN' ? 'Click to upload' : 'クリックしてアップロード'}</span> {lang === 'KR' ? 'or drag and drop' : lang === 'EN' ? 'or drag and drop' : 'またはドラッグ＆ドロップ'}</p>
+                <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>MP4, MOV or PNG</p>
+                {loadState === 'loading' && <p className="mt-2 text-xs text-blue-400">{lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...'}</p>}
+                {ffmpegError && <p className="mt-2 text-xs text-red-500">{ffmpegError}</p>}
               </div>
-            )}
+            </div>
             
             {isExtracting && (
               <div className={`mt-4 flex items-center gap-3 p-3 rounded-lg text-sm ${isDark ? 'text-blue-400 bg-blue-500/10' : 'text-black bg-gray-100'}`}>

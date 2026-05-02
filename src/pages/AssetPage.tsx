@@ -12,7 +12,7 @@ export default function AssetPage() {
   const { lang } = useLanguage();
   const { theme } = useTheme();
   const { frames, setFrames, fps, exclusionStrokes } = useStudio();
-  const { ffmpeg, isLoaded: isFFmpegLoaded } = useFFmpeg();
+  const { ffmpeg, loadState, loadFFmpeg } = useFFmpeg();
   const { isProcessing: isBatchProcessing, progress: batchProgress, startJob, cancelJob } = useBatchJob();
 
   const [showDirtyModal, setShowDirtyModal] = useState(false);
@@ -119,9 +119,20 @@ export default function AssetPage() {
 
   // --- Feature A: Transparent Video Export ---
   const executeExportVideo = async () => {
-    if (!ffmpeg || !isFFmpegLoaded || frames.length === 0) return;
+    if (frames.length === 0) return;
     
     setIsVideoProcessing(true);
+    let currentFFmpeg = ffmpeg;
+    if (loadState !== 'loaded' || !currentFFmpeg) {
+      currentFFmpeg = await loadFFmpeg();
+    }
+
+    if (!currentFFmpeg) {
+      setIsVideoProcessing(false);
+      alert(lang === 'KR' ? "비디오 엔진 로딩에 실패했습니다." : "Failed to load video engine.");
+      return;
+    }
+    
     setVideoProgress(0);
     setVideoUrl(null);
 
@@ -132,16 +143,16 @@ export default function AssetPage() {
         const url = frame.processedUrl ?? frame.rawUrl;
         const response = await fetch(url);
         const buffer = await response.arrayBuffer();
-        await ffmpeg.writeFile(`frame_${i.toString().padStart(4, '0')}.png`, new Uint8Array(buffer));
+        await currentFFmpeg.writeFile(`frame_${i.toString().padStart(4, '0')}.png`, new Uint8Array(buffer));
       }
 
-      ffmpeg.on('progress', ({ progress }) => {
+      currentFFmpeg.on('progress', ({ progress }) => {
         setVideoProgress(Math.round(progress * 100));
       });
 
       // Encode to WebM with alpha channel
       // -c:v libvpx-vp9 -pix_fmt yuva420p -auto-alt-ref 0
-      await ffmpeg.exec([
+      await currentFFmpeg.exec([
         '-framerate', fps.toString(),
         '-i', 'frame_%04d.png',
         '-c:v', 'libvpx-vp9',
@@ -151,16 +162,16 @@ export default function AssetPage() {
         'output.webm'
       ]);
 
-      const data = await ffmpeg.readFile('output.webm');
+      const data = await currentFFmpeg.readFile('output.webm');
       const blob = new Blob([data], { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
       setVideoUrl(url);
 
       // Cleanup
       for (let i = 0; i < frames.length; i++) {
-        await ffmpeg.deleteFile(`frame_${i.toString().padStart(4, '0')}.png`);
+        await currentFFmpeg.deleteFile(`frame_${i.toString().padStart(4, '0')}.png`);
       }
-      await ffmpeg.deleteFile('output.webm');
+      await currentFFmpeg.deleteFile('output.webm');
     } catch (error) {
       console.error('Video export failed:', error);
     } finally {
@@ -343,6 +354,11 @@ export default function AssetPage() {
               '抽出されたフレームをプロフェッショナルなゲーム/映像アセットに変換します。'
             )}
           </p>
+          {frames.length > 0 && (
+            <p className="mt-3 text-sm font-medium text-blue-500">
+              {lang === 'KR' ? `공유된 ${frames.length} 프레임으로 에셋을 만듭니다.` : `Creating assets from ${frames.length} shared frames.`}
+            </p>
+          )}
         </header>
 
         {frames.length === 0 ? (
@@ -393,10 +409,10 @@ export default function AssetPage() {
                 ) : (
                   <button 
                     onClick={handleExportVideo}
-                    disabled={!isFFmpegLoaded}
-                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${isFFmpegLoaded ? 'bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                    disabled={loadState === 'loading'}
+                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${loadState !== 'loading' ? 'bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                   >
-                    {!isFFmpegLoaded && <Loader2 className="w-5 h-5 animate-spin" />}
+                    {loadState === 'loading' && <Loader2 className="w-5 h-5 animate-spin" />}
                     {lang === 'KR' ? '비디오 생성 시작' : lang === 'EN' ? 'Start Video Generation' : 'ビデオ生成開始'}
                   </button>
                 )}
