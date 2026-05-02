@@ -509,9 +509,9 @@ export default function RemovePage() {
 
 
 
-  const extractFrames = async (file: File, targetFps: number) => {
-    if (!ffmpeg) {
-      console.warn("FFmpeg not loaded yet.");
+  const extractFrames = async (file: File, targetFps: number, engine: FFmpeg) => {
+    if (!engine) {
+      console.warn("FFmpeg engine not provided.");
       return;
     }
     
@@ -522,7 +522,7 @@ export default function RemovePage() {
     
     try {
       console.log("Starting frame extraction for:", file.name);
-      await ffmpeg.writeFile('input.mp4', await fetchFile(file));
+      await engine.writeFile('input.mp4', await fetchFile(file));
       setImgDims(null); // Reset dimensions for new file
       
       // Dynamic limits based on device
@@ -532,14 +532,14 @@ export default function RemovePage() {
       
       console.log(`Running FFmpeg command with scaling (Max ${maxRes}p, Device: ${isMobile ? 'Mobile' : 'Desktop'})...`);
       
-      await ffmpeg.exec([
+      await engine.exec([
         '-i', 'input.mp4',
         '-vf', `fps=${targetFps},scale='min(iw,${maxRes === 1080 ? 1920 : 1280}):min(ih,${maxRes})':force_original_aspect_ratio=decrease`,
         'frame_%04d.png'
       ]);
       
       console.log("Reading file list...");
-      const fileList = await ffmpeg.listDir('/');
+      const fileList = await engine.listDir('/');
       const frameFiles = fileList.filter(f => f.name.startsWith('frame_') && f.name.endsWith('.png'));
       frameFiles.sort((a, b) => a.name.localeCompare(b.name));
       
@@ -558,8 +558,8 @@ export default function RemovePage() {
       let frameWidth = 0;
       let frameHeight = 0;
       if (frameFiles.length > 0) {
-          const data = await ffmpeg.readFile(frameFiles[0].name);
-          const blob = new Blob([data], { type: 'image/png' });
+          const data = await engine.readFile(frameFiles[0].name);
+          const blob = new Blob([data as any], { type: 'image/png' });
           const url = URL.createObjectURL(blob);
           const img = new Image();
           await new Promise((resolve, reject) => {
@@ -574,8 +574,8 @@ export default function RemovePage() {
       const extractedFrames: import('../StudioContext').StudioFrame[] = [];
       for (let i = 0; i < frameFiles.length; i++) {
         const f = frameFiles[i];
-        const data = await ffmpeg.readFile(f.name);
-        const blob = new Blob([data], { type: 'image/png' });
+        const data = await engine.readFile(f.name);
+        const blob = new Blob([data as any], { type: 'image/png' });
         const url = URL.createObjectURL(blob);
         extractedFrames.push({
           id: Math.random().toString(36).substring(7),
@@ -587,11 +587,11 @@ export default function RemovePage() {
         });
         
         // Clean up FS to save memory
-        await ffmpeg.deleteFile(f.name);
+        await engine.deleteFile(f.name);
       }
       
       // Clean up input file
-      await ffmpeg.deleteFile('input.mp4');
+      await engine.deleteFile('input.mp4');
       
       setFrames(extractedFrames);
       setCurrentFrame(0);
@@ -632,8 +632,15 @@ export default function RemovePage() {
     }
     
     if (file.type.includes('video/mp4') || file.type.includes('video/quicktime')) {
+      let currentFFmpeg = ffmpeg;
+      if (loadState !== 'loaded' || !currentFFmpeg) {
+        currentFFmpeg = await loadFFmpeg();
+      }
+      if (!currentFFmpeg) {
+        return; // handle error UI
+      }
       setVideoFile(file);
-      await extractFrames(file, fps);
+      await extractFrames(file, fps, currentFFmpeg);
       return;
     }
     
@@ -670,7 +677,12 @@ export default function RemovePage() {
   const handleFpsChange = async (newFps: number) => {
     setFps(newFps);
     if (videoFile && !videoFile.type.startsWith('image/')) {
-      await extractFrames(videoFile, newFps);
+      let currentFFmpeg = ffmpeg;
+      if (loadState !== 'loaded' || !currentFFmpeg) {
+        currentFFmpeg = await loadFFmpeg();
+      }
+      if (!currentFFmpeg) return;
+      await extractFrames(videoFile, newFps, currentFFmpeg);
     }
   };
 

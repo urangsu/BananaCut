@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 import { useTheme } from '../ThemeContext';
 import { useLanguage } from '../LanguageContext';
-import { Scissors, Wand2, Download, Smartphone, Play } from 'lucide-react';
+import { Scissors, Wand2, Download, Smartphone, Play, PlaySquare } from 'lucide-react';
 import { Modal } from '../components/Modal';
 
 function ScratchOverlay({ isDark, lang, onReveal }: { isDark: boolean, lang: string, onReveal: () => void }) {
@@ -131,6 +131,8 @@ export default function LandingPage() {
   const [showGetApp, setShowGetApp] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
 
   return (
     <div className={`min-h-screen flex flex-col ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
@@ -225,15 +227,32 @@ export default function LandingPage() {
           {/* Video Demo Section (For Users & Bots) */}
           <section className="max-w-5xl mx-auto space-y-6">
             <div className={`aspect-video rounded-3xl flex items-center justify-center border overflow-hidden relative shadow-2xl ${isDark ? 'bg-black border-white/10' : 'bg-black border-gray-200'}`}>
-              <iframe 
-                src="https://www.youtube.com/embed/rTOB6sX-zA8?start=34&autoplay=1&mute=1&loop=1&playlist=rTOB6sX-zA8" 
-                className="w-full h-full object-cover"
-                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-                sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin allow-top-navigation allow-presentation"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-                title="BananaCut Demo"
-              ></iframe>
+              {!iframeError ? (
+                <iframe 
+                  src="https://www.youtube.com/embed/rTOB6sX-zA8?start=34&autoplay=1&mute=1&loop=1&playlist=rTOB6sX-zA8" 
+                  className="w-full h-full object-cover"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                  title="BananaCut Demo"
+                  onError={() => setIframeError(true)}
+                ></iframe>
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-gray-100 dark:bg-black/50">
+                  <PlaySquare className="w-16 h-16 mb-4 text-blue-500 opacity-80" />
+                  <p className="mb-6 max-w-sm text-lg text-gray-600 dark:text-gray-300">
+                    {lang === 'KR' ? '동영상을 불러올 수 없습니다. 원본 사이트에서 시청해주세요.' : lang === 'EN' ? 'Unable to load the video. Please watch it on the original site.' : '動画を読み込めませんでした。元のサイトでご覧ください。'}
+                  </p>
+                  <a 
+                    href="https://www.youtube.com/watch?v=rTOB6sX-zA8&t=34s" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors flex items-center gap-2"
+                  >
+                    Watch on YouTube
+                  </a>
+                </div>
+              )}
             </div>
             
             {/* Text description for SEO/Bots */}
@@ -469,13 +488,21 @@ export default function LandingPage() {
         setLang={setLang}
       >
         <div className="flex flex-col items-center justify-center text-center space-y-6 py-4">
-          <div className="w-full bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative">
-            <img 
-              src="/images/team.jpg" 
-              alt="Dalgrac Studio Team" 
-              className="max-w-full h-auto object-contain"
-              referrerPolicy="no-referrer"
-            />
+          <div className="w-full bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative min-h-[200px]">
+            {!imgError ? (
+              <img 
+                src="/images/team.jpg" 
+                alt="Dalgrac Studio Team" 
+                className="max-w-full h-auto object-contain"
+                referrerPolicy="no-referrer"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-gray-400 p-8">
+                <Smartphone className="w-12 h-12 mb-2 opacity-20" />
+                <span className="text-sm font-medium">Coming Soon</span>
+              </div>
+            )}
           </div>
           
           <div className="space-y-2">

@@ -33,6 +33,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   const [showSupport, setShowSupport] = useState(false);
   const [showGetApp, setShowGetApp] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const handleGuideClick = () => {
     if (window.innerWidth < 1024) {
@@ -402,13 +403,21 @@ function Layout({ children }: { children: React.ReactNode }) {
         setLang={setLang}
       >
         <div className="flex flex-col items-center justify-center text-center space-y-6 py-4">
-          <div className="w-full bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative">
-            <img 
-              src="/images/team.jpg" 
-              alt="Dalgrac Studio Team" 
-              className="max-w-full h-auto object-contain"
-              referrerPolicy="no-referrer"
-            />
+          <div className="w-full bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative min-h-[200px]">
+            {!imgError ? (
+              <img 
+                src="/images/team.jpg" 
+                alt="Dalgrac Studio Team" 
+                className="max-w-full h-auto object-contain"
+                referrerPolicy="no-referrer"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-gray-400 p-8">
+                <Smartphone className="w-12 h-12 mb-2 opacity-20" />
+                <span className="text-sm font-medium">Coming Soon</span>
+              </div>
+            )}
           </div>
           
           <div className="space-y-2">
