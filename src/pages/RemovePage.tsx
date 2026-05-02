@@ -8,7 +8,7 @@ import { useFFmpeg } from '../FFmpegContext';
 import { useStudio } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
 import { DownloadModal } from '../components/DownloadModal';
-
+import { useBatchJob } from '../hooks/useBatchJob';
 import { useLanguage } from '../LanguageContext';
 
 const GET_MIDDLE_NAME_OPTIONS = (lang: string) => [
@@ -47,13 +47,62 @@ export default function RemovePage() {
   } = useStudio();
   
   const [isExtracting, setIsExtracting] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [batchProgress, setBatchProgress] = useState(-1);
+  const { isProcessing: isBatchProcessing, progress: batchProgress, startJob, cancelJob } = useBatchJob();
+  const [isProcessingLocal, setIsProcessingLocal] = useState(false);
+  const isProcessing = isExtracting || isBatchProcessing || isProcessingLocal;
+  const setIsProcessing = setIsProcessingLocal;
+  
   const [isDragging, setIsDragging] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
   
   const [currentFrame, setCurrentFrame] = useState(0);
+
+  const processTargetFrames = async (targetIndices: number[]) => {
+    if (targetIndices.length === 0) return;
+    
+    const newFrames = [...frames];
+    
+    await startJob<number, void>({
+      items: targetIndices,
+      delayMs: 0,
+      processItem: async (idx, resultIndex) => {
+         const frame = newFrames[idx];
+         
+         const img = new Image();
+         img.src = frame.rawUrl;
+         await new Promise((resolve, reject) => { 
+           img.onload = resolve; 
+           img.onerror = reject; 
+         });
+         
+         const canvas = document.createElement('canvas');
+         canvas.width = img.width;
+         canvas.height = img.height;
+         const ctx = canvas.getContext('2d', { willReadFrequently: true });
+         if (!ctx) throw new Error("No context");
+         
+         ctx.drawImage(img, 0, 0);
+         const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
+         const mask = exclusionMasks.get(idx);
+         applyChromaKey(imgData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, mask);
+         ctx.putImageData(imgData, 0, 0);
+         
+         const blob = await new Promise<Blob|null>(resolve => canvas.toBlob(resolve, 'image/png'));
+         if (blob) {
+           const newUrl = URL.createObjectURL(blob);
+           if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
+           newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
+         }
+      },
+      onSuccess: () => {
+        setFrames(newFrames);
+      },
+      onPartialSuccess: () => {
+        setFrames(newFrames);
+      }
+    });
+  };
   const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set([0]));
   const [isPlaying, setIsPlaying] = useState(false);
   
@@ -537,11 +586,27 @@ export default function RemovePage() {
       }
     }
 
+    const targetSet = new Set(targetIndices);
+    const maskRefs = new Map<Uint8Array, { isSharedOutside: boolean }>();
+    exclusionMasks.forEach((m, i) => {
+      if (!maskRefs.has(m)) {
+        maskRefs.set(m, { isSharedOutside: !targetSet.has(i) });
+      } else if (!targetSet.has(i)) {
+        maskRefs.get(m)!.isSharedOutside = true;
+      }
+    });
+
     targetIndices.forEach(idx => {
       let mask = exclusionMasks.get(idx);
       if (!mask || mask.length !== imgW * imgH) {
         mask = new Uint8Array(imgW * imgH);
         exclusionMasks.set(idx, mask);
+      } else if (maskRefs.get(mask)?.isSharedOutside) {
+        // Clone for copy-on-write
+        mask = new Uint8Array(mask);
+        exclusionMasks.set(idx, mask);
+        // New mask is isolated now
+        maskRefs.set(mask, { isSharedOutside: false });
       }
 
       for (let i = 0; i < offsetsToUpdate.length; i++) {
@@ -557,61 +622,7 @@ export default function RemovePage() {
     }
   };
 
-  const processTargetFrames = async (targetIndices: number[]) => {
-    if (targetIndices.length === 0) return;
-    setIsProcessing(true);
-    setBatchProgress(0);
-    
-    // Configurable chunk size
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-    const chunkSize = isMobile ? 5 : 10;
-    const newFrames = [...frames];
-    const targetSet = new Set(targetIndices);
-    
-    let processedCount = 0;
-    
-    for (let i = 0; i < targetIndices.length; i += chunkSize) {
-      const chunk = targetIndices.slice(i, i + chunkSize);
-      
-      await new Promise(resolve => setTimeout(resolve, 0)); // yield to main thread
-      
-      for (const idx of chunk) {
-         const frame = newFrames[idx];
-         
-         const img = new Image();
-         img.src = frame.rawUrl;
-         await new Promise((resolve, reject) => { 
-           img.onload = resolve; 
-           img.onerror = reject; 
-         });
-         
-         const canvas = document.createElement('canvas');
-         canvas.width = img.width;
-         canvas.height = img.height;
-         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-         if (!ctx) continue;
-         
-         ctx.drawImage(img, 0, 0);
-         const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
-         const mask = exclusionMasks.get(idx);
-         applyChromaKey(imgData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, mask);
-         ctx.putImageData(imgData, 0, 0);
-         
-         const blob = await new Promise<Blob|null>(resolve => canvas.toBlob(resolve, 'image/png'));
-         if (blob) {
-           const newUrl = URL.createObjectURL(blob);
-           if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
-           newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
-         }
-      }
-      processedCount += chunk.length;
-      setBatchProgress(Math.round((processedCount / targetIndices.length) * 100));
-    }
-    
-    setFrames(newFrames);
-    setIsProcessing(false);
-    setBatchProgress(-1);
-  };
+
 
   const extractFrames = async (file: File, targetFps: number) => {
     if (!ffmpeg) {
@@ -1504,14 +1515,23 @@ export default function RemovePage() {
           </div>
 
           <button 
-            onClick={() => {
-              const notProcessed = frames.filter(f => !f.processedUrl || f.dirty).length;
-              if (notProcessed > 0) {
-                alert(lang === 'KR' 
-                  ? `${notProcessed}개의 프레임이 적용되지 않았습니다. '전체 적용'을 먼저 클릭해주세요.` 
+            onClick={async () => {
+              const dirtyIndices: number[] = [];
+              frames.forEach((f, i) => {
+                if (!f.processedUrl || f.dirty) dirtyIndices.push(i);
+              });
+              
+              if (dirtyIndices.length > 0) {
+                const confirmed = confirm(lang === 'KR' 
+                  ? `${dirtyIndices.length}개의 프레임이 적용되지 않았습니다. 자동으로 적용하고 다운로드할까요?` 
                   : lang === 'EN' 
-                  ? `${notProcessed} frames are not processed. Please click 'Process All' first.` 
-                  : `${notProcessed} フレームが適用されていません。まず「すべて適用」をクリックしてください。`);
+                  ? `${dirtyIndices.length} frames are not processed. Do you want to process them automatically and download?` 
+                  : `${dirtyIndices.length} フレームが適用されていません。自動的に適用してダウンロードしますか？`);
+                
+                if (confirmed) {
+                  await processTargetFrames(dirtyIndices);
+                  setShowDownloadModal(true);
+                }
                 return;
               }
               setShowDownloadModal(true);
@@ -1685,7 +1705,7 @@ export default function RemovePage() {
                     const newMasks = new Map(exclusionMasks);
                     selectedFrames.forEach(idx => {
                       if (idx === currentFrame) return;
-                      newMasks.set(idx, new Uint8Array(currentMask));
+                      newMasks.set(idx, currentMask);
                     });
                     setExclusionMasks(newMasks);
                   }}

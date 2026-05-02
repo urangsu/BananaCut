@@ -2,9 +2,11 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, Download, Loader2, ZoomIn, ZoomOut, MousePointer2, Paintbrush, SquareDashed, Trash2, Eraser, Play, Square, Sliders, ChevronDown, Undo2, Redo2, PaintBucket } from 'lucide-react';
 import JSZip from 'jszip';
 import { useLanguage } from '../LanguageContext';
+import { useBatchJob } from '../hooks/useBatchJob';
 import { useTheme } from '../ThemeContext';
 import { useStudio, StudioFrame } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
+import { revokeUrlsSafely } from '../utils/urlUtils';
 
 interface Point {
   x: number;
@@ -18,7 +20,10 @@ export default function RecoverPage() {
   const [selectedFrames, setSelectedFrames] = useState<Set<string>>(new Set());
   const [currentFrameId, setCurrentFrameId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { isProcessing: isBatchProcessing, progress: batchProgress, startJob } = useBatchJob();
+  const [isProcessingLocal, setIsProcessingLocal] = useState(false);
+  const isProcessing = isBatchProcessing || isProcessingLocal;
+  const setIsProcessing = setIsProcessingLocal;
   
   // Canvas Settings
   const [canvasWidth, setCanvasWidth] = useState(() => Number(localStorage.getItem('recover_canvasWidth')) || 500);
@@ -43,24 +48,21 @@ export default function RecoverPage() {
   const pushToHistory = useCallback((entry: HistoryEntry) => {
     setHistory(prev => {
       const droppedFuture = prev.slice(historyPointer + 1);
-      droppedFuture.forEach(h => {
-        h.forEach(e => {
-          if (e.redoUrl) URL.revokeObjectURL(e.redoUrl);
-        });
-      });
+      const urlsToRevoke: string[] = [];
+      droppedFuture.forEach(h => h.forEach(e => { if (e.redoUrl) urlsToRevoke.push(e.redoUrl); }));
 
       const newHist = prev.slice(0, historyPointer + 1);
       newHist.push(entry);
       if (newHist.length > 20) {
         const droppedPast = newHist.shift();
-        droppedPast?.forEach(e => {
-          if (e.undoUrl) URL.revokeObjectURL(e.undoUrl);
-        });
+        droppedPast?.forEach(e => { if (e.undoUrl) urlsToRevoke.push(e.undoUrl); });
       }
+      
+      revokeUrlsSafely(urlsToRevoke, frames, newHist);
       return newHist;
     });
     setHistoryPointer(prev => Math.min(19, prev + 1));
-  }, [historyPointer]);
+  }, [historyPointer, frames]);
   
   // Drawing State
   const [isDrawing, setIsDrawing] = useState(false);
@@ -308,17 +310,21 @@ export default function RecoverPage() {
   };
 
   const clearFrames = () => {
+    const urlsToRevoke: string[] = [];
     frames.forEach(f => {
-      URL.revokeObjectURL(f.rawUrl);
-      if (f.processedUrl) URL.revokeObjectURL(f.processedUrl);
+      urlsToRevoke.push(f.rawUrl);
+      if (f.processedUrl) urlsToRevoke.push(f.processedUrl);
     });
     history.forEach(h => {
       h.forEach(entry => {
-        // Technically redo/undo urls might overlap with current frames, but Revoking multiple times is safe.
-        if (entry.undoUrl) URL.revokeObjectURL(entry.undoUrl);
-        if (entry.redoUrl) URL.revokeObjectURL(entry.redoUrl);
+        if (entry.undoUrl) urlsToRevoke.push(entry.undoUrl);
+        if (entry.redoUrl) urlsToRevoke.push(entry.redoUrl);
       });
     });
+    
+    // Everything is being cleared, so we pass empty arrays for activeFrames and activeHistory
+    revokeUrlsSafely(urlsToRevoke, [], []);
+
     setHistory([]);
     setHistoryPointer(-1);
 
@@ -426,63 +432,61 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
   }, [handleUndo, handleRedo]);
 
   const performBatchFill = async (targetFrameIds: string[], mask: boolean[] | null, isEraser: boolean = false) => {
-    const updates = new Map<string, string>();
-    
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = canvasWidth;
     tempCanvas.height = canvasHeight;
     const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!;
 
-    for (let i = 0; i < targetFrameIds.length; i++) {
-      const frameId = targetFrameIds[i];
-      const currentFrame = frames.find(f => f.id === frameId);
-      if (!currentFrame) continue;
+    await startJob<string, { id: string, url: string }>({
+      items: targetFrameIds,
+      delayMs: 0,
+      processItem: async (frameId) => {
+        const currentFrame = frames.find(f => f.id === frameId);
+        if (!currentFrame) throw new Error("Frame not found");
+        
+        const sourceUrl = currentFrame.processedUrl ?? currentFrame.rawUrl;
+        let img = imageCache.current.get(sourceUrl);
+        if (!img) {
+          img = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const newImg = new Image();
+            newImg.onload = () => resolve(newImg);
+            newImg.onerror = reject;
+            newImg.src = sourceUrl;
+          });
+          imageCache.current.set(sourceUrl, img);
+        }
 
-      const sourceUrl = currentFrame.processedUrl ?? currentFrame.rawUrl;
-      
-      let img = imageCache.current.get(sourceUrl);
-      if (!img) {
-        img = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const newImg = new Image();
-          newImg.onload = () => resolve(newImg);
-          newImg.onerror = reject;
-          newImg.src = sourceUrl;
+        tempCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+        const offsetX = (canvasWidth - img.width) / 2;
+        const offsetY = (canvasHeight - img.height) / 2;
+        tempCtx.drawImage(img, offsetX, offsetY);
+
+        let imageData = tempCtx.getImageData(0, 0, canvasWidth, canvasHeight);
+        imageData = applyFillToImageData(imageData, mask, isEraser);
+        tempCtx.putImageData(imageData, 0, 0);
+
+        const blob = await new Promise<Blob | null>(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+        if (blob) {
+          return { id: frameId, url: URL.createObjectURL(blob) };
+        }
+        throw new Error("Blob failed");
+      },
+      onSuccess: (results) => {
+        const updates = new Map(results.map(r => [r.id, r.url]));
+        const historyEntry = targetFrameIds.map(id => {
+          const frame = frames.find(f => f.id === id);
+          return { frameId: id, undoUrl: frame?.processedUrl, redoUrl: updates.get(id) };
         });
-        imageCache.current.set(sourceUrl, img);
+        pushToHistory(historyEntry);
+
+        setFrames(prev => prev.map(f => {
+          if (updates.has(f.id)) {
+            return { ...f, processedUrl: updates.get(f.id)! };
+          }
+          return f;
+        }));
       }
-
-      tempCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-      const offsetX = (canvasWidth - img.width) / 2;
-      const offsetY = (canvasHeight - img.height) / 2;
-      tempCtx.drawImage(img, offsetX, offsetY);
-
-      let imageData = tempCtx.getImageData(0, 0, canvasWidth, canvasHeight);
-      imageData = applyFillToImageData(imageData, mask, isEraser);
-      tempCtx.putImageData(imageData, 0, 0);
-
-      const blob = await new Promise<Blob | null>(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-      if (blob) {
-        const newUrl = URL.createObjectURL(blob);
-        updates.set(frameId, newUrl);
-      }
-
-      if (i > 0 && i % 5 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
-    }
-
-    const historyEntry = targetFrameIds.map(id => {
-      const frame = frames.find(f => f.id === id);
-      return { frameId: id, undoUrl: frame?.processedUrl, redoUrl: updates.get(id) };
     });
-    pushToHistory(historyEntry);
-
-    setFrames(prev => prev.map(f => {
-      if (updates.has(f.id)) {
-        return { ...f, processedUrl: updates.get(f.id)! };
-      }
-      return f;
-    }));
   };
 
   const handleFillAll = async () => {
@@ -493,65 +497,69 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
       targetFrames = frames.map(f => f.id);
     }
     
-    setIsProcessing(true);
-    const updates = new Map<string, string>();
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = canvasWidth;
     tempCanvas.height = canvasHeight;
     const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!;
     const rgb = hexToRgb(fillColor);
 
-    for (const frameId of targetFrames) {
-      const frame = frames.find(f => f.id === frameId);
-      if (!frame) continue;
-      const sourceUrl = frame.processedUrl ?? frame.rawUrl;
-      let img = imageCache.current.get(sourceUrl);
-      if (!img) {
-        img = await new Promise<HTMLImageElement>((resolve) => {
-          const newImg = new Image();
-          newImg.onload = () => resolve(newImg);
-          newImg.src = sourceUrl;
-        });
-        imageCache.current.set(sourceUrl, img);
-      }
-      tempCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-      const offsetX = (canvasWidth - img.width) / 2;
-      const offsetY = (canvasHeight - img.height) / 2;
-      tempCtx.drawImage(img, offsetX, offsetY);
-      const imageData = tempCtx.getImageData(0, 0, canvasWidth, canvasHeight);
-      const data = imageData.data;
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i + 3] < alphaThreshold) {
-          data[i] = rgb.r;
-          data[i + 1] = rgb.g;
-          data[i + 2] = rgb.b;
-          data[i + 3] = 255;
+    await startJob<string, { id: string, url: string }>({
+      items: targetFrames,
+      delayMs: 0,
+      processItem: async (frameId) => {
+        const frame = frames.find(f => f.id === frameId);
+        if (!frame) throw new Error("Frame not found");
+        const sourceUrl = frame.processedUrl ?? frame.rawUrl;
+        
+        let img = imageCache.current.get(sourceUrl);
+        if (!img) {
+          img = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const newImg = new Image();
+            newImg.onload = () => resolve(newImg);
+            newImg.onerror = reject;
+            newImg.src = sourceUrl;
+          });
+          imageCache.current.set(sourceUrl, img);
         }
-      }
-      tempCtx.putImageData(imageData, 0, 0);
-      const blob = await new Promise<Blob | null>(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-      if (blob) {
-        updates.set(frameId, URL.createObjectURL(blob));
-      }
-      
-      // Yield to main thread
-      await new Promise(resolve => setTimeout(resolve, 0));
-    }
+        tempCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+        const offsetX = (canvasWidth - img.width) / 2;
+        const offsetY = (canvasHeight - img.height) / 2;
+        tempCtx.drawImage(img, offsetX, offsetY);
+        
+        const imageData = tempCtx.getImageData(0, 0, canvasWidth, canvasHeight);
+        const data = imageData.data;
+        for (let j = 0; j < data.length; j += 4) {
+          if (data[j + 3] < alphaThreshold) {
+            data[j] = rgb.r;
+            data[j + 1] = rgb.g;
+            data[j + 2] = rgb.b;
+            data[j + 3] = 255;
+          }
+        }
+        tempCtx.putImageData(imageData, 0, 0);
+        const blob = await new Promise<Blob | null>(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+        if (blob) {
+          return { id: frameId, url: URL.createObjectURL(blob) };
+        }
+        throw new Error("Blob failed");
+      },
+      onSuccess: (results) => {
+        const updates = new Map(results.map(r => [r.id, r.url]));
+        const historyEntry = targetFrames.map(id => {
+          const frame = frames.find(f => f.id === id);
+          return { frameId: id, undoUrl: frame?.processedUrl, redoUrl: updates.get(id) };
+        });
+        pushToHistory(historyEntry);
 
-    const historyEntry = targetFrames.map(id => {
-      const frame = frames.find(f => f.id === id);
-      return { frameId: id, undoUrl: frame?.processedUrl, redoUrl: updates.get(id) };
+        setFrames(prev => prev.map(f => {
+          if (updates.has(f.id)) {
+            return { ...f, processedUrl: updates.get(f.id)! };
+          }
+          return f;
+        }));
+        trackEvent('Fill_All');
+      }
     });
-    pushToHistory(historyEntry);
-
-    setFrames(prev => prev.map(f => {
-      if (updates.has(f.id)) {
-        return { ...f, processedUrl: updates.get(f.id)! };
-      }
-      return f;
-    }));
-    setIsProcessing(false);
-    trackEvent('Fill_All');
   };
 
   const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
@@ -956,6 +964,18 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
                     <span className="text-[9px] font-medium uppercase tracking-wider">{lang === 'KR' ? 'Fill All' : lang === 'EN' ? 'Fill All' : 'すべて塗りつぶし'}</span>
                   </button>
                 </div>
+                {/* Batch Progress */}
+                {batchProgress >= 0 && (
+                  <div className="mt-4">
+                    <div className="flex justify-between text-[10px] text-blue-500 mb-1 font-medium tracking-wide">
+                      <span>{lang === 'KR' ? '처리 중...' : lang === 'EN' ? 'Processing...' : '処理中...'}</span>
+                      <span>{batchProgress}%</span>
+                    </div>
+                    <div className={`w-full h-1.5 rounded-full overflow-hidden ${theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+                      <div className="bg-blue-500 h-full transition-all duration-300" style={{ width: `${batchProgress}%` }} />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
