@@ -564,7 +564,7 @@ export default function RemovePage() {
     
     // Configurable chunk size
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-    const chunkSize = extendsChunkSize ? (isMobile ? 5 : 10) : 5;
+    const chunkSize = isMobile ? 5 : 10;
     const newFrames = [...frames];
     const targetSet = new Set(targetIndices);
     
@@ -612,8 +612,6 @@ export default function RemovePage() {
     setIsProcessing(false);
     setBatchProgress(-1);
   };
-
-  const extendsChunkSize = true; // For configuration later if needed
 
   const extractFrames = async (file: File, targetFps: number) => {
     if (!ffmpeg) {

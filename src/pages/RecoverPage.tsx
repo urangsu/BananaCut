@@ -42,9 +42,21 @@ export default function RecoverPage() {
 
   const pushToHistory = useCallback((entry: HistoryEntry) => {
     setHistory(prev => {
+      const droppedFuture = prev.slice(historyPointer + 1);
+      droppedFuture.forEach(h => {
+        h.forEach(e => {
+          if (e.redoUrl) URL.revokeObjectURL(e.redoUrl);
+        });
+      });
+
       const newHist = prev.slice(0, historyPointer + 1);
       newHist.push(entry);
-      if (newHist.length > 20) newHist.shift();
+      if (newHist.length > 20) {
+        const droppedPast = newHist.shift();
+        droppedPast?.forEach(e => {
+          if (e.undoUrl) URL.revokeObjectURL(e.undoUrl);
+        });
+      }
       return newHist;
     });
     setHistoryPointer(prev => Math.min(19, prev + 1));
@@ -145,15 +157,16 @@ export default function RecoverPage() {
         setShowResolutionToast(true);
         setTimeout(() => setShowResolutionToast(false), 3000);
         
-        setFrames(prev => [...prev, ...newFrames]);
+        setFrames(prev => {
+          const updated = [...prev, ...newFrames];
+          if (!currentFrameId) {
+            setCurrentFrameId(newFrames[0].id);
+            setSelectedFrames(new Set([newFrames[0].id]));
+          }
+          return updated;
+        });
       };
       img.src = firstFrame.rawUrl;
-
-      setFrames(prev => [...prev, ...newFrames]);
-      if (!currentFrameId) {
-        setCurrentFrameId(newFrames[0].id);
-        setSelectedFrames(new Set([newFrames[0].id]));
-      }
     }
   };
 
@@ -295,6 +308,20 @@ export default function RecoverPage() {
   };
 
   const clearFrames = () => {
+    frames.forEach(f => {
+      URL.revokeObjectURL(f.rawUrl);
+      if (f.processedUrl) URL.revokeObjectURL(f.processedUrl);
+    });
+    history.forEach(h => {
+      h.forEach(entry => {
+        // Technically redo/undo urls might overlap with current frames, but Revoking multiple times is safe.
+        if (entry.undoUrl) URL.revokeObjectURL(entry.undoUrl);
+        if (entry.redoUrl) URL.revokeObjectURL(entry.redoUrl);
+      });
+    });
+    setHistory([]);
+    setHistoryPointer(-1);
+
     setFrames([]);
     setSelectedFrames(new Set());
     setCurrentFrameId(null);
@@ -323,7 +350,7 @@ export default function RecoverPage() {
     };
   };
 
-const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brushPath: Point[] | null, isEraser: boolean = false) => {
+const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEraser: boolean = false) => {
     const data = imageData.data;
     const rgb = hexToRgb(fillColor);
     const width = imageData.width;
@@ -343,45 +370,6 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
               data[pixelIndex + 2] = rgb.b;
               data[pixelIndex + 3] = 255;
             }
-          }
-        }
-      }
-    } else if (brushPath) {
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = width;
-      tempCanvas.height = height;
-      const tCtx = tempCanvas.getContext('2d')!;
-      
-      tCtx.beginPath();
-      tCtx.lineCap = 'round';
-      tCtx.lineJoin = 'round';
-      tCtx.lineWidth = brushSize;
-      tCtx.strokeStyle = 'white';
-      tCtx.fillStyle = 'white';
-      
-      if (brushPath.length === 1) {
-        tCtx.arc(brushPath[0].x, brushPath[0].y, brushSize / 2, 0, Math.PI * 2);
-        tCtx.fill();
-      } else if (brushPath.length > 1) {
-        tCtx.moveTo(brushPath[0].x, brushPath[0].y);
-        for (let i = 1; i < brushPath.length; i++) {
-          tCtx.lineTo(brushPath[i].x, brushPath[i].y);
-        }
-        tCtx.stroke();
-      }
-
-      const maskData = tCtx.getImageData(0, 0, width, height).data;
-      
-      for (let i = 0; i < data.length; i += 4) {
-        // 브러시가 칠해진 영역(maskData)이면서, 동시에 캔버스의 반투명/투명한 곳(data)만 색을 채웁니다.
-        if (maskData[i + 3] > 0) {
-          if (isEraser) {
-            data[i + 3] = 0;
-          } else if (data[i + 3] < alphaThreshold) {
-            data[i] = rgb.r;
-            data[i + 1] = rgb.g;
-            data[i + 2] = rgb.b;
-            data[i + 3] = 255;
           }
         }
       }
@@ -437,7 +425,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleUndo, handleRedo]);
 
-  const performBatchFill = async (targetFrameIds: string[], mask: boolean[] | null, brushPath: Point[] | null, isEraser: boolean = false) => {
+  const performBatchFill = async (targetFrameIds: string[], mask: boolean[] | null, isEraser: boolean = false) => {
     const updates = new Map<string, string>();
     
     const tempCanvas = document.createElement('canvas');
@@ -469,7 +457,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
       tempCtx.drawImage(img, offsetX, offsetY);
 
       let imageData = tempCtx.getImageData(0, 0, canvasWidth, canvasHeight);
-      imageData = applyFillToImageData(imageData, mask, brushPath, isEraser);
+      imageData = applyFillToImageData(imageData, mask, isEraser);
       tempCtx.putImageData(imageData, 0, 0);
 
       const blob = await new Promise<Blob | null>(resolve => tempCanvas.toBlob(resolve, 'image/png'));
@@ -495,10 +483,6 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
       }
       return f;
     }));
-  };
-
-  const performFill = async (frameId: string, mask: boolean[] | null, brushPath: Point[] | null, isEraser: boolean = false) => {
-    await performBatchFill([frameId], mask, brushPath, isEraser);
   };
 
   const handleFillAll = async () => {
@@ -634,13 +618,13 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
     }
     setIsProcessing(true);
 
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvasWidth;
+    tempCanvas.height = canvasHeight;
+    const tCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!;
+    
+    tCtx.beginPath();
     if (activeTool === 'lasso') {
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = canvasWidth;
-      tempCanvas.height = canvasHeight;
-      const tCtx = tempCanvas.getContext('2d')!;
-      
-      tCtx.beginPath();
       if (lassoPoints.length > 0) {
         tCtx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
         for (let i = 1; i < lassoPoints.length; i++) {
@@ -650,21 +634,35 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
         tCtx.fillStyle = 'white';
         tCtx.fill();
       }
-
-      const maskData = tCtx.getImageData(0, 0, canvasWidth, canvasHeight).data;
-      const mask = new Array(canvasWidth * canvasHeight).fill(false);
-      for (let i = 0; i < maskData.length; i += 4) {
-        if (maskData[i + 3] > 0) {
-          mask[i / 4] = true;
+    } else { // brush or eraser
+      tCtx.lineCap = 'round';
+      tCtx.lineJoin = 'round';
+      tCtx.lineWidth = brushSize;
+      tCtx.strokeStyle = 'white';
+      tCtx.fillStyle = 'white';
+      
+      if (lassoPoints.length === 1) {
+        tCtx.arc(lassoPoints[0].x, lassoPoints[0].y, brushSize / 2, 0, Math.PI * 2);
+        tCtx.fill();
+      } else if (lassoPoints.length > 1) {
+        tCtx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+        for (let i = 1; i < lassoPoints.length; i++) {
+          tCtx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
         }
+        tCtx.stroke();
       }
-
-      await performBatchFill(targetFrames, mask, null, activeTool === 'eraser');
-      setLastAction({ type: activeTool === 'eraser' ? 'brush' : 'lasso', data: mask });
-    } else {
-      await performBatchFill(targetFrames, null, lassoPoints, activeTool === 'eraser');
-      setLastAction({ type: activeTool === 'eraser' ? 'brush' : 'brush', data: lassoPoints });
     }
+
+    const maskData = tCtx.getImageData(0, 0, canvasWidth, canvasHeight).data;
+    const mask = new Array(canvasWidth * canvasHeight).fill(false);
+    for (let i = 0; i < maskData.length; i += 4) {
+      if (maskData[i + 3] > 0) {
+        mask[i / 4] = true;
+      }
+    }
+
+    await performBatchFill(targetFrames, mask, activeTool === 'eraser');
+    setLastAction({ type: activeTool === 'eraser' ? 'eraser' : activeTool, data: mask });
     
     setIsProcessing(false);
     setLassoPoints([]);
@@ -686,11 +684,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
     setIsProcessing(true);
     try {
       const framesToProcess = Array.from(selectedFrames).filter(id => id !== currentFrameId) as string[];
-      if (lastAction.type === 'lasso') {
-        await performBatchFill(framesToProcess, lastAction.data as boolean[], null);
-      } else {
-        await performBatchFill(framesToProcess, null, lastAction.data as Point[]);
-      }
+      await performBatchFill(framesToProcess, lastAction.data as boolean[], lastAction.type === 'eraser');
     } catch (error) {
       console.error("Error applying to all:", error);
       alert(lang === 'KR' ? "선택된 프레임에 적용 실패." : lang === 'EN' ? "Failed to apply to all selected frames." : "選択したすべてのフレームへの適用に失敗しました。");
@@ -712,7 +706,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, brus
         const response = await fetch(sourceUrl);
         const blob = await response.blob();
         
-        const nameParts = frame.name.split('.');
+        const nameParts = (frame.name || 'frame.png').split('.');
         const ext = nameParts.pop();
         const baseName = nameParts.join('.');
         const newName = `${baseName}_R.${ext}`;
