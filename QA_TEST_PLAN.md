@@ -71,3 +71,11 @@
 - Frame strip thumbnails loaded correctly without broken image icons.
 - Frame total count steadily increased to final count.
 - Selecting frames updated the preview successfully.
+
+## 2026-05-02: User Flow & Local FFmpeg WASM Regression Test
+- Opened application as a fresh user (no python, no global installation required).
+- Navigated to `/remove` route.
+- FFmpeg context prewarned successfully in the background (`/ffmpeg/ffmpeg-core.wasm` loaded).
+- Uploaded PNG sequence correctly, previewing image sequentially.
+- Uploaded MP4 correctly.
+- Background Network Tab verified that `/ffmpeg/ffmpeg-core.wasm` is serving from the same domain locally as primary source without fallback execution.

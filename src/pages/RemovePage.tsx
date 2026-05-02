@@ -38,6 +38,14 @@ export default function RemovePage() {
   const { lang } = useLanguage();
   const MIDDLE_NAME_OPTIONS = GET_MIDDLE_NAME_OPTIONS(lang);
   const { ffmpeg, loadState, error: ffmpegError, retry: retryFFmpeg, loadFFmpeg } = useFFmpeg();
+
+  // Prewarm FFmpeg engine in the background when user enters RemovePage
+  useEffect(() => {
+    if (loadState === 'idle') {
+      loadFFmpeg().catch(console.error);
+    }
+  }, [loadState, loadFFmpeg]);
+
   const { 
     frames, setFrames, 
     videoFile, setVideoFile, 

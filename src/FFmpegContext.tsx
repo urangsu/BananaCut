@@ -35,11 +35,23 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           console.log("[FFmpeg Log]", message);
         });
         
-        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-        await ffmpegInstance.load({
-          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-        });
+        const localBaseURL = '/ffmpeg';
+        const fallbackBaseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+        
+        try {
+          await ffmpegInstance.load({
+            coreURL: await toBlobURL(`${localBaseURL}/ffmpeg-core.js`, 'text/javascript'),
+            wasmURL: await toBlobURL(`${localBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+          });
+          console.log("[FFmpeg] Loaded from local domain.");
+        } catch (localError) {
+          console.warn("[FFmpeg] Failed to load from local domain, trying fallback...", localError);
+          await ffmpegInstance.load({
+            coreURL: await toBlobURL(`${fallbackBaseURL}/ffmpeg-core.js`, 'text/javascript'),
+            wasmURL: await toBlobURL(`${fallbackBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+          });
+          console.log("[FFmpeg] Loaded from unpkg fallback.");
+        }
         
         setFFmpeg(ffmpegInstance);
         setLoadState('loaded');
