@@ -62,41 +62,21 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           const start = Date.now();
           logDebug(`[FFmpeg] Loading from ${sourceName} ${baseURL} start...`);
 
-          const checkFile = async (url: string, expectedType: string) => {
-            try {
-              const res = await fetch(url, { method: 'HEAD' });
-              if (!res.ok) {
-                throw new Error(`HTTP ${res.status} ${res.statusText}`);
-              }
-              const contentType = res.headers.get('content-type');
-              if (contentType && !contentType.includes(expectedType)) {
-                logDebug(`[FFmpeg] Warning: Expected ${expectedType} for ${url}, got ${contentType}`);
-              }
-            } catch (e: any) {
-              throw new Error(`Failed to reach ${url}: ${e.message}`);
-            }
-          };
-
-          // Pre-flight checks
-          await Promise.all([
-            checkFile(`${baseURL}/ffmpeg-core.js`, 'javascript'),
-            checkFile(`${baseURL}/ffmpeg-core.wasm`, 'wasm'),
-            checkFile(`${baseURL}/ffmpeg-core.worker.js`, 'javascript'),
-          ]);
-
-          const [coreURL, wasmURL, workerURL] = await Promise.all([
+          const toBlobStart = Date.now();
+          const [coreURL, wasmURL] = await Promise.all([
             toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-            toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript')
+            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
           ]);
+          logDebug(`[FFmpeg] toBlobURL from ${sourceName} completed in ${Date.now() - toBlobStart}ms`);
 
+          const loadStart = Date.now();
           await ffmpegInstance.load({
             coreURL,
-            wasmURL,
-            workerURL
+            wasmURL
           });
+          logDebug(`[FFmpeg] ffmpeg.load from ${sourceName} completed in ${Date.now() - loadStart}ms`);
 
-          logDebug(`[FFmpeg] Selected Source: ${sourceName}. Loaded in ${Date.now() - start}ms`);
+          logDebug(`[FFmpeg] Selected Source: ${sourceName}. Total load time: ${Date.now() - start}ms`);
         };
 
         const totalStart = Date.now();
@@ -104,7 +84,7 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         try {
           await loadWithTimeout(
             () => loadCoreFromBase(localBaseURL, 'local'),
-            20000,
+            15000,
             'local domain'
           );
         } catch (localError: any) {
