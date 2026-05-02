@@ -6,6 +6,7 @@ import { useFFmpeg } from '../FFmpegContext';
 import { Download, Film, LayoutGrid, Loader2, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useBatchJob } from '../hooks/useBatchJob';
 import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
+import { PerfLogger } from '../utils/performanceLogger';
 
 export default function AssetPage() {
   const { lang } = useLanguage();
@@ -42,7 +43,7 @@ export default function AssetPage() {
     // Load config from localStorage
     const params = {
       keyingMode: (localStorage.getItem('ck_keyingMode') as any) || 'greenAdvanced',
-      previewMode: (localStorage.getItem('ck_previewMode') as any) || 'result',
+      previewMode: 'result' as const,
       tolerance: Number(localStorage.getItem('ck_tolerance')) || 30,
       softness: Number(localStorage.getItem('ck_softness')) || 20,
       enclosedTolerance: Number(localStorage.getItem('ck_enclosedTolerance')) || 10,
@@ -73,7 +74,9 @@ export default function AssetPage() {
            
            const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
            const mask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, idx);
+           PerfLogger.start('AssetPage_applyChromaKeyAdvanced');
            applyChromaKeyAdvanced(imgData.data, canvas.width, canvas.height, params, mask);
+           PerfLogger.end('AssetPage_applyChromaKeyAdvanced');
            ctx.putImageData(imgData, 0, 0);
            
            const blob = await new Promise<Blob|null>(resolve => canvas.toBlob(resolve, 'image/png'));

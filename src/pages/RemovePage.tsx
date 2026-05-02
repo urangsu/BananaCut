@@ -12,6 +12,7 @@ import { DownloadModal } from '../components/DownloadModal';
 import { useBatchJob } from '../hooks/useBatchJob';
 import { useLanguage } from '../LanguageContext';
 import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
+import { PerfLogger } from '../utils/performanceLogger';
 
 const GET_MIDDLE_NAME_OPTIONS = (lang: string) => [
   { id: "idle_sitting", desc: lang === 'KR' ? "자연스러운 호흡" : lang === 'EN' ? "Natural Breathing" : "自然な呼吸" },
@@ -89,7 +90,14 @@ export default function RemovePage() {
          ctx.drawImage(img, 0, 0);
          const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
          const mask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, idx);
-         applyChromaKey(imgData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, mask);
+         
+         PerfLogger.start('processTargetFrames_applyChromaKey');
+         applyChromaKeyAdvanced(imgData.data, canvas.width, canvas.height, {
+           keyingMode, previewMode: 'result', tolerance, softness, enclosedTolerance,
+           chromaKeyColor, pickedColor, despill, erode, dilate, feather, alphaContrast
+         }, mask);
+         PerfLogger.end('processTargetFrames_applyChromaKey');
+         
          ctx.putImageData(imgData, 0, 0);
          
          const blob = await new Promise<Blob|null>(resolve => canvas.toBlob(resolve, 'image/png'));
@@ -229,7 +237,6 @@ export default function RemovePage() {
     setCurrentFrame(idx);
   };
 
-  const maskCacheRef = useRef<Map<number, { width: number, height: number, version: number, data: Uint8Array }>>(new Map());
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>();
   const lastDrawTime = useRef<number>(0);
@@ -249,53 +256,6 @@ export default function RemovePage() {
     requestRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(requestRef.current!);
   }, [isPlaying, frames, fps]);
-
-  const generateStrokeMask = (width: number, height: number, strokes: BrushStroke[], frameIndex: number): Uint8Array | undefined => {
-    const activeStrokes = strokes.filter(s => s.targetFrameIndexes.includes(frameIndex));
-    if (activeStrokes.length === 0) return undefined;
-    
-    let mask = maskCacheRef.current.get(frameIndex);
-    if (!mask || mask.width !== width || mask.height !== height || mask.version !== activeStrokes.length) {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-      
-      ctx.fillStyle = 'black';
-      ctx.fillRect(0, 0, width, height);
-
-      for (const stroke of activeStrokes) {
-        ctx.beginPath();
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = stroke.brushSize;
-        ctx.strokeStyle = stroke.tool === 'eraser' ? 'black' : 'white';
-        
-        const pts = stroke.points;
-        if (pts.length === 0) continue;
-        if (pts.length === 1) {
-           ctx.fillStyle = ctx.strokeStyle;
-           ctx.arc(pts[0].x, pts[0].y, stroke.brushSize / 2, 0, Math.PI * 2);
-           ctx.fill();
-        } else {
-           ctx.moveTo(pts[0].x, pts[0].y);
-           for (let i = 1; i < pts.length; i++) {
-             ctx.lineTo(pts[i].x, pts[i].y);
-           }
-           ctx.stroke();
-        }
-      }
-
-      const imgData = ctx.getImageData(0, 0, width, height).data;
-      const maskData = new Uint8Array(width * height);
-      for (let i = 0; i < maskData.length; i++) {
-        maskData[i] = imgData[i * 4] > 128 ? 1 : 0;
-      }
-      mask = { width, height, version: activeStrokes.length, data: maskData };
-      maskCacheRef.current.set(frameIndex, mask);
-    }
-    return mask.data;
-  };
 
   const applyChromaKey = (data: Uint8ClampedArray, width: number, height: number, tol: number, soft: number, enclosedTol: number, colorMode: 'White' | 'Green' | 'Picker', pickedColor: {r: number, g: number, b: number}, exclusionMask?: Uint8Array) => {
     applyChromaKeyAdvanced(data, width, height, {
