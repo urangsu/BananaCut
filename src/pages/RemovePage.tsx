@@ -65,6 +65,7 @@ export default function RemovePage() {
   
   type UploadState = 'idle' | 'image-loading' | 'video-engine-loading' | 'video-extracting' | 'ready' | 'error';
   const [uploadState, setUploadState] = useState<UploadState>('idle');
+  const [showTechError, setShowTechError] = useState(false);
   const isExtracting = uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading';
   const { isProcessing: isBatchProcessing, progress: batchProgress, startJob, cancelJob } = useBatchJob();
   const [isProcessingLocal, setIsProcessingLocal] = useState(false);
@@ -972,8 +973,22 @@ export default function RemovePage() {
                   </span>
                   <span className="text-xs opacity-60">MP4, MOV, PNG</span>
                   {ffmpegError && uploadState === 'error' && (
-                    <div className="mt-2 text-center w-full">
-                      <div className="text-[10px] text-red-500 whitespace-pre-wrap max-w-full overflow-hidden truncate">{ffmpegError}</div>
+                    <div className="mt-2 text-center w-full flex flex-col items-center">
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowTechError(!showTechError);
+                        }}
+                        className="text-[10px] text-gray-500 underline mb-2"
+                      >
+                        {showTechError ? 'Hide technical error' : 'Show technical error'}
+                      </button>
+                      {showTechError && (
+                        <div className="text-[10px] text-red-500 whitespace-pre-wrap max-w-full overflow-x-auto text-left bg-red-500/10 p-2 rounded border border-red-500/20 mb-2">
+                          {ffmpegError}
+                        </div>
+                      )}
                       <button 
                         onClick={(e) => {
                           e.preventDefault();
@@ -1034,8 +1049,22 @@ export default function RemovePage() {
                   {uploadState === 'error' ? (lang === 'KR' ? '비디오 대신 이미지를 업로드해보세요.' : 'Try a PNG sequence instead.') : 'MP4, MOV or PNG'}
                 </p>
                 {ffmpegError && uploadState === 'error' && (
-                  <div className="mt-3 flex flex-col items-center">
-                    <pre className="text-[10px] text-red-500 max-w-full overflow-x-auto whitespace-pre-wrap text-left bg-red-500/10 p-2 rounded border border-red-500/20">{ffmpegError}</pre>
+                  <div className="mt-3 flex flex-col items-center max-w-full">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowTechError(!showTechError);
+                      }}
+                      className="text-[10px] text-gray-500 underline mb-2"
+                    >
+                      {showTechError ? 'Hide technical error' : 'Show technical error'}
+                    </button>
+                    {showTechError && (
+                      <pre className="text-[10px] text-red-500 max-w-full overflow-x-auto whitespace-pre-wrap text-left bg-red-500/10 p-2 rounded border border-red-500/20 mb-2">
+                        {ffmpegError}
+                      </pre>
+                    )}
                     <button 
                       onClick={(e) => {
                         e.preventDefault();

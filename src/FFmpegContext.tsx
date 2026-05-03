@@ -63,7 +63,12 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             const textSample = contentType.includes('text/html')
               ? await res.clone().text().then(t => t.slice(0, 120)).catch(() => '')
               : '';
-            return { url, ok: res.ok, status: res.status, contentType, textSample };
+            
+            let rewriteWarning = '';
+            if (contentType.includes('text/html')) {
+              rewriteWarning = 'Vercel rewrite returned index.html instead of ffmpeg asset';
+            }
+            return { url, ok: res.ok, status: res.status, contentType, textSample, rewriteWarning };
           } catch (e: any) {
             return { url, ok: false, error: e.message };
           }
@@ -119,7 +124,7 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         };
 
         const totalStart = Date.now();
-        let lastErrorMsg = '';
+        let errors: any[] = [];
         try {
           await loadWithTimeout(
             () => loadCoreFromBase(localBaseURL, 'local'),
@@ -127,8 +132,8 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             'local domain'
           );
         } catch (localError: any) {
-          lastErrorMsg = localError?.message || String(localError);
-          logDebug(`[FFmpeg] Local load failed: ${lastErrorMsg}`);
+          errors.push({ source: 'local', error: localError?.message || String(localError) });
+          logDebug(`[FFmpeg] Local load failed: ${localError?.message || String(localError)}`);
           try {
              await loadWithTimeout(
               () => loadCoreFromBase('https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm', 'unpkg'),
@@ -136,8 +141,8 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
               'unpkg'
             );
           } catch (unpkgError: any) {
-            lastErrorMsg = unpkgError?.message || String(unpkgError);
-            logDebug(`[FFmpeg] unpkg load failed: ${lastErrorMsg}`);
+            errors.push({ source: 'unpkg', error: unpkgError?.message || String(unpkgError) });
+            logDebug(`[FFmpeg] unpkg load failed: ${unpkgError?.message || String(unpkgError)}`);
             try {
               await loadWithTimeout(
                 () => loadCoreFromBase('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm', 'jsdelivr'),
@@ -145,9 +150,9 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 'jsdelivr'
               );
             } catch (jsdelivrError: any) {
-              lastErrorMsg = jsdelivrError?.message || String(jsdelivrError);
-              logDebug(`[FFmpeg] jsdelivr load failed: ${lastErrorMsg}`);
-              throw new Error(`All FFmpeg load sources failed. Last error: ${lastErrorMsg}`);
+              errors.push({ source: 'jsdelivr', error: jsdelivrError?.message || String(jsdelivrError) });
+              logDebug(`[FFmpeg] jsdelivr load failed: ${jsdelivrError?.message || String(jsdelivrError)}`);
+              throw new Error(`All FFmpeg load sources failed.\nDetailed traces:\n${JSON.stringify(errors, null, 2)}`);
             }
           }
         }
@@ -159,12 +164,7 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return ffmpegInstance;
       } catch (err: any) {
         console.error("Failed to load FFmpeg:", err);
-        const isDebug = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
-        if (isDebug) {
-          setError(`비디오 엔진 로딩 실패 (Video engine loading failed)\nDetailed Error:\n${err?.message || err}`);
-        } else {
-          setError("비디오 엔진 로딩 실패 (Video engine loading failed)");
-        }
+        setError(`비디오 엔진 로딩 실패 (Video engine loading failed)\nDetailed Error:\n${err?.message || err}`);
         setLoadState('error');
         loadingPromiseRef.current = null;
         return null;

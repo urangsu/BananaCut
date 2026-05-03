@@ -79,9 +79,9 @@
 - FFmpeg context prewarned successfully in the background (`/ffmpeg/ffmpeg-core.wasm` loaded).
 - Uploaded PNG sequence correctly, previewing image sequentially.
 - 8초 MP4 업로드
-- Network 탭에서 아래 세 파일이 모두 200인지 확인:
+- Network 탭에서 아래 세 파일이 모두 200인지 확인 (실제 배포 포함):
   - `/ffmpeg/ffmpeg-core.js`
   - `/ffmpeg/ffmpeg-core.wasm`
-  - `/ffmpeg/ffmpeg-core.worker.js`
+  - `/ffmpeg/ffmpeg-core.worker.js` (보류중이지만 존재는 확인)
 - 20초 안에 `video-extracting`으로 넘어가지 않으면 실패.
 - 첫 프레임 preview와 frame strip이 보여야 함.
