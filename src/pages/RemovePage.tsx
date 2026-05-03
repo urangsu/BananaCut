@@ -628,6 +628,7 @@ export default function RemovePage() {
 
       console.log(`Extracted ${frameFiles.length} frames. Loading into memory...`);
       setExtractionProgress({ current: 0, total: frameFiles.length });
+      extractionProgressRef.current = { current: 0, lastUpdated: Date.now() };
       
       let frameWidth = 0;
       let frameHeight = 0;
@@ -678,9 +679,16 @@ export default function RemovePage() {
       
       setIsPlaying(true);
       console.log("Extraction complete.");
+      setExtractionStartMs(null);
+      setExtractionStalled(false);
+      abortControllerRef.current = null;
       setUploadState('ready');
     } catch (error) {
       console.error("Error extracting frames:", error);
+      setExtractionStartMs(null);
+      setExtractionStalled(false);
+      abortControllerRef.current = null;
+      setIsPlaying(false);
       setUploadState('error');
     }
   };
@@ -796,6 +804,7 @@ export default function RemovePage() {
         abortControllerRef.current = null;
         setIsProcessingLocal(false);
         setExtractionStartMs(null);
+        setExtractionStalled(false);
       }
       return;
     }
