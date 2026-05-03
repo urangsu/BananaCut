@@ -42,7 +42,7 @@ export async function extractFramesNative(file: File, options: {
     video.onerror = () => {
       signal?.removeEventListener('abort', abortHandler);
       cleanup();
-      reject(new Error(`Video load error: ${video.error?.message || 'Unknown code ' + video.error?.code}`));
+      reject(new Error(`Video metadata failed to load or unsupported video codec (Code. ${video.error?.code}). Try FFmpeg fallback.`));
     };
 
     video.onloadedmetadata = async () => {
@@ -114,7 +114,7 @@ export async function extractFramesNative(file: File, options: {
               if (handled) return;
               handled = true;
               clearEvents();
-              rej(new Error('Seek error'));
+              rej(new Error('Seek error (timeout or codec issue)'));
             };
             
             video.addEventListener('seeked', onSeeked);
@@ -125,6 +125,7 @@ export async function extractFramesNative(file: File, options: {
             setTimeout(() => {
                if(!handled) {
                    logDebug(`[nativeVideoExtract] seeked timeout fallback at time ${time}`);
+                   // instead of finishing, verify if it's completely hung
                    finish();
                }
             }, 500);
@@ -137,7 +138,7 @@ export async function extractFramesNative(file: File, options: {
               if (blob) {
                 res(URL.createObjectURL(blob));
               } else {
-                rej(new Error('Canvas toBlob failed'));
+                rej(new Error('Canvas capture failed: toBlob returned null'));
               }
             }, 'image/png');
           });

@@ -132,6 +132,7 @@ export default function LandingPage() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
 
   return (
     <div className={`min-h-screen flex flex-col ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
@@ -201,18 +202,18 @@ export default function LandingPage() {
           {/* Hero Section */}
           <section className="text-center space-y-8">
             <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight">
-              Remove Backgrounds <br />
+              Turn AI Video into <br />
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
-                In Your Browser
+                Transparent Assets
               </span>
             </h1>
             <p className={`text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
               {lang === 'KR' ? (
-                <>빠르고 안전하게.<br />프레임 추출부터 배경 제거,<br />디테일 복구까지 한 번에.</>
+                <>AI 생성 비디오에서 투명한 에셋을 추출하세요.<br />프레임 추출부터 배경 제거, 섬세한 복구까지 웹 브라우저 안에서 완벽하게.</>
               ) : lang === 'EN' ? (
-                <>Fast and secure.<br />Can extract frames, remove backgrounds,<br />and recover details.</>
+                <>Extract transparent assets from AI-generated videos.<br />Extract frames, remove backgrounds, and precisely recover details entirely within your browser.</>
               ) : (
-                <>高速で安全に。<br />フレーム抽出から背景削除、<br />ディテール復元までこれ一つで。</>
+                <>AI生成ビデオから透明なアセットを抽出します。<br />フレーム抽出から背景削除、精巧なディテール復元まで、すべてブラウザ内で完結。</>
               )}
             </p>
             <button 
@@ -259,13 +260,56 @@ export default function LandingPage() {
           {/* Video Demo Section (For Users & Bots) */}
           <section className="max-w-5xl mx-auto space-y-6">
             <div className={`aspect-video rounded-3xl flex items-center justify-center border overflow-hidden relative shadow-2xl group ${isDark ? 'bg-[#0a0a0a] border-white/10' : 'bg-black border-gray-200'}`}>
-              <iframe 
-                className="w-full h-full"
-                src="https://www.youtube.com/embed/rTOB6sX-zA8"
-                title="BananaCut Demo Video"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              {!isRevealed ? (
+                <>
+                  <img 
+                    src="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg" 
+                    alt="BananaCut Demo Thumbnail" 
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+                    <button 
+                      onClick={(e) => { 
+                        e.preventDefault(); 
+                        setIsRevealed(true); 
+                      }}
+                      className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-all flex items-center gap-3 shadow-[0_0_40px_rgba(220,38,38,0.5)] group-hover:scale-110 group-hover:shadow-[0_0_60px_rgba(220,38,38,0.8)] pointer-events-auto"
+                    >
+                      <PlaySquare className="w-6 h-6" />
+                      {lang === 'KR' ? 'YouTube에서 데모 보기' : lang === 'EN' ? 'Watch demo' : 'デモを見る'}
+                    </button>
+                    <p className={`mt-6 text-sm font-medium px-4 py-2 rounded-full backdrop-blur-md ${isDark ? 'text-white/80 bg-black/40' : 'text-gray-900 bg-white/60'}`}>
+                      {lang === 'KR' ? '클릭 시 동영상이 재생됩니다.' : lang === 'EN' ? 'Click to play video.' : 'クリックして再生'}
+                    </p>
+                  </div>
+                </>
+              ) : iframeError ? (
+                <div className="flex flex-col items-center justify-center text-white/50 space-y-4">
+                  <PlaySquare className="w-12 h-12 opacity-50" />
+                  <p>{lang === 'KR' ? '동영상을 로드하지 못했습니다.' : 'Failed to load video.'}</p>
+                  <a 
+                    href="https://www.youtube.com/watch?v=rTOB6sX-zA8" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+                  >
+                    Open in YouTube
+                  </a>
+                </div>
+              ) : (
+                <iframe 
+                  className="w-full h-full"
+                  src="https://www.youtube.com/embed/rTOB6sX-zA8?autoplay=1"
+                  title="BananaCut Demo Video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  onError={() => setIframeError(true)}
+                />
+              )}
             </div>
             
             {/* Text description for SEO/Bots */}

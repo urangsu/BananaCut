@@ -54,6 +54,7 @@ export default function RemovePage() {
   
   type UploadState = 'idle' | 'image-loading' | 'video-engine-loading' | 'video-extracting' | 'ready' | 'error';
   const [uploadState, setUploadState] = useState<UploadState>('idle');
+  const [nativeExtractError, setNativeExtractError] = useState<string | null>(null);
   const [showTechErrorModal, setShowTechErrorModal] = useState(false);
   const isExtracting = uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading';
   const { isProcessing: isBatchProcessing, progress: batchProgress, startJob, cancelJob } = useBatchJob();
@@ -657,6 +658,7 @@ export default function RemovePage() {
       abortControllerRef.current = new AbortController();
       
       setUploadState('video-extracting');
+      setNativeExtractError(null);
       setVideoFile(file);
       setFrames([]);
       setExtractionProgress({ current: 0, total: 0 });
@@ -696,6 +698,7 @@ export default function RemovePage() {
           return;
         }
         console.error("Browser video extraction failed:", err);
+        setNativeExtractError(err instanceof Error ? err.message : 'Unknown native extraction error');
         setUploadState('error');
       }
       return;
@@ -1105,6 +1108,20 @@ export default function RemovePage() {
 
             {uploadState === 'error' && (
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                {nativeExtractError && !ffmpegError && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (videoFile) processFile(videoFile);
+                    }}
+                    className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
+                  >
+                    {lang === 'KR' ? '재시도 (브라우저 디코더)' : 'Retry (Browser Decoder)'}
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={async (e) => {
@@ -1127,10 +1144,10 @@ export default function RemovePage() {
                   }}
                   className="rounded-lg bg-red-50 hover:bg-red-100 px-3 py-2 text-xs font-semibold text-red-600 transition-colors"
                 >
-                  {lang === 'KR' ? 'FFmpeg 폴백 시도' : 'Try FFmpeg fallback'}
+                  {ffmpegError ? (lang === 'KR' ? 'FFmpeg 재시도' : 'Retry FFmpeg') : (lang === 'KR' ? 'FFmpeg 폴백 시도' : 'Try FFmpeg fallback')}
                 </button>
                 
-                {ffmpegError && (
+                {(ffmpegError || nativeExtractError) && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1891,14 +1908,20 @@ export default function RemovePage() {
             </div>
 
             <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-xl bg-gray-100 dark:bg-black/50 p-4 text-xs font-mono text-red-600 dark:text-red-400 border border-gray-200 dark:border-red-500/10">
-              {ffmpegError || 'No technical error available.'}
+              {nativeExtractError && `[Native Error]\n${nativeExtractError}\n\n`}
+              {ffmpegError && `[FFmpeg Error]\n${ffmpegError}`}
+              {(!nativeExtractError && !ffmpegError) && 'No technical error available.'}
             </pre>
 
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(ffmpegError || '');
+                  const errText = [
+                    nativeExtractError ? `[Native Error]\n${nativeExtractError}` : '',
+                    ffmpegError ? `[FFmpeg Error]\n${ffmpegError}` : ''
+                  ].filter(Boolean).join('\n\n');
+                  navigator.clipboard.writeText(errText || 'No error details');
                   alert('Copied to clipboard');
                 }}
                 className="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors dark:text-gray-300"
