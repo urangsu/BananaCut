@@ -7,11 +7,12 @@ export async function extractFramesNative(file: File, options: {
   maxHeight: number;
   maxFrames: number;
   fastMode?: boolean;
+  skipFailedFrames?: boolean;
   signal?: AbortSignal;
   onProgress?: (current: number, total: number) => void;
   onChunk?: (frames: StudioFrame[]) => void;
-}): Promise<StudioFrame[]> {
-  const { fps, maxWidth, maxHeight, maxFrames, fastMode = false, signal, onProgress, onChunk } = options;
+}): Promise<{frames: StudioFrame[], skippedFrames: number[]}> {
+  const { fps, maxWidth, maxHeight, maxFrames, fastMode = false, skipFailedFrames = true, signal, onProgress, onChunk } = options;
   const url = URL.createObjectURL(file);
   const video = document.createElement('video');
   video.src = url;
@@ -24,7 +25,7 @@ export async function extractFramesNative(file: File, options: {
   const isDebug = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
   const logDebug = (...args: any[]) => { if (isDebug) console.log(...args); };
 
-  return new Promise<StudioFrame[]>((resolve, reject) => {
+  return new Promise<{frames: StudioFrame[], skippedFrames: number[]}>((resolve, reject) => {
     let settled = false;
 
     const cleanup = () => {
@@ -55,6 +56,7 @@ export async function extractFramesNative(file: File, options: {
 
       video.onloadedmetadata = async () => {
       let outFrames: StudioFrame[] = [];
+      let skippedFrames: number[] = [];
       try {
         const metadataLoadTime = Date.now() - startTime;
         logDebug(`[nativeVideoExtract] metadata loaded in ${metadataLoadTime}ms`);
@@ -90,11 +92,12 @@ export async function extractFramesNative(file: File, options: {
         }
 
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
-        const seekTimeoutMs = isMobile ? 2500 : 1200;
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        const seekTimeoutMs = isSafari ? 6000 : (isMobile ? 5000 : 3000);
         
         let chunk: StudioFrame[] = [];
         
-        const seekAndWait = async (time: number, isRetry = false): Promise<void> => {
+        const seekAndWait = async (time: number, retryCount = 0): Promise<void> => {
           return new Promise<void>((resolve, reject) => {
             if (signal?.aborted) return reject(new Error('Aborted'));
             
@@ -119,10 +122,11 @@ export async function extractFramesNative(file: File, options: {
               handled = true;
               clearEvents();
               
-              if (!isRetry) {
-                logDebug(`[nativeVideoExtract] seek failed at time ${time}, retrying...`);
+              if (retryCount < 2) {
+                logDebug(`[nativeVideoExtract] seek failed at time ${time}, retrying (${retryCount + 1}/2)...`);
                 try {
-                  await seekAndWait(time, true);
+                  await new Promise(r => setTimeout(r, 120));
+                  await seekAndWait(time, retryCount + 1);
                   resolve();
                 } catch (retryErr) {
                   reject(retryErr);
@@ -157,7 +161,7 @@ export async function extractFramesNative(file: File, options: {
             timeoutId = setTimeout(() => {
                if (!handled) {
                    logDebug(`[nativeVideoExtract] seeked timeout fallback at time ${time}`);
-                   fail(new Error(`Seek timeout after ${seekTimeoutMs}ms. Possibly unsupported video codec.`));
+                   fail(new Error(`Browser decoder was too slow to seek this frame. Try again, lower FPS, or use a shorter clip.`));
                }
             }, seekTimeoutMs);
           });
@@ -190,7 +194,18 @@ export async function extractFramesNative(file: File, options: {
           PerfLogger.start('nativeVideoExtract_frame');
 
           const timestamp = Math.min(i / safeFps, Math.max(0, duration - 0.001));
-          await seekAndWait(timestamp);
+          
+          try {
+            await seekAndWait(timestamp);
+          } catch (err) {
+            if (skipFailedFrames && i > 0) { // First frame must secure
+              logDebug(`[nativeVideoExtract] Skipping frame ${i} due to seek failure`);
+              skippedFrames.push(i);
+              if (onProgress) onProgress(i + 1, totalFrames);
+              continue;
+            }
+            throw err;
+          }
           
           ctx.drawImage(video, 0, 0, scaledWidth, scaledHeight);
           const blobUrl = await canvasToBlobUrl();
@@ -246,7 +261,7 @@ export async function extractFramesNative(file: File, options: {
         settled = true;
         signal?.removeEventListener('abort', abortHandler);
         cleanup();
-        resolve(outFrames);
+        resolve({frames: outFrames, skippedFrames});
       } catch (err) {
         if (settled) return;
         settled = true;

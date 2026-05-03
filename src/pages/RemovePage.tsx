@@ -57,6 +57,7 @@ export default function RemovePage() {
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [nativeExtractError, setNativeExtractError] = useState<string | null>(null);
   const [showTechErrorModal, setShowTechErrorModal] = useState(false);
+  const [skippedFramesWarning, setSkippedFramesWarning] = useState(false);
   const isExtracting = uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading';
   const { isProcessing: isBatchProcessing, progress: batchProgress, startJob, cancelJob } = useBatchJob();
   const [isProcessingLocal, setIsProcessingLocal] = useState(false);
@@ -173,6 +174,7 @@ export default function RemovePage() {
   const isInitialMount = useRef(true);
 
   const markSelectedFramesDirty = () => {
+    if (isExtracting) return;
     setFrames(prev => prev.map((f, i) => {
       if (selectedFrames.has(i) && f.processedUrl && !f.dirty) {
         return { ...f, dirty: true };
@@ -274,12 +276,15 @@ export default function RemovePage() {
   };
 
   useEffect(() => {
-    if (frames.length === 0 || !canvasRef.current) return;
+    if (frames.length === 0 || !canvasRef.current || isExtracting) return;
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     
+    const targetFrame = frames[currentFrame];
+    if (!targetFrame) return;
+
     const img = new Image();
     img.onload = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -306,7 +311,6 @@ export default function RemovePage() {
       const offsetX = (canvas.width - newW) / 2;
       const offsetY = (canvas.height - newH) / 2;
       
-      const targetFrame = frames[currentFrame];
       const useProcessed = targetFrame.processedUrl && !targetFrame.dirty;
       
       const tempCanvas = document.createElement('canvas');
@@ -342,9 +346,8 @@ export default function RemovePage() {
         ctx.stroke();
       }
     };
-    const targetFrame = frames[currentFrame];
     img.src = getFrameDisplayUrl(targetFrame);
-  }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionStrokes, isBrushActive, isPlaying, lastPos, brushSize, drawTick, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast]);
+  }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionStrokes, isBrushActive, isPlaying, lastPos, brushSize, drawTick, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast, isExtracting]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPlaying || frames.length === 0) return;
@@ -678,7 +681,7 @@ export default function RemovePage() {
         const maxRes = isMobile ? 720 : 1080;
         const maxFramesLimit = isMobile ? 500 : 1500;
 
-        await import('../utils/nativeVideoExtract').then(m => m.extractFramesNative(file, {
+        const { frames: outFrames, skippedFrames } = await import('../utils/nativeVideoExtract').then(m => m.extractFramesNative(file, {
           fps: targetFps,
           maxWidth: maxRes === 1080 ? 1920 : 1280,
           maxHeight: maxRes,
@@ -698,6 +701,12 @@ export default function RemovePage() {
              });
           }
         }));
+        
+        if (skippedFrames && skippedFrames.length > 0) {
+           setSkippedFramesWarning(true);
+        } else {
+           setSkippedFramesWarning(false);
+        }
         
         setIsPlaying(true);
         console.log("Native extraction complete.");
@@ -1134,17 +1143,36 @@ export default function RemovePage() {
             {uploadState === 'error' && (
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 {nativeExtractError && !ffmpegError && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (videoFile) processFile(videoFile);
-                    }}
-                    className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
-                  >
-                    {lang === 'KR' ? '재시도 (브라우저 디코더)' : 'Retry (Browser Decoder)'}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (videoFile) processFile(videoFile);
+                      }}
+                      className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
+                    >
+                      {lang === 'KR' ? '재시도 (브라우저)' : 'Retry (Browser Decoder)'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // fps is the state variable, not targetFps
+                        const currentFps = fps;
+                        const newFps = Math.max(4, Math.floor(currentFps / 2));
+                        setFps(newFps);
+                        if (videoFile) {
+                          processFile(videoFile, newFps);
+                        }
+                      }}
+                      className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
+                    >
+                      {lang === 'KR' ? `목표 FPS 낮추기 (${fps} -> ${Math.max(4, Math.floor(fps / 2))})` : `Lower FPS (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`}
+                    </button>
+                  </>
                 )}
 
                 <button
@@ -1189,8 +1217,19 @@ export default function RemovePage() {
             )}
             
           </div>
+          
+          {isExtracting && (
+            <div className="order-2 w-full mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-3 backdrop-blur-sm shadow-sm transition-all">
+               <Loader2 className={`w-5 h-5 animate-spin shrink-0 mt-0.5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+               <div>
+                  <p className={`text-sm font-semibold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                    {lang === 'KR' ? '프레임 추출 중입니다. 추출이 끝날 때까지 편집 기능이 잠시 잠깁니다.' : 'Extracting frames... editing is temporarily locked.'}
+                  </p>
+               </div>
+            </div>
+          )}
 
-          <div className={`order-3 ${panelClass}`}>
+          <div className={`order-3 ${panelClass} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-lg font-medium flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <Sliders className={accentIconClass} />
@@ -1537,7 +1576,7 @@ export default function RemovePage() {
             </div>
           </div>
 
-          <div className={`order-4 ${panelClass}`}>
+          <div className={`order-4 ${panelClass} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
             <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               <Settings className={accentIconClass} />
               3. Asset Settings <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(에셋 설정)' : lang === 'EN' ? '(Asset Settings)' : '(アセット設定)'}</span>
@@ -1732,7 +1771,7 @@ export default function RemovePage() {
         </div>
 
         {/* Right Panel: Preview (Sticky on Mobile Phase 2) */}
-        <div className={`order-1 w-full lg:flex-1 flex flex-col items-center min-w-0 lg:overflow-y-auto custom-scrollbar lg:pr-2 lg:order-2 ${frames.length > 0 ? 'pb-2 lg:pb-0 pt-2 lg:pt-0 lg:relative lg:z-auto border-b lg:border-none' : 'hidden lg:flex'} ${isDark ? 'bg-[#121212] border-white/10 lg:bg-transparent' : 'bg-white border-gray-200 lg:bg-transparent'}`}>
+        <div className={`order-1 w-full lg:flex-1 flex flex-col items-center min-w-0 lg:overflow-y-auto custom-scrollbar lg:pr-2 lg:order-2 ${frames.length > 0 ? 'pb-2 lg:pb-0 pt-2 lg:pt-0 lg:relative lg:z-auto border-b lg:border-none' : 'hidden lg:flex'} ${isDark ? 'bg-[#121212] border-white/10 lg:bg-transparent' : 'bg-white border-gray-200 lg:bg-transparent'} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
           <div className={`sticky top-[56px] lg:top-0 z-40 w-full ${isDark ? 'bg-[#121212]' : 'bg-white'} flex flex-col items-center`}>
             <div className="w-full flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 lg:gap-0 mb-3 lg:mb-4 px-2 shrink-0 pt-2 lg:pt-0">
               <div className="flex items-center justify-between lg:justify-start gap-2 lg:gap-4 w-full lg:w-auto">
@@ -1805,7 +1844,17 @@ export default function RemovePage() {
 
             {/* Scrubber & Filmstrip (Sticky part) */}
             {frames.length > 0 && (
-              <div className="w-full max-w-[500px] mt-2 lg:mt-6 space-y-2 lg:space-y-4 shrink-0 pb-2 lg:pb-8 px-2">
+              <div className={`w-full max-w-[500px] mt-2 lg:mt-6 space-y-2 lg:space-y-4 shrink-0 pb-2 lg:pb-8 px-2 ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
+                {skippedFramesWarning && (
+                  <div className="text-xs text-orange-500 bg-orange-500/10 border border-orange-500/20 px-3 py-2 rounded-lg font-medium flex items-center justify-between">
+                    <span>
+                      {lang === 'KR' 
+                        ? '일부 프레임 생략됨 (디코딩 지연). 완전한 추출을 위해 FPS를 낮추거나 FFmpeg를 사용하세요.' 
+                        : 'Some frames skipped (decoding delays). Lower FPS or use FFmpeg for full extraction.'}
+                    </span>
+                    <button onClick={() => setSkippedFramesWarning(false)} className="opacity-70 hover:opacity-100 pl-2">✕</button>
+                  </div>
+                )}
                 <input 
                   type="range" 
                   min="0" 
