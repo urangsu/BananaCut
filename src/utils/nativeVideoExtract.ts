@@ -14,7 +14,6 @@ export async function extractFramesNative(file: File, options: {
   video.src = url;
   video.muted = true;
   video.playsInline = true;
-  video.crossOrigin = 'anonymous'; // might help with some issues
   video.preload = 'metadata';
 
   return new Promise<StudioFrame[]>((resolve, reject) => {
@@ -30,7 +29,7 @@ export async function extractFramesNative(file: File, options: {
           throw new Error('Invalid video duration');
         }
 
-        const totalFrames = Math.min(maxFrames, Math.floor(duration * fps));
+        const totalFrames = Math.min(maxFrames, Math.ceil(duration * fps));
         if (totalFrames <= 0) {
           throw new Error('Video is too short or fps is too small');
         }
@@ -58,8 +57,6 @@ export async function extractFramesNative(file: File, options: {
         const frames: StudioFrame[] = [];
         let chunk: StudioFrame[] = [];
         
-        const timeInterval = 1 / fps;
-        
         const seekAndWait = (time: number): Promise<void> => {
           return new Promise((res, rej) => {
             let handled = false;
@@ -69,11 +66,22 @@ export async function extractFramesNative(file: File, options: {
               video.removeEventListener('error', onError);
             };
 
-            const onSeeked = () => {
+            const finish = () => {
               if (handled) return;
               handled = true;
               cleanup();
-              res();
+              if ('requestVideoFrameCallback' in video) {
+                // @ts-ignore
+                video.requestVideoFrameCallback(() => {
+                  res();
+                });
+              } else {
+                res();
+              }
+            };
+
+            const onSeeked = () => {
+              finish();
             };
             const onError = () => {
               if (handled) return;
@@ -89,9 +97,7 @@ export async function extractFramesNative(file: File, options: {
             // fallback if seeked doesn't fire
             setTimeout(() => {
                if(!handled) {
-                   handled = true;
-                   cleanup();
-                   res();
+                   finish();
                }
             }, 500);
           });
@@ -117,7 +123,7 @@ export async function extractFramesNative(file: File, options: {
         }
 
         for (let i = 0; i < totalFrames; i++) {
-          const timestamp = i * timeInterval;
+          const timestamp = Math.min(i / fps, duration - 0.001);
           await seekAndWait(timestamp);
           
           ctx.drawImage(video, 0, 0, scaledWidth, scaledHeight);

@@ -975,15 +975,42 @@ export default function RemovePage() {
                   )}
                   <span className="font-medium text-center">
                     {uploadState === 'image-loading' ? (lang === 'KR' ? '이미지 불러오는 중...' : 'Loading image...') :
-                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? '비디오 엔진 로딩 중... (최초 약 10~30초 소요)' : 'Loading video engine... first time may take 10-30s') :
-                     uploadState === 'video-extracting' ? (lang === 'KR' ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total}` : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total}`) :
-                     uploadState === 'error' ? (lang === 'KR' ? '업로드 실패. 다시 시도해주세요.' : 'Upload failed. Try again.') :
+                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? 'FFmpeg 대개체 엔진 로딩 중...' : 'Loading FFmpeg fallback engine...') :
+                     uploadState === 'video-extracting' ? (lang === 'KR' ? `브라우저 디코더로 프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total}` : `Extracting frames with browser decoder... ${extractionProgress.current} / ${extractionProgress.total}`) :
+                     uploadState === 'error' ? (lang === 'KR' ? '브라우저 추출 실패. FFmpeg 재시도 또는 PNG를 사용하세요.' : 'Browser extraction failed. Try FFmpeg fallback or PNG sequence.') :
                      uploadState === 'ready' ? `${frames.length} frames ready` :
                      (lang === 'KR' ? '파일 선택' : 'Select File')}
                   </span>
                   <span className="text-xs opacity-60">MP4, MOV, PNG</span>
-                  {ffmpegError && uploadState === 'error' && (
-                    <div className="mt-4 flex items-center justify-center gap-2">
+                </label>
+                {uploadState === 'error' && (
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!videoFile) return;
+                        setUploadState('video-engine-loading');
+                        let currentFFmpeg = ffmpeg;
+                        if (loadState !== 'loaded' || !currentFFmpeg) {
+                          currentFFmpeg = await loadFFmpeg();
+                        }
+                        if (!currentFFmpeg) {
+                          setUploadState('error');
+                          if (ffmpegError) {
+                             setShowTechErrorModal(true);
+                          }
+                          return;
+                        }
+                        await extractFramesWithFFmpeg(videoFile, fps, currentFFmpeg);
+                      }}
+                      className="rounded-lg bg-red-50 hover:bg-red-100 px-3 py-2 text-xs font-semibold text-red-600 transition-colors"
+                    >
+                      {lang === 'KR' ? 'FFmpeg 폴백 시도' : 'Try FFmpeg fallback'}
+                    </button>
+                    
+                    {ffmpegError && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -991,26 +1018,13 @@ export default function RemovePage() {
                           e.stopPropagation();
                           setShowTechErrorModal(true);
                         }}
-                        className={`rounded-lg border px-3 py-2 text-xs font-semibold hover:opacity-80 ${isDark ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'}`}
+                        className={`rounded-lg border px-3 py-2 text-xs font-semibold hover:opacity-80 transition-opacity ${isDark ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'}`}
                       >
                         {lang === 'KR' ? '상세 기술 정보' : 'Technical Details'}
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setUploadState('idle');
-                          retryFFmpeg();
-                        }}
-                        className="rounded-lg bg-red-50 hover:bg-red-100 px-3 py-2 text-xs font-semibold text-red-600 transition-colors"
-                      >
-                        {lang === 'KR' ? '엔진 다시 로드' : 'Retry Engine Load'}
-                      </button>
-                    </div>
-                  )}
-                </label>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
