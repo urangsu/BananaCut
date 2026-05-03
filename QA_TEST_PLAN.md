@@ -74,17 +74,20 @@
 
 ## 2026-05-03: Native Video Extraction Test (Phase E)
 - Goal: Validate Native browser video extraction (MP4/MOV) over FFmpeg fallback.
+- Test Matrix:
+  - **8초 MP4 (12fps)**: Expected first frame < 2s. Total extract < 5s. Frame count ~96. Preview/strip working. Recover/Asset sharing working.
+  - **30초 MP4 (12fps)**: Progress clearly visible. No OOM. Total time < 15s. Frame count ~360.
+  - **MOV 파일**: Native fallback triggers successfully. First frame visible inline.
+  - **PNG 1장 / PNG sequence 10장**: Normal image flow runs seamlessly without triggering FFmpeg.
 - Desktop (Chrome/Safari): 
   - Upload MP4/MOV video. Extraction bypasses FFmpeg by default.
-  - Video extracted up to 1080p, maximum 1500 frames limit.
   - Performance: Expected first frame visible within 2s. Average extraction speed ~5-15ms/frame.
 - Mobile (iOS/Android):
   - Upload MP4/MOV video.
   - Extraction runs successfully using native browser API.
-  - Resolution is correctly limited to 720p and capped at 500 frames to prevent Out-Of-Memory (OOM) crashes.
   - Cancellation capability verified if extraction takes too long.
 - Error Handling:
-  - If native extraction fails, detailed error shown and specific "Try FFmpeg fallback" button provided.
+  - If native extraction fails, detailed error shown (e.g. Unsupported codec, Seek timeout) and specific "Try FFmpeg fallback" button provided.
 
 ## User Flow & Local FFmpeg WASM Regression Test
 - Opened application as a fresh user (no python, no global installation required).

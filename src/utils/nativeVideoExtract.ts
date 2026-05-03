@@ -204,6 +204,9 @@ export async function extractFramesNative(file: File, options: {
         cleanup();
         resolve(frames);
       } catch (err) {
+        if (frames && frames.length > 0) {
+          frames.forEach(f => URL.revokeObjectURL(f.rawUrl));
+        }
         signal?.removeEventListener('abort', abortHandler);
         cleanup();
         reject(err);
