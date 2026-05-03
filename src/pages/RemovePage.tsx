@@ -526,6 +526,37 @@ export default function RemovePage() {
 
 
   const [extractionProgress, setExtractionProgress] = useState({ current: 0, total: 0 });
+  const [extractionStalled, setExtractionStalled] = useState(false);
+  const [extractionStartMs, setExtractionStartMs] = useState<number | null>(null);
+  const [extractionElapsedText, setExtractionElapsedText] = useState('00:00');
+  const extractionProgressRef = useRef({ current: 0, lastUpdated: 0 });
+
+  useEffect(() => {
+    if (uploadState !== 'video-extracting') {
+      setExtractionStalled(false);
+      setExtractionElapsedText('00:00');
+      return;
+    }
+    
+    const interval = setInterval(() => {
+      if (extractionStartMs) {
+        const elapsedS = Math.floor((Date.now() - extractionStartMs) / 1000);
+        const mins = Math.floor(elapsedS / 60).toString().padStart(2, '0');
+        const secs = (elapsedS % 60).toString().padStart(2, '0');
+        setExtractionElapsedText(`${mins}:${secs}`);
+      }
+
+      const now = Date.now();
+      const lastUpdate = extractionProgressRef.current.lastUpdated;
+      if (lastUpdate > 0 && now - lastUpdate > 8000) {
+        setExtractionStalled(true);
+      } else {
+        setExtractionStalled(false);
+      }
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [uploadState, extractionStartMs]);
 
   const extractFramesWithFFmpeg = async (file: File, targetFps: number, engine: FFmpeg) => {
     if (!engine) {
@@ -539,6 +570,8 @@ export default function RemovePage() {
     setIsPlaying(false);
     setExclusionStrokes([]);
     setExtractionProgress({ current: 0, total: 0 });
+    setExtractionStartMs(Date.now());
+    extractionProgressRef.current = { current: 0, lastUpdated: Date.now() };
     
     try {
       console.log("Starting frame extraction for:", file.name);
@@ -615,6 +648,7 @@ export default function RemovePage() {
           const currentFrames = [...extractedFrames];
           setFrames(currentFrames);
           setExtractionProgress({ current: i + 1, total: frameFiles.length });
+          extractionProgressRef.current = { current: i + 1, lastUpdated: Date.now() };
           if (i === 0) setCurrentFrame(0);
         }
       }
@@ -681,6 +715,8 @@ export default function RemovePage() {
       setVideoFile(file);
       setFrames([]);
       setExtractionProgress({ current: 0, total: 0 });
+      setExtractionStartMs(Date.now());
+      extractionProgressRef.current = { current: 0, lastUpdated: Date.now() };
       let accumulatedFrames: StudioFrame[] = [];
       try {
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
@@ -696,6 +732,7 @@ export default function RemovePage() {
           signal: abortControllerRef.current?.signal,
           onProgress: (current, total) => {
              setExtractionProgress({ current, total });
+             extractionProgressRef.current = { current, lastUpdated: Date.now() };
           },
           onChunk: (chunk) => {
              accumulatedFrames = [...accumulatedFrames, ...chunk];
@@ -1027,8 +1064,8 @@ export default function RemovePage() {
                   )}
                   <span className="font-medium text-center">
                     {uploadState === 'image-loading' ? (lang === 'KR' ? '이미지 불러오는 중...' : 'Loading image...') :
-                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? 'FFmpeg 대개체 엔진 로딩 중...' : 'Loading FFmpeg fallback engine...') :
-                     uploadState === 'video-extracting' ? (lang === 'KR' ? `브라우저 디코더로 프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total}` : `Extracting frames with browser decoder... ${extractionProgress.current} / ${extractionProgress.total}`) :
+                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? 'FFmpeg 대체 엔진 로딩 중...' : 'Loading FFmpeg fallback engine...') :
+                     uploadState === 'video-extracting' ? (lang === 'KR' ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과` : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`) :
                      uploadState === 'error' ? (lang === 'KR' ? '브라우저 추출 실패. FFmpeg 재시도 또는 PNG를 사용하세요.' : 'Browser extraction failed. Try FFmpeg fallback or PNG sequence.') :
                      uploadState === 'ready' ? `${frames.length} frames ready` :
                      (lang === 'KR' ? '파일 선택' : 'Select File')}
@@ -1113,8 +1150,8 @@ export default function RemovePage() {
                 
                 <p className={`mb-2 text-sm font-semibold ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
                     {uploadState === 'image-loading' ? (lang === 'KR' ? '이미지 불러오는 중...' : 'Loading image...') :
-                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? 'FFmpeg 대개체 엔진 로딩 중...' : 'Loading FFmpeg fallback engine...') :
-                     uploadState === 'video-extracting' ? (lang === 'KR' ? `브라우저 디코더로 프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total}` : `Extracting frames with browser decoder... ${extractionProgress.current} / ${extractionProgress.total}`) :
+                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? 'FFmpeg 대체 엔진 로딩 중...' : 'Loading FFmpeg fallback engine...') :
+                     uploadState === 'video-extracting' ? (lang === 'KR' ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과` : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`) :
                      uploadState === 'error' ? (lang === 'KR' ? '브라우저 추출 실패. FFmpeg 재시도 또는 PNG를 사용하세요.' : 'Browser extraction failed. Try FFmpeg fallback or PNG sequence.') :
                      uploadState === 'ready' ? `${frames.length} frames ready` :
                      (lang === 'KR' ? '파일 업로드 (클릭 또는 드래그)' : 'Click to upload or drag and drop')}
@@ -1126,20 +1163,29 @@ export default function RemovePage() {
             </div>
 
             {uploadState === 'video-extracting' && (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (abortControllerRef.current) {
-                      abortControllerRef.current.abort();
-                    }
-                  }}
-                  className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
-                >
-                  {lang === 'KR' ? '추출 취소' : 'Cancel extraction'}
-                </button>
+              <div className="mt-4 flex flex-col items-center gap-3">
+                {extractionStalled && (
+                   <div className="text-xs text-orange-500 bg-orange-500/10 border border-orange-500/20 px-3 py-2 rounded-lg font-medium text-center">
+                     {lang === 'KR' 
+                       ? '추출이 지연되고 있습니다. 취소하거나 FPS를 낮춰 다시 시도할 수 있습니다.' 
+                       : 'Extraction seems stalled. You can cancel or retry with lower FPS.'}
+                   </div>
+                )}
+                <div className="flex flex-wrap flex-row justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (abortControllerRef.current) {
+                        abortControllerRef.current.abort();
+                      }
+                    }}
+                    className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
+                  >
+                    {lang === 'KR' ? '추출 취소' : 'Cancel extraction'}
+                  </button>
+                </div>
               </div>
             )}
 

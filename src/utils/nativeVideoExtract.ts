@@ -97,14 +97,17 @@ export async function extractFramesNative(file: File, options: {
         
         let chunk: StudioFrame[] = [];
         
-        const seekAndWait = async (time: number, retryCount = 0): Promise<void> => {
+        const waitOnePaint = async (): Promise<void> => {
+          await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+        };
+
+        const seekAndWait = async (time: number, retryCount = 0, index: number = -1): Promise<void> => {
+          const seekStartT = Date.now();
+          let stage = 'seek-start';
           if (Math.abs(video.currentTime - time) < 0.001) {
-            if (!fastMode && 'requestVideoFrameCallback' in video) {
-              await new Promise<void>((resolve) => {
-                // @ts-ignore
-                video.requestVideoFrameCallback(() => resolve());
-              });
-            }
+            stage = 'captured';
+            logDebug(`[nativeVideoExtract] frame ${index} t=${time.toFixed(3)}s stage=${stage} in ${Date.now() - seekStartT}ms`);
+            await waitOnePaint();
             return;
           }
 
@@ -124,6 +127,8 @@ export async function extractFramesNative(file: File, options: {
               if (handled) return;
               handled = true;
               clearEvents();
+              stage = 'captured';
+              logDebug(`[nativeVideoExtract] frame ${index} t=${time.toFixed(3)}s stage=${stage} in ${Date.now() - seekStartT}ms`);
               resolve();
             };
 
@@ -136,12 +141,14 @@ export async function extractFramesNative(file: File, options: {
                 logDebug(`[nativeVideoExtract] seek failed at time ${time}, retrying (${retryCount + 1}/2)...`);
                 try {
                   await new Promise(r => setTimeout(r, 120));
-                  await seekAndWait(time, retryCount + 1);
+                  await seekAndWait(time, retryCount + 1, index);
                   resolve();
                 } catch (retryErr) {
                   reject(retryErr);
                 }
               } else {
+                stage = 'skipped';
+                logDebug(`[nativeVideoExtract] frame ${index} t=${time.toFixed(3)}s stage=${stage} in ${Date.now() - seekStartT}ms`);
                 reject(err);
               }
             };
@@ -152,14 +159,19 @@ export async function extractFramesNative(file: File, options: {
 
             const onSeeked = () => {
               if (handled) return;
-              
+              stage = 'seeked';
               if (!fastMode && 'requestVideoFrameCallback' in video) {
-                // @ts-ignore
-                video.requestVideoFrameCallback(() => {
+                Promise.race([
+                  new Promise<void>(r => {
+                    // @ts-ignore
+                    video.requestVideoFrameCallback(() => r());
+                  }),
+                  new Promise<void>(r => setTimeout(r, 250))
+                ]).then(() => {
                   finish();
                 });
               } else {
-                finish();
+                waitOnePaint().then(finish);
               }
             };
             
@@ -191,7 +203,7 @@ export async function extractFramesNative(file: File, options: {
 
         // Ensure first frame handles correctly
         if (video.currentTime !== 0) {
-           await seekAndWait(0);
+           await seekAndWait(0, 0, 0);
         }
 
         let firstFrameTime = 0;
@@ -209,7 +221,7 @@ export async function extractFramesNative(file: File, options: {
             if (i === 0 && timestamp === 0 && video.currentTime === 0) {
               // Skip seek if we're perfectly at the start
             } else {
-              await seekAndWait(timestamp);
+              await seekAndWait(timestamp, 0, i);
             }
           } catch (err) {
             if (skipFailedFrames && i > 0) { // First frame must secure
