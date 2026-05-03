@@ -85,6 +85,7 @@ export default function RemovePage() {
   const isProcessing = isExtracting || isBatchProcessing || isProcessingLocal;
   const setIsProcessing = setIsProcessingLocal;
   const abortControllerRef = useRef<AbortController | null>(null);
+  const extractionRunIdRef = useRef(0);
 
   const [failedItems, setFailedItems] = useState<number[]>([]);
   
@@ -695,6 +696,14 @@ export default function RemovePage() {
 
   const processFile = async (file: File, overrideFps?: number) => {
     const targetFps = overrideFps || fps;
+    const runId = ++extractionRunIdRef.current;
+    const isCurrentRun = () => extractionRunIdRef.current === runId;
+    
+    const revokeFrameUrls = (f: StudioFrame) => {
+      if (f.rawUrl?.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
+      if (f.processedUrl?.startsWith('blob:')) URL.revokeObjectURL(f.processedUrl);
+    };
+
     setImgDims(null); // Reset dimensions for new file
     setExclusionStrokes([]);
     
@@ -711,23 +720,38 @@ export default function RemovePage() {
       setUploadState('image-loading');
       const url = URL.createObjectURL(file);
       const img = new Image();
-      await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = url;
-      });
-      setFrames([{
-          id: Math.random().toString(36).substring(7),
-          rawUrl: url,
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-          name: file.name,
-          sourceIndex: 0
-      }]);
-      setCurrentFrame(0);
-      setIsPlaying(false);
-      setVideoFile(file);
-      setUploadState('ready');
+      try {
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = url;
+        });
+        if (!isCurrentRun()) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        setFrames([{
+            id: Math.random().toString(36).substring(7),
+            rawUrl: url,
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+            name: file.name,
+            sourceIndex: 0
+        }]);
+        setCurrentFrame(0);
+        setIsPlaying(false);
+        setVideoFile(file);
+        setUploadState('ready');
+      } catch (err) {
+        if (!isCurrentRun()) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        URL.revokeObjectURL(url);
+        setUploadState('error');
+        setNativeExtractError('[Image Error]\nFailed to load image');
+        setIsPlaying(false);
+      }
       return;
     }
     
@@ -759,10 +783,18 @@ export default function RemovePage() {
           skipFailedFrames: true,
           signal: abortControllerRef.current?.signal,
           onProgress: (current, total) => {
+             if (!isCurrentRun()) return;
              setExtractionProgress({ current, total });
              extractionProgressRef.current = { current, lastUpdated: Date.now() };
           },
           onChunk: (chunk) => {
+             if (!isCurrentRun()) {
+               chunk.forEach(f => {
+                 if (f.rawUrl?.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
+                 if (f.processedUrl?.startsWith('blob:')) URL.revokeObjectURL(f.processedUrl);
+               });
+               return;
+             }
              accumulatedFrames = [...accumulatedFrames, ...chunk];
              setFrames(accumulatedFrames);
              if (accumulatedFrames.length === chunk.length) {
@@ -772,39 +804,50 @@ export default function RemovePage() {
           }
         });
         
+        if (!isCurrentRun()) {
+          accumulatedFrames.forEach(revokeFrameUrls);
+          return;
+        }
+        
         setFrames(extractedFrames);
         setSkippedFramesWarning(skippedFrames && skippedFrames.length > 0);
         
         setIsPlaying(true);
         console.log("Native extraction complete.");
         setUploadState('ready');
+        setExtractionStartMs(null);
+        setExtractionStalled(false);
+        abortControllerRef.current = null;
       } catch (err) {
+        if (!isCurrentRun()) {
+          accumulatedFrames.forEach(revokeFrameUrls);
+          return;
+        }
         if (err instanceof Error && err.message === 'Aborted') {
           console.log('Video extraction canceled.');
-          accumulatedFrames.forEach(f => {
-            URL.revokeObjectURL(f.rawUrl);
-            if (f.processedUrl) URL.revokeObjectURL(f.processedUrl);
-          });
+          accumulatedFrames.forEach(revokeFrameUrls);
           setFrames([]);
           setUploadState('idle');
+          setExtractionStartMs(null);
+          setExtractionStalled(false);
+          abortControllerRef.current = null;
           setIsPlaying(false);
           return;
         }
         console.error("Browser video extraction failed:", err);
-        accumulatedFrames.forEach(f => {
-          URL.revokeObjectURL(f.rawUrl);
-          if (f.processedUrl) URL.revokeObjectURL(f.processedUrl);
-        });
+        accumulatedFrames.forEach(revokeFrameUrls);
         setFrames([]);
         setNativeExtractError(err instanceof Error ? `[Native Error]\n${err.message}` : `[Native Error]\nUnknown error`);
         setExtractionProgress({ current: 0, total: 0 });
         setUploadState('error');
         setIsPlaying(false);
       } finally {
-        abortControllerRef.current = null;
-        setIsProcessingLocal(false);
-        setExtractionStartMs(null);
-        setExtractionStalled(false);
+        if (isCurrentRun()) {
+          abortControllerRef.current = null;
+          setIsProcessingLocal(false);
+          setExtractionStartMs(null);
+          setExtractionStalled(false);
+        }
       }
       return;
     }
@@ -1208,9 +1251,19 @@ export default function RemovePage() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      extractionRunIdRef.current += 1;
                       if (abortControllerRef.current) {
                         abortControllerRef.current.abort();
                       }
+                      frames.forEach(f => {
+                        if (f.rawUrl?.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
+                        if (f.processedUrl?.startsWith('blob:')) URL.revokeObjectURL(f.processedUrl);
+                      });
+                      setFrames([]);
+                      setUploadState('idle');
+                      setExtractionStartMs(null);
+                      setExtractionStalled(false);
+                      abortControllerRef.current = null;
                     }}
                     className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
                   >
@@ -1222,9 +1275,15 @@ export default function RemovePage() {
                       onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        extractionRunIdRef.current += 1;
                         if (abortControllerRef.current) {
                           abortControllerRef.current.abort();
                         }
+                        frames.forEach(f => {
+                          if (f.rawUrl?.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
+                          if (f.processedUrl?.startsWith('blob:')) URL.revokeObjectURL(f.processedUrl);
+                        });
+                        setFrames([]);
                         setNativeExtractError(null);
                         setSkippedFramesWarning(false);
                         const currentFps = fps;
