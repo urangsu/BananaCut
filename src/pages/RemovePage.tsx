@@ -184,6 +184,7 @@ export default function RemovePage() {
   };
 
   useEffect(() => {
+    if (isExtracting) return;
     localStorage.setItem('ck_tolerance', tolerance.toString());
     localStorage.setItem('ck_softness', softness.toString());
     localStorage.setItem('ck_enclosedTolerance', enclosedTolerance.toString());
@@ -228,6 +229,7 @@ export default function RemovePage() {
   }, []);
 
   const toggleSelection = (idx: number, ctrlKey: boolean, shiftKey: boolean) => {
+    if (isExtracting) return;
     setSelectedFrames(prev => {
       const next = new Set(prev);
       if (shiftKey && currentFrame !== null) {
@@ -276,7 +278,7 @@ export default function RemovePage() {
   };
 
   useEffect(() => {
-    if (frames.length === 0 || !canvasRef.current || isExtracting) return;
+    if (frames.length === 0 || !canvasRef.current) return;
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -321,7 +323,7 @@ export default function RemovePage() {
       
       tempCtx.drawImage(img, 0, 0);
       
-      if (!useProcessed) {
+      if (!isExtracting && !useProcessed) {
         const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
         
         let mask = generateStrokeMask(img.width, img.height, exclusionStrokes, currentFrame);
@@ -350,7 +352,7 @@ export default function RemovePage() {
   }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionStrokes, isBrushActive, isPlaying, lastPos, brushSize, drawTick, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast, isExtracting]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (isPlaying || frames.length === 0) return;
+    if (isPlaying || frames.length === 0 || isExtracting) return;
 
     if (isPickingColor) {
       const canvas = canvasRef.current;
@@ -448,7 +450,7 @@ export default function RemovePage() {
 
   const lastDrawRef = useRef(0);
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current || frames.length === 0) return;
+    if (!canvasRef.current || frames.length === 0 || isExtracting) return;
     
     const now = Date.now();
     if (isDrawing && now - lastDrawRef.current < 16) return; // Throttle to ~60fps
@@ -498,6 +500,7 @@ export default function RemovePage() {
   };
 
   const handlePointerUp = () => {
+    if (isExtracting) return;
     if (isDrawing) {
       if (activeStrokeRef.current) {
         setExclusionStrokes(prev => [...prev, activeStrokeRef.current!]);
@@ -1091,7 +1094,7 @@ export default function RemovePage() {
             </h2>
             
             <div 
-              className={dropzoneClass}
+              className={`${dropzoneClass} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -1849,8 +1852,8 @@ export default function RemovePage() {
                   <div className="text-xs text-orange-500 bg-orange-500/10 border border-orange-500/20 px-3 py-2 rounded-lg font-medium flex items-center justify-between">
                     <span>
                       {lang === 'KR' 
-                        ? '일부 프레임 생략됨 (디코딩 지연). 완전한 추출을 위해 FPS를 낮추거나 FFmpeg를 사용하세요.' 
-                        : 'Some frames skipped (decoding delays). Lower FPS or use FFmpeg for full extraction.'}
+                        ? '브라우저 디코더 지연으로 일부 프레임을 건너뛰었습니다. FPS를 낮추면 안정성이 좋아질 수 있습니다.' 
+                        : 'Some frames were skipped because the browser decoder was slow. Lower FPS may improve stability.'}
                     </span>
                     <button onClick={() => setSkippedFramesWarning(false)} className="opacity-70 hover:opacity-100 pl-2">✕</button>
                   </div>
