@@ -226,8 +226,8 @@ export default function LandingPage() {
             <div className={`flex flex-wrap justify-center gap-3 pt-4 ${isDark ? 'text-white/60' : 'text-gray-600'} text-xs font-bold tracking-widest uppercase`}>
               <span className="px-3 py-1 rounded-full border border-current bg-transparent">No upload</span>
               <span className="px-3 py-1 rounded-full border border-current bg-transparent">Local in browser</span>
-              <span className="px-3 py-1 rounded-full border border-current bg-transparent">Free</span>
-              <span className="px-3 py-1 rounded-full border border-current bg-transparent">No ads</span>
+              <span className="px-3 py-1 rounded-full border border-current bg-transparent">Free to start</span>
+              <span className="px-3 py-1 rounded-full border border-current bg-transparent">No account</span>
             </div>
           </section>
 
@@ -247,9 +247,9 @@ export default function LandingPage() {
               <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'}`}>
                 <Wand2 className="w-8 h-8" strokeWidth={1.5} />
               </div>
-              <h3 className="font-bold text-xl tracking-tight">Free & No Ads</h3>
+              <h3 className="font-bold text-xl tracking-tight">Free to Use</h3>
               <p className={`text-sm leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
-                {lang === 'KR' ? '번거로운 가입이나 귀찮은 광고 없이 완전 무료로 에셋을 만드세요.' : 'Completely free to use with no annoying advertisements or sign-ups.'}
+                {lang === 'KR' ? '회원가입 없이 즉시 브라우저에서 투명 에셋 생성을 시작하세요.' : 'Start creating transparent assets instantly in your browser with no sign-ups required.'}
               </p>
             </div>
             
