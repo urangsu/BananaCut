@@ -72,7 +72,21 @@
 - Frame total count steadily increased to final count.
 - Selecting frames updated the preview successfully.
 
-## 2026-05-02: User Flow & Local FFmpeg WASM Regression Test
+## 2026-05-03: Native Video Extraction Test (Phase E)
+- Goal: Validate Native browser video extraction (MP4/MOV) over FFmpeg fallback.
+- Desktop (Chrome/Safari): 
+  - Upload MP4/MOV video. Extraction bypasses FFmpeg by default.
+  - Video extracted up to 1080p, maximum 1500 frames limit.
+  - Performance: Expected first frame visible within 2s. Average extraction speed ~5-15ms/frame.
+- Mobile (iOS/Android):
+  - Upload MP4/MOV video.
+  - Extraction runs successfully using native browser API.
+  - Resolution is correctly limited to 720p and capped at 500 frames to prevent Out-Of-Memory (OOM) crashes.
+  - Cancellation capability verified if extraction takes too long.
+- Error Handling:
+  - If native extraction fails, detailed error shown and specific "Try FFmpeg fallback" button provided.
+
+## User Flow & Local FFmpeg WASM Regression Test
 - Opened application as a fresh user (no python, no global installation required).
 - Navigated to `/remove` route.
 - Vercel 배포 후 `/remove` 일반 접속 (debug=1 없이도 에러 확인 가능)

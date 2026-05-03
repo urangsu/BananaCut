@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 import { useTheme } from '../ThemeContext';
 import { useLanguage } from '../LanguageContext';
-import { Scissors, Wand2, Download, Smartphone, Play, PlaySquare } from 'lucide-react';
+import { Scissors, Wand2, Download, Smartphone, Play, PlaySquare, Shield } from 'lucide-react';
 import { Modal } from '../components/Modal';
 
 function ScratchOverlay({ isDark, lang, onReveal }: { isDark: boolean, lang: string, onReveal: () => void }) {
@@ -132,7 +132,6 @@ export default function LandingPage() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [iframeError, setIframeError] = useState(false);
 
   return (
     <div className={`min-h-screen flex flex-col ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
@@ -224,32 +223,49 @@ export default function LandingPage() {
             </button>
           </section>
 
+          {/* Trust Blocks */}
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto text-center">
+            <div className={`p-8 rounded-3xl flex flex-col items-center gap-4 transition-transform hover:-translate-y-1 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-100 shadow-xl shadow-gray-200/50'}`}>
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>
+                <Smartphone className="w-8 h-8" strokeWidth={1.5} />
+              </div>
+              <h3 className="font-bold text-xl tracking-tight">100% Local Processing</h3>
+              <p className={`text-sm leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                {lang === 'KR' ? '모든 작업이 브라우저 내부에서 처리되어 영상을 서버로 전송하지 않습니다.' : 'All processing happens securely inside your browser. No server uploads.'}
+              </p>
+            </div>
+            
+            <div className={`p-8 rounded-3xl flex flex-col items-center gap-4 transition-transform hover:-translate-y-1 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-100 shadow-xl shadow-gray-200/50'}`}>
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'}`}>
+                <Wand2 className="w-8 h-8" strokeWidth={1.5} />
+              </div>
+              <h3 className="font-bold text-xl tracking-tight">Free & No Ads</h3>
+              <p className={`text-sm leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                {lang === 'KR' ? '번거로운 가입이나 귀찮은 광고 없이 완전 무료로 에셋을 만드세요.' : 'Completely free to use with no annoying advertisements or sign-ups.'}
+              </p>
+            </div>
+            
+            <div className={`p-8 rounded-3xl flex flex-col items-center gap-4 transition-transform hover:-translate-y-1 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-100 shadow-xl shadow-gray-200/50'}`}>
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600'}`}>
+                <Shield className="w-8 h-8" strokeWidth={1.5} />
+              </div>
+              <h3 className="font-bold text-xl tracking-tight">Data Privacy</h3>
+              <p className={`text-sm leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                {lang === 'KR' ? '프라이버시를 최우선으로 합니다. 어떠한 민감한 흔적도 남지 않습니다.' : 'Your data privacy is our top priority. We leave no sensitive traces behind.'}
+              </p>
+            </div>
+          </section>
+
           {/* Video Demo Section (For Users & Bots) */}
           <section className="max-w-5xl mx-auto space-y-6">
-            <div className={`aspect-video rounded-3xl flex items-center justify-center border overflow-hidden relative shadow-2xl group ${isDark ? 'bg-[#0a0a0a] border-white/10' : 'bg-gray-100 border-gray-200'}`}>
-              <img 
-                src="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg" 
-                alt="BananaCut Demo Thumbnail" 
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
+            <div className={`aspect-video rounded-3xl flex items-center justify-center border overflow-hidden relative shadow-2xl group ${isDark ? 'bg-[#0a0a0a] border-white/10' : 'bg-black border-gray-200'}`}>
+              <iframe 
+                className="w-full h-full"
+                src="https://www.youtube.com/embed/rTOB6sX-zA8"
+                title="BananaCut Demo Video"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
               />
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors pointer-events-none" />
-              <div className="absolute flex flex-col items-center justify-center pointer-events-none">
-                <a 
-                  href="https://www.youtube.com/watch?v=rTOB6sX-zA8&t=34s" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-all flex items-center gap-3 shadow-[0_0_40px_rgba(220,38,38,0.5)] group-hover:scale-110 group-hover:shadow-[0_0_60px_rgba(220,38,38,0.8)] pointer-events-auto"
-                >
-                  <PlaySquare className="w-6 h-6" />
-                  {lang === 'KR' ? 'YouTube에서 데모 보기' : lang === 'EN' ? 'Watch demo on YouTube' : 'YouTubeでデモを見る'}
-                </a>
-                <p className={`mt-6 text-sm font-medium px-4 py-2 rounded-full backdrop-blur-md ${isDark ? 'text-white/80 bg-black/40' : 'text-gray-900 bg-white/60'}`}>
-                  {lang === 'KR' ? '클릭하면 새 탭에서 열립니다.' : lang === 'EN' ? 'Opens in a new tab.' : 'クリックすると新しいタブで開きます。'}
-                </p>
-              </div>
             </div>
             
             {/* Text description for SEO/Bots */}

@@ -1,14 +1,16 @@
 import { StudioFrame } from '../StudioContext';
+import { PerfLogger } from './performanceLogger';
 
 export async function extractFramesNative(file: File, options: {
   fps: number;
   maxWidth: number;
   maxHeight: number;
   maxFrames: number;
+  signal?: AbortSignal;
   onProgress?: (current: number, total: number) => void;
   onChunk?: (frames: StudioFrame[]) => void;
 }): Promise<StudioFrame[]> {
-  const { fps, maxWidth, maxHeight, maxFrames, onProgress, onChunk } = options;
+  const { fps, maxWidth, maxHeight, maxFrames, signal, onProgress, onChunk } = options;
   const url = URL.createObjectURL(file);
   const video = document.createElement('video');
   video.src = url;
@@ -16,20 +18,43 @@ export async function extractFramesNative(file: File, options: {
   video.playsInline = true;
   video.preload = 'metadata';
 
+  // performance tracking
+  const startTime = Date.now();
+  const isDebug = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
+  const logDebug = (...args: any[]) => { if (isDebug) console.log(...args); };
+
   return new Promise<StudioFrame[]>((resolve, reject) => {
-    video.onerror = () => {
+    const cleanup = () => {
       URL.revokeObjectURL(url);
-      reject(new Error(`Video load error: ${video.error?.message || 'Unknown'}`));
+    };
+
+    if (signal?.aborted) {
+      cleanup();
+      return reject(new Error('Aborted'));
+    }
+
+    const abortHandler = () => {
+      cleanup();
+      reject(new Error('Aborted'));
+    };
+    signal?.addEventListener('abort', abortHandler);
+
+    video.onerror = () => {
+      signal?.removeEventListener('abort', abortHandler);
+      cleanup();
+      reject(new Error(`Video load error: ${video.error?.message || 'Unknown code ' + video.error?.code}`));
     };
 
     video.onloadedmetadata = async () => {
       try {
+        logDebug(`[nativeVideoExtract] metadata loaded in ${Date.now() - startTime}ms`);
         const duration = video.duration;
         if (!duration || !isFinite(duration)) {
           throw new Error('Invalid video duration');
         }
 
-        const totalFrames = Math.min(maxFrames, Math.ceil(duration * fps));
+        const safeFps = fps > 0 ? fps : 12;
+        const totalFrames = Math.min(maxFrames, Math.max(1, Math.ceil(duration * safeFps)));
         if (totalFrames <= 0) {
           throw new Error('Video is too short or fps is too small');
         }
@@ -59,9 +84,11 @@ export async function extractFramesNative(file: File, options: {
         
         const seekAndWait = (time: number): Promise<void> => {
           return new Promise((res, rej) => {
+            if (signal?.aborted) return rej(new Error('Aborted'));
+
             let handled = false;
             
-            const cleanup = () => {
+            const clearEvents = () => {
               video.removeEventListener('seeked', onSeeked);
               video.removeEventListener('error', onError);
             };
@@ -69,7 +96,7 @@ export async function extractFramesNative(file: File, options: {
             const finish = () => {
               if (handled) return;
               handled = true;
-              cleanup();
+              clearEvents();
               if ('requestVideoFrameCallback' in video) {
                 // @ts-ignore
                 video.requestVideoFrameCallback(() => {
@@ -86,7 +113,7 @@ export async function extractFramesNative(file: File, options: {
             const onError = () => {
               if (handled) return;
               handled = true;
-              cleanup();
+              clearEvents();
               rej(new Error('Seek error'));
             };
             
@@ -97,6 +124,7 @@ export async function extractFramesNative(file: File, options: {
             // fallback if seeked doesn't fire
             setTimeout(() => {
                if(!handled) {
+                   logDebug(`[nativeVideoExtract] seeked timeout fallback at time ${time}`);
                    finish();
                }
             }, 500);
@@ -115,19 +143,26 @@ export async function extractFramesNative(file: File, options: {
           });
         };
 
-        let lastProgressTime = Date.now();
-
         // Ensure first frame handles correctly
         if (video.currentTime !== 0) {
            await seekAndWait(0);
         }
 
+        let firstFrameTime = 0;
+
         for (let i = 0; i < totalFrames; i++) {
-          const timestamp = Math.min(i / fps, duration - 0.001);
+          if (signal?.aborted) {
+            frames.forEach(f => URL.revokeObjectURL(f.rawUrl));
+            throw new Error('Aborted');
+          }
+          PerfLogger.start('nativeVideoExtract_frame');
+
+          const timestamp = Math.min(i / safeFps, Math.max(0, duration - 0.001));
           await seekAndWait(timestamp);
           
           ctx.drawImage(video, 0, 0, scaledWidth, scaledHeight);
           const blobUrl = await canvasToBlobUrl();
+          PerfLogger.end('nativeVideoExtract_frame');
           
           const frame: StudioFrame = {
             id: `frame-${i}`,
@@ -141,26 +176,35 @@ export async function extractFramesNative(file: File, options: {
           frames.push(frame);
           chunk.push(frame);
           
-          if (onProgress) {
-            const now = Date.now();
-            if (now - lastProgressTime > 100 || i === totalFrames - 1) {
-              onProgress(i + 1, totalFrames);
-              lastProgressTime = now;
-            }
-          }
-
-          if (i === 0 || chunk.length >= 5 || i === totalFrames - 1) {
-            if (onChunk && chunk.length > 0) {
-              onChunk([...chunk]);
-            }
+          if (i === 0) {
+            firstFrameTime = Date.now() - startTime;
+            logDebug(`[nativeVideoExtract] First frame generated in ${firstFrameTime}ms`);
+            if (onChunk) onChunk([...chunk]);
+            if (onProgress) onProgress(1, totalFrames);
             chunk = [];
+            await new Promise(requestAnimationFrame);
+          } else {
+            if (onProgress) onProgress(i + 1, totalFrames);
+            
+            if (chunk.length >= 8 || i === totalFrames - 1) {
+              if (onChunk && chunk.length > 0) {
+                onChunk([...chunk]);
+              }
+              chunk = [];
+              await new Promise(requestAnimationFrame); // yield
+            }
           }
         }
 
-        URL.revokeObjectURL(url);
+        const totalTime = Date.now() - startTime;
+        logDebug(`[nativeVideoExtract] Completed ${totalFrames} frames in ${totalTime}ms (avg ${totalTime/totalFrames}ms/frame) @ ${scaledWidth}x${scaledHeight}`);
+        
+        signal?.removeEventListener('abort', abortHandler);
+        cleanup();
         resolve(frames);
       } catch (err) {
-        URL.revokeObjectURL(url);
+        signal?.removeEventListener('abort', abortHandler);
+        cleanup();
         reject(err);
       }
     };

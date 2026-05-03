@@ -755,7 +755,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
           <p className={`${textSecondary} mt-2 text-sm`}>{lang === 'KR' ? 'Smart Alpha Fill & Sequence Recovery' : lang === 'EN' ? 'Smart Alpha Fill & Sequence Recovery' : 'スマートアルファ塗りつぶし＆シーケンス復旧'}</p>
           {frames.length > 0 && (
             <p className="mt-2 text-xs font-medium text-blue-500">
-              {lang === 'KR' ? `Remove에서 처리한 ${frames.length} 프레임을 이어서 복구합니다.` : `Continuing recovery for ${frames.length} frames from Remove.`}
+              {lang === 'KR' ? `Remove 연결: ${frames.length} 프레임 로드됨` : `Continuing from Remove: ${frames.length} frames loaded`}
             </p>
           )}
         </div>
@@ -838,9 +838,17 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
                   <Upload className={`w-10 h-10 mb-3 transition-colors ${isDragging ? 'text-blue-500' : textMuted}`} />
                   <p className={`mb-2 text-base ${textSecondary} text-center px-4`}><span className="font-semibold">{lang === 'KR' ? 'Click' : lang === 'EN' ? 'Click' : 'クリック'}</span> {lang === 'KR' ? 'or drag PNG/JPG sequences' : lang === 'EN' ? 'or drag PNG/JPG sequences' : 'またはPNG/JPGシーケンスをドラッグ'}</p>
                   <p className="text-xs text-blue-500 font-medium px-4 text-center mt-1">
-                    {lang === 'KR' ? '(주의: 새 작업 시작)' : '(Warning: Starts a new project)'}
+                    {lang === 'KR' ? '(주의: 새 복구 세션 시작)' : '(Start new recovery session)'}
                   </p>
                 </div>
+              </div>
+              <div className="mt-4 flex justify-center w-full">
+                <button
+                  onClick={() => document.dispatchEvent(new CustomEvent('navigate', { detail: 'remove' }))}
+                  className="w-full max-w-[200px] border border-blue-500/50 text-blue-500 px-4 py-2 rounded-full font-medium hover:bg-blue-500/10 transition-colors shadow-sm text-sm"
+                >
+                  {lang === 'KR' ? 'Remove 화면으로 이동' : 'Start from Remove'}
+                </button>
               </div>
             </div>
           </div>
@@ -1163,34 +1171,42 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
                 </div>
               )}
               {frames.length === 0 ? (
-                <div 
-                  className={`flex flex-col items-center justify-center p-12 w-full max-w-lg mx-4 border-2 border-dashed rounded-2xl transition-all cursor-pointer ${
-                    isDragging 
-                      ? 'border-blue-500 bg-blue-500/10' 
-                      : theme === 'dark'
-                        ? 'border-white/10 text-white/30 hover:bg-white/5 hover:border-white/20'
-                        : 'border-gray-300 text-gray-400 hover:bg-gray-50'
-                  }`}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  <label className="absolute inset-0 w-full h-full cursor-pointer">
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept="image/png,image/jpeg,image/jpg" 
-                      multiple 
-                      onChange={(e) => handleFiles(e.target.files)} 
-                    />
-                  </label>
-                  <div className="flex flex-col items-center pointer-events-none">
-                    <Upload className="w-12 h-12 mb-4 opacity-50" />
-                    <p className="text-base font-medium text-center mb-2">{lang === 'KR' ? 'PNG/JPG 시퀀스 업로드' : lang === 'EN' ? 'Upload PNG/JPG sequences' : 'PNG/JPGシーケンスをアップロード'}</p>
-                    <p className="text-sm text-center opacity-70">
-                      {lang === 'KR' ? '좌측 패널에서 파일을 업로드하거나 이곳에 드래그하세요.' : lang === 'EN' ? 'Upload files from the left panel or drag them here.' : '左のパネルからファイルをアップロードするか、ここにドラッグしてください。'}
-                    </p>
+                <div className="flex flex-col items-center justify-center w-full max-w-lg mx-4 gap-4">
+                  <div 
+                    className={`flex flex-col items-center justify-center p-12 w-full border-2 border-dashed rounded-2xl transition-all cursor-pointer relative ${
+                      isDragging 
+                        ? 'border-blue-500 bg-blue-500/10' 
+                        : theme === 'dark'
+                          ? 'border-white/10 text-white/30 hover:bg-white/5 hover:border-white/20'
+                          : 'border-gray-300 text-gray-400 hover:bg-gray-50'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <label className="absolute inset-0 w-full h-full cursor-pointer">
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/png,image/jpeg,image/jpg" 
+                        multiple 
+                        onChange={(e) => handleFiles(e.target.files)} 
+                      />
+                    </label>
+                    <div className="flex flex-col items-center pointer-events-none">
+                      <Upload className="w-12 h-12 mb-4 opacity-50" />
+                      <p className="text-base font-medium text-center mb-2">{lang === 'KR' ? '새 복구 세션 시작 (PNG/JPG)' : lang === 'EN' ? 'Start new recovery session (PNG/JPG)' : 'PNG/JPGシーケンスをアップロード'}</p>
+                      <p className="text-sm text-center opacity-70">
+                        {lang === 'KR' ? '좌측 패널에서 파일을 업로드하거나 이곳에 드래그하세요.' : lang === 'EN' ? 'Upload files from the left panel or drag them here.' : '左のパネルからファイルをアップロードするか、ここにドラッグしてください。'}
+                      </p>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => document.dispatchEvent(new CustomEvent('navigate', { detail: 'remove' }))}
+                    className="w-full max-w-xs border border-blue-500/50 text-blue-500 px-6 py-2 rounded-full font-medium hover:bg-blue-500/10 transition-colors shadow-sm"
+                  >
+                    {lang === 'KR' ? 'Remove 화면으로 이동' : 'Start from Remove'}
+                  </button>
                 </div>
               ) : (
                 <div 

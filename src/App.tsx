@@ -35,6 +35,12 @@ function Layout({ children }: { children: React.ReactNode }) {
   const [showToast, setShowToast] = useState(false);
   const [imgError, setImgError] = useState(false);
 
+  useEffect(() => {
+    const handleGetApp = () => setShowGetApp(true);
+    document.addEventListener('openGetApp', handleGetApp);
+    return () => document.removeEventListener('openGetApp', handleGetApp);
+  }, []);
+
   const handleGuideClick = () => {
     if (window.innerWidth < 1024) {
       setShowToast(true);
@@ -189,21 +195,37 @@ function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="lg:flex-1 min-w-0 flex flex-col lg:min-h-0 lg:overflow-hidden relative w-full">
-        {/* Language Toggle (Desktop & Mobile) */}
-        <div className="absolute top-4 right-4 z-50 hidden lg:flex items-center gap-1 p-1 rounded-full border bg-white/50 dark:bg-black/50 backdrop-blur-md border-gray-200 dark:border-white/10">
-          {(['KR', 'EN', 'JP'] as const).map((l) => (
-            <button
-              key={l}
-              onClick={() => setLang(l)}
-              className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
-                lang === l 
-                  ? (isDark ? 'bg-white text-black' : 'bg-black text-white')
-                  : (isDark ? 'text-white/60 hover:text-white' : 'text-gray-500 hover:text-black')
-              }`}
-            >
-              {l}
-            </button>
-          ))}
+        {/* Top Right Controls (Desktop & Mobile) */}
+        <div className="absolute top-4 right-4 z-50 hidden lg:flex items-center gap-2">
+          {/* GET APP Button */}
+          <button
+            onClick={() => setShowGetApp(true)}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide transition-all shadow-lg ${
+              isDark 
+                ? 'bg-blue-500 hover:bg-blue-400 text-white shadow-blue-500/20' 
+                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5" strokeWidth={2.5} />
+            {lang === 'KR' ? '앱 다운로드' : lang === 'EN' ? 'GET APP' : 'アプリ入手'}
+          </button>
+          
+          {/* Language Toggle */}
+          <div className="flex items-center gap-1 p-1 rounded-full border bg-white/50 dark:bg-black/50 backdrop-blur-md border-gray-200 dark:border-white/10">
+            {(['KR', 'EN', 'JP'] as const).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLang(l)}
+                className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
+                  lang === l 
+                    ? (isDark ? 'bg-white text-black' : 'bg-black text-white')
+                    : (isDark ? 'text-white/60 hover:text-white' : 'text-gray-500 hover:text-black')
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
 
         {children}

@@ -60,6 +60,7 @@ export default function RemovePage() {
   const [isProcessingLocal, setIsProcessingLocal] = useState(false);
   const isProcessing = isExtracting || isBatchProcessing || isProcessingLocal;
   const setIsProcessing = setIsProcessingLocal;
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const [failedItems, setFailedItems] = useState<number[]>([]);
   
@@ -650,6 +651,11 @@ export default function RemovePage() {
     }
     
     if (file.type.includes('video/mp4') || file.type.includes('video/quicktime')) {
+      if (abortControllerRef.current) {
+         abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+      
       setUploadState('video-extracting');
       setVideoFile(file);
       setFrames([]);
@@ -664,6 +670,7 @@ export default function RemovePage() {
           maxWidth: maxRes === 1080 ? 1920 : 1280,
           maxHeight: maxRes,
           maxFrames: maxFramesLimit,
+          signal: abortControllerRef.current?.signal,
           onProgress: (current, total) => {
              setExtractionProgress({ current, total });
           },
@@ -683,6 +690,11 @@ export default function RemovePage() {
         console.log("Native extraction complete.");
         setUploadState('ready');
       } catch (err) {
+        if (err instanceof Error && err.message === 'Aborted') {
+          console.log('Video extraction canceled.');
+          setUploadState('idle');
+          return;
+        }
         console.error("Browser video extraction failed:", err);
         setUploadState('error');
       }
@@ -1072,6 +1084,24 @@ export default function RemovePage() {
                 </p>
               </div>
             </div>
+
+            {uploadState === 'video-extracting' && (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (abortControllerRef.current) {
+                      abortControllerRef.current.abort();
+                    }
+                  }}
+                  className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
+                >
+                  {lang === 'KR' ? '추출 취소' : 'Cancel extraction'}
+                </button>
+              </div>
+            )}
 
             {uploadState === 'error' && (
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -1586,9 +1616,9 @@ export default function RemovePage() {
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="min-w-0 flex flex-col">
+                        <label className="min-w-0">
                           <div className="flex justify-between items-center mb-1">
-                            <label className={`${segmentLabelClass} truncate`}>{seg.useFrames ? 'START (f)' : 'START (s)'}</label>
+                            <span className={`${segmentLabelClass} truncate`}>{seg.useFrames ? 'START (f)' : 'START (s)'}</span>
                             <button 
                               onClick={() => updateSegment(idx, 'useFrames', !seg.useFrames)}
                               className="text-[9px] bg-white/10 px-1 rounded flex-shrink-0"
@@ -1600,22 +1630,22 @@ export default function RemovePage() {
                             type="number" 
                             step={seg.useFrames ? "1" : "0.1"}
                             value={seg.start}
-                            onChange={(e) => updateSegment(idx, 'start', parseFloat(e.target.value))}
-                            className={`${segmentInputClass} max-w-[96px]`}
+                            onChange={(e) => updateSegment(idx, 'start', parseFloat(e.target.value) || 0)}
+                            className={`${segmentInputClass} w-full px-1.5`}
                           />
-                        </div>
-                        <div className="min-w-0 flex flex-col">
+                        </label>
+                        <label className="min-w-0">
                           <div className="flex justify-between items-center mb-1">
-                            <label className={`${segmentLabelClass} truncate`}>{seg.useFrames ? 'END (f)' : 'END (s)'}</label>
+                            <span className={`${segmentLabelClass} truncate`}>{seg.useFrames ? 'END (f)' : 'END (s)'}</span>
                           </div>
                           <input 
                             type="number" 
                             step={seg.useFrames ? "1" : "0.1"}
                             value={seg.end}
-                            onChange={(e) => updateSegment(idx, 'end', parseFloat(e.target.value))}
-                            className={`${segmentInputClass} max-w-[96px]`}
+                            onChange={(e) => updateSegment(idx, 'end', parseFloat(e.target.value) || 0)}
+                            className={`${segmentInputClass} w-full px-1.5`}
                           />
-                        </div>
+                        </label>
                       </div>
                     </div>
                   ))}

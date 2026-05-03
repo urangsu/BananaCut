@@ -355,17 +355,32 @@ export default function AssetPage() {
             )}
           </p>
           {frames.length > 0 && (
-            <p className="mt-3 text-sm font-medium text-blue-500">
-              {lang === 'KR' ? `공유된 ${frames.length} 프레임으로 에셋을 만듭니다.` : `Creating assets from ${frames.length} shared frames.`}
+            <p className="mt-3 text-sm font-medium text-blue-500 flex flex-wrap gap-4 items-center">
+              <span>{lang === 'KR' ? `공유된 ${frames.length} 프레임으로 에셋을 만듭니다.` : `Creating assets from ${frames.length} shared frames.`}</span>
+              <span className={`px-2 py-0.5 rounded text-xs ${isDark ? 'bg-white/10 text-white/70' : 'bg-gray-100 text-gray-600'}`}>
+                {lang === 'KR' ? '처리됨:' : 'Processed:'} {frames.filter(f => f.processedUrl && !f.dirty).length} / {frames.length}
+              </span>
+              {frames.some(f => !f.processedUrl || f.dirty) && (
+                <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 font-semibold flex items-center gap-1 border border-yellow-500/30">
+                  <AlertTriangle className="w-3 h-3" />
+                  {lang === 'KR' ? '미적용 프레임:' : 'Unprocessed:'} {frames.filter(f => !f.processedUrl || f.dirty).length}
+                </span>
+              )}
             </p>
           )}
         </header>
 
         {frames.length === 0 ? (
-          <div className={`p-12 text-center rounded-2xl border border-dashed ${isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'}`}>
+          <div className={`p-12 text-center rounded-2xl border border-dashed ${isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'} flex flex-col items-center justify-center space-y-4`}>
             <p className={`text-lg ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
               {lang === 'KR' ? '먼저 REMOVE 탭에서 프레임을 추출해주세요.' : lang === 'EN' ? 'Please extract frames in the REMOVE tab first.' : 'まずREMOVEタブでフレームを抽出してください。'}
             </p>
+            <button
+               onClick={() => document.dispatchEvent(new CustomEvent('navigate', { detail: 'remove' }))}
+               className="bg-blue-500 text-white px-6 py-2 rounded-full font-medium hover:bg-blue-600 transition-colors shadow-lg"
+            >
+              {lang === 'KR' ? 'Remove 화면으로 이동' : 'Start from Remove'}
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
