@@ -5,7 +5,7 @@ import { Upload, Play, Square, Download, Settings, Loader2, Sliders, ChevronDown
 import JSZip from 'jszip';
 import { useTheme } from '../ThemeContext';
 import { useFFmpeg } from '../FFmpegContext';
-import { useStudio, BrushStroke } from '../StudioContext';
+import { useStudio, BrushStroke, StudioFrame } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
 import { revokeUrlsSafely } from '../utils/urlUtils';
 import { getFrameDisplayUrl } from '../utils/frameUtils';
@@ -14,6 +14,7 @@ import { useBatchJob } from '../hooks/useBatchJob';
 import { useLanguage } from '../LanguageContext';
 import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
 import { PerfLogger } from '../utils/performanceLogger';
+import { extractFramesNative } from '../utils/nativeVideoExtract';
 
 const GET_MIDDLE_NAME_OPTIONS = (lang: string) => [
   { id: "idle_sitting", desc: lang === 'KR' ? "자연스러운 호흡" : lang === 'EN' ? "Natural Breathing" : "自然な呼吸" },
@@ -676,40 +677,38 @@ export default function RemovePage() {
       
       setUploadState('video-extracting');
       setNativeExtractError(null);
+      setSkippedFramesWarning(false);
       setVideoFile(file);
       setFrames([]);
       setExtractionProgress({ current: 0, total: 0 });
+      let accumulatedFrames: StudioFrame[] = [];
       try {
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
         const maxRes = isMobile ? 720 : 1080;
         const maxFramesLimit = isMobile ? 500 : 1500;
 
-        const { frames: outFrames, skippedFrames } = await import('../utils/nativeVideoExtract').then(m => m.extractFramesNative(file, {
+        const { frames: extractedFrames, skippedFrames } = await extractFramesNative(file, {
           fps: targetFps,
           maxWidth: maxRes === 1080 ? 1920 : 1280,
           maxHeight: maxRes,
           maxFrames: maxFramesLimit,
+          skipFailedFrames: true,
           signal: abortControllerRef.current?.signal,
           onProgress: (current, total) => {
              setExtractionProgress({ current, total });
           },
           onChunk: (chunk) => {
-             setFrames(prev => {
-                const isFirstChunk = prev.length === 0 && chunk.length > 0;
-                if (isFirstChunk) {
-                   setCurrentFrame(0);
-                   setImgDims({ w: chunk[0].width, h: chunk[0].height });
-                }
-                return [...prev, ...chunk];
-             });
+             accumulatedFrames = [...accumulatedFrames, ...chunk];
+             setFrames(accumulatedFrames);
+             if (accumulatedFrames.length === chunk.length) {
+                setCurrentFrame(0);
+                setImgDims({ w: chunk[0].width, h: chunk[0].height });
+             }
           }
-        }));
+        });
         
-        if (skippedFrames && skippedFrames.length > 0) {
-           setSkippedFramesWarning(true);
-        } else {
-           setSkippedFramesWarning(false);
-        }
+        setFrames(extractedFrames);
+        setSkippedFramesWarning(skippedFrames && skippedFrames.length > 0);
         
         setIsPlaying(true);
         console.log("Native extraction complete.");
@@ -717,26 +716,26 @@ export default function RemovePage() {
       } catch (err) {
         if (err instanceof Error && err.message === 'Aborted') {
           console.log('Video extraction canceled.');
-          setFrames(prev => {
-            prev.forEach(f => {
-              URL.revokeObjectURL(f.rawUrl);
-              if (f.processedUrl) URL.revokeObjectURL(f.processedUrl);
-            });
-            return [];
+          accumulatedFrames.forEach(f => {
+            URL.revokeObjectURL(f.rawUrl);
+            if (f.processedUrl) URL.revokeObjectURL(f.processedUrl);
           });
+          setFrames([]);
           setUploadState('idle');
           return;
         }
         console.error("Browser video extraction failed:", err);
-        setFrames(prev => {
-          prev.forEach(f => {
-            URL.revokeObjectURL(f.rawUrl);
-            if (f.processedUrl) URL.revokeObjectURL(f.processedUrl);
-          });
-          return [];
+        accumulatedFrames.forEach(f => {
+          URL.revokeObjectURL(f.rawUrl);
+          if (f.processedUrl) URL.revokeObjectURL(f.processedUrl);
         });
-        setNativeExtractError(err instanceof Error ? err.message : 'Unknown native extraction error');
+        setFrames([]);
+        setNativeExtractError(err instanceof Error ? `[Native Error]\n${err.message}` : `[Native Error]\nUnknown error`);
         setUploadState('error');
+        setIsPlaying(false);
+      } finally {
+        abortControllerRef.current = null;
+        setIsProcessingLocal(false);
       }
       return;
     }
@@ -1149,10 +1148,12 @@ export default function RemovePage() {
                   <>
                     <button
                       type="button"
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (videoFile) processFile(videoFile);
+                        setNativeExtractError(null);
+                        setSkippedFramesWarning(false);
+                        if (videoFile) await processFile(videoFile);
                       }}
                       className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
                     >
@@ -1160,15 +1161,16 @@ export default function RemovePage() {
                     </button>
                     <button
                       type="button"
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        // fps is the state variable, not targetFps
+                        setNativeExtractError(null);
+                        setSkippedFramesWarning(false);
                         const currentFps = fps;
                         const newFps = Math.max(4, Math.floor(currentFps / 2));
                         setFps(newFps);
                         if (videoFile) {
-                          processFile(videoFile, newFps);
+                          await processFile(videoFile, newFps);
                         }
                       }}
                       className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
@@ -1982,7 +1984,7 @@ export default function RemovePage() {
             </div>
 
             <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-xl bg-gray-100 dark:bg-black/50 p-4 text-xs font-mono text-red-600 dark:text-red-400 border border-gray-200 dark:border-red-500/10">
-              {nativeExtractError && `[Native Error]\n${nativeExtractError}\n\n`}
+              {nativeExtractError && `${nativeExtractError}\n\n`}
               {ffmpegError && `[FFmpeg Error]\n${ffmpegError}`}
               {(!nativeExtractError && !ffmpegError) && 'No technical error available.'}
             </pre>
@@ -1992,7 +1994,7 @@ export default function RemovePage() {
                 type="button"
                 onClick={() => {
                   const errText = [
-                    nativeExtractError ? `[Native Error]\n${nativeExtractError}` : '',
+                    nativeExtractError ? `${nativeExtractError}` : '',
                     ffmpegError ? `[FFmpeg Error]\n${ffmpegError}` : ''
                   ].filter(Boolean).join('\n\n');
                   navigator.clipboard.writeText(errText || 'No error details');
