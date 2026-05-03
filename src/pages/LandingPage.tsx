@@ -203,7 +203,7 @@ export default function LandingPage() {
           {/* Hero Section */}
           <section className="text-center space-y-8">
             <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight">
-              Turn Video into <br />
+              Cut Video into <br />
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
                 Transparent Assets
               </span>
@@ -386,11 +386,11 @@ export default function LandingPage() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                 <div className="space-y-4">
-                  <h3 className="text-2xl font-bold tracking-tight">100% Local Processing</h3>
+                  <h3 className="text-2xl font-bold tracking-tight">Local Processing</h3>
                   <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {lang === 'KR' ? '바나나컷은 고성능 웹 엔진(WASM/FFmpeg)을 사용하여 모든 작업을 브라우저 내부에서 처리합니다. 무거운 4K 영상을 외부 서버에 업로드할 필요가 없으며, 사용자의 데이터 프라이버시는 완벽하게 보호됩니다.' : 
-                     lang === 'EN' ? 'BananaCut uses a high-performance web engine (WASM/FFmpeg) to process everything inside your browser. No need to upload heavy 4K videos to external servers, and your data privacy is perfectly protected.' : 
-                     'BananaCutは高性能ウェブエンジン（WASM/FFmpeg）を使用して、すべての作業をブラウザ内で処理します。重い4K動画を外部サーバーにアップロードする必要はなく、ユーザーのデータプライバシーは完全に保護されます。'}
+                    {lang === 'KR' ? '바나나컷은 고성능 웹 엔진(WASM/FFmpeg)을 사용하여 핵심 작업을 브라우저 내부에서 처리합니다. 무거운 4K 영상을 외부 서버에 업로드할 필요가 없습니다.' : 
+                     lang === 'EN' ? 'BananaCut uses a high-performance web engine (WASM/FFmpeg) to process core tasks inside your browser. No need to upload heavy 4K videos to external servers.' : 
+                     'BananaCutは高性能ウェブエンジン（WASM/FFmpeg）を使用して、コアタスクをブラウザ内で処理します。重い4K動画を外部サーバーにアップロードする必要はありません。'}
                   </p>
                 </div>
                 <div className="space-y-4">
@@ -402,11 +402,11 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <div className="space-y-4">
-                  <h3 className="text-2xl font-bold tracking-tight">Forever Free & No Limits</h3>
+                  <h3 className="text-2xl font-bold tracking-tight">Free to Use</h3>
                   <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {lang === 'KR' ? '이 모든 전문가급 기능을 100% 무료로 제공합니다. 워터마크도, 사용량 제한도, 번거로운 회원가입도 필요 없습니다.' : 
-                     lang === 'EN' ? 'We provide all these professional-grade features 100% free. No watermarks, no usage limits, and no cumbersome sign-ups required.' : 
-                     'これらのプロフェッショナルレベルの機能をすべて完全無料で提供します。透かしも、使用制限も、面倒な会員登録も必要ありません。'}
+                    {lang === 'KR' ? '이 모든 전문가급 기능을 바탕으로 시작하세요. 워터마크도, 번거로운 회원가입도 필요 없습니다.' : 
+                     lang === 'EN' ? 'Start using these professional-grade features for free. No watermarks and no cumbersome sign-ups required.' : 
+                     'これらのプロフェッショナルレベルの機能を利用し始めましょう。透かしも、面倒な会員登録も必要ありません。'}
                   </p>
                 </div>
               </div>
@@ -432,12 +432,12 @@ export default function LandingPage() {
               <div className="space-y-8">
                 <div className={`pb-8 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
                   <h3 className="text-xl font-bold mb-3">
-                    {lang === 'KR' ? 'Q: 정말 100% 무료인가요?' : lang === 'EN' ? 'Q: Is it really 100% free?' : 'Q: 本当に100%無料ですか？'}
+                    {lang === 'KR' ? 'Q: 정말 무료인가요?' : lang === 'EN' ? 'Q: Is it free to use?' : 'Q: 無料ですか？'}
                   </h3>
                   <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {lang === 'KR' ? 'A: 네, 바나나컷은 크리에이터 생태계를 위해 만들어진 도구로, 모든 기능을 횟수 제한 없이 무료로 제공합니다.' : 
-                     lang === 'EN' ? 'A: Yes, BananaCut is a tool built for the creator ecosystem, providing all features for free with no usage limits.' : 
-                     'A: はい、BananaCutはクリエイターエコシステムのために作られたツールであり、すべての機能を回数制限なしで無料で提供します。'}
+                    {lang === 'KR' ? 'A: 네, 바나나컷은 크리에이터 생태계를 위해 만들어진 도구로, 기능들을 무료로 제공합니다.' : 
+                     lang === 'EN' ? 'A: Yes, BananaCut is a tool built for the creator ecosystem, providing features for free.' : 
+                     'A: はい、BananaCutはクリエイターエコシステムのために作られたツールであり、機能を無料で提供します。'}
                   </p>
                 </div>
                 <div className={`pb-8 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
@@ -445,9 +445,9 @@ export default function LandingPage() {
                     {lang === 'KR' ? 'Q: 제 파일이 서버에 저장되나요?' : lang === 'EN' ? 'Q: Are my files saved on a server?' : 'Q: 私のファイルはサーバーに保存されますか？'}
                   </h3>
                   <p className={`text-lg leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {lang === 'KR' ? 'A: 아니요. 모든 프레임 처리와 영상 인코딩은 사용자의 기기(브라우저) 안에서만 이루어지며, 어떤 데이터도 외부로 전송되지 않습니다.' : 
-                     lang === 'EN' ? 'A: No. All frame processing and video encoding happens entirely within your device (browser), and no data is transmitted externally.' : 
-                     'A: いいえ。すべてのフレーム処理と動画エンコードはユーザーのデバイス（ブラウザ）内でのみ行われ、データが外部に送信されることはありません。'}
+                    {lang === 'KR' ? 'A: 아니요. 원본 이미지/비디오, 추출 프레임, 편집 결과물은 바나나컷 서버로 업로드되거나 저장되지 않습니다.' : 
+                     lang === 'EN' ? 'A: No. Original images/videos, extracted frames, and edited results are not uploaded or stored on BananaCut servers.' : 
+                     'A: いいえ。元の画像/ビデオ、抽出されたフレーム、および編集結果がBananaCutサーバーにアップロードされたり保存されたりすることはありません。'}
                   </p>
                 </div>
                 <div className={`pb-8 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>

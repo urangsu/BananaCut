@@ -1,0 +1,197 @@
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export function getAlphaBoundingBox(
+  imageData: ImageData,
+  alphaThreshold: number,
+): Box | null {
+  const { data, width, height } = imageData;
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const alpha = data[(y * width + x) * 4 + 3];
+      if (alpha > alphaThreshold) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (minX > maxX || minY > maxY) {
+    return null; // Empty or fully transparent
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    w: maxX - minX + 1,
+    h: maxY - minY + 1,
+  };
+}
+
+export async function analyzeFrameBounds(
+  frames: any[], // StudioFrame type, but we use any to avoid importing circle dependencies if any, or we can use the exact type.
+  options: {
+    alphaThreshold: number;
+    padding: number;
+    useProcessed: boolean;
+    maxSamples?: number;
+    onProgress?: (current: number, total: number) => void;
+  },
+): Promise<{
+  frameBoxes: Array<{ index: number; box: Box | null }>;
+  stableBox: Box | null;
+  sourceWidth: number;
+  sourceHeight: number;
+  recommendedCanvas: { width: number; height: number } | null;
+  transparentWasteRatio: number;
+}> {
+  const { alphaThreshold, padding, useProcessed, onProgress, maxSamples } =
+    options;
+  const processedFrames = useProcessed
+    ? frames.filter((f) => f.processedUrl || f.base64)
+    : frames;
+
+  if (processedFrames.length === 0) {
+    return {
+      frameBoxes: [],
+      stableBox: null,
+      sourceWidth: 0,
+      sourceHeight: 0,
+      recommendedCanvas: null,
+      transparentWasteRatio: 0,
+    };
+  }
+
+  // To get source dimensions, load the first frame
+  const firstFrameUrl = useProcessed
+    ? processedFrames[0].processedUrl || processedFrames[0].base64
+    : processedFrames[0].rawUrl;
+
+  if (!firstFrameUrl) {
+    throw new Error("No image URL found for the first frame.");
+  }
+
+  const firstImg = await loadImage(firstFrameUrl);
+  const sourceWidth = firstImg.width;
+  const sourceHeight = firstImg.height;
+
+  let stableMinX = sourceWidth;
+  let stableMinY = sourceHeight;
+  let stableMaxX = -1;
+  let stableMaxY = -1;
+
+  const frameBoxes: Array<{ index: number; box: Box | null }> = [];
+
+  const canvas = document.createElement("canvas");
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) throw new Error("Failed to get 2d context");
+
+  const totalToAnalyze = maxSamples
+    ? Math.min(processedFrames.length, maxSamples)
+    : processedFrames.length;
+  // If maxSamples is provided, pick evenly distributed frames
+  const indicesToAnalyze = [];
+  if (maxSamples && processedFrames.length > maxSamples) {
+    for (let i = 0; i < maxSamples; i++) {
+      indicesToAnalyze.push(
+        Math.floor((i * (processedFrames.length - 1)) / (maxSamples - 1)),
+      );
+    }
+  } else {
+    for (let i = 0; i < processedFrames.length; i++) {
+      indicesToAnalyze.push(i);
+    }
+  }
+
+  let count = 0;
+  for (const idx of indicesToAnalyze) {
+    const f = processedFrames[idx];
+    const url = useProcessed ? f.processedUrl || f.base64 : f.rawUrl;
+    if (!url) continue;
+
+    try {
+      const img = await loadImage(url);
+      ctx.clearRect(0, 0, sourceWidth, sourceHeight);
+      ctx.drawImage(img, 0, 0);
+      const imgData = ctx.getImageData(0, 0, sourceWidth, sourceHeight);
+      const box = getAlphaBoundingBox(imgData, alphaThreshold);
+
+      frameBoxes.push({ index: idx, box });
+
+      if (box) {
+        if (box.x < stableMinX) stableMinX = box.x;
+        if (box.y < stableMinY) stableMinY = box.y;
+        if (box.x + box.w > stableMaxX) stableMaxX = box.x + box.w;
+        if (box.y + box.h > stableMaxY) stableMaxY = box.y + box.h;
+      }
+    } catch (err) {
+      console.error("Failed to load frame for analysis", err);
+    }
+
+    count++;
+    if (onProgress) onProgress(count, indicesToAnalyze.length);
+  }
+
+  canvas.width = 1;
+  canvas.height = 1;
+
+  let stableBox: Box | null = null;
+  let recommendedCanvas = null;
+  let transparentWasteRatio = 0;
+
+  if (stableMinX <= stableMaxX && stableMinY <= stableMaxY) {
+    // Add padding and clamp
+    const finalX = Math.max(0, stableMinX - padding);
+    const finalY = Math.max(0, stableMinY - padding);
+    const finalMaxX = Math.min(sourceWidth - 1, stableMaxX + padding);
+    const finalMaxY = Math.min(sourceHeight - 1, stableMaxY + padding);
+
+    stableBox = {
+      x: finalX,
+      y: finalY,
+      w: finalMaxX - finalX + 1,
+      h: finalMaxY - finalY + 1,
+    };
+
+    recommendedCanvas = {
+      width: stableBox.w,
+      height: stableBox.h,
+    };
+
+    const sourceArea = sourceWidth * sourceHeight;
+    const stableArea = stableBox.w * stableBox.h;
+    transparentWasteRatio = Math.max(0, (sourceArea - stableArea) / sourceArea);
+  }
+
+  return {
+    frameBoxes,
+    stableBox,
+    sourceWidth,
+    sourceHeight,
+    recommendedCanvas,
+    transparentWasteRatio,
+  };
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}

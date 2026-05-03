@@ -20,8 +20,8 @@ export default function PrivacyPage() {
         {lang === 'KR' && (
           <div className="space-y-8">
             <section>
-              <h2 className="font-bold text-xl mb-4">1. 데이터 처리</h2>
-              <p className="opacity-80">BananaCut은 모든 이미지 및 비디오 처리를 사용자의 브라우저 내에서 직접 수행합니다. 어떠한 원본 파일이나 편집 데이터도 서버로 전송하거나 저장하지 않습니다.</p>
+              <h2 className="font-bold text-xl mb-4">1. 미디어 파일 처리</h2>
+              <p className="opacity-80">원본 이미지/비디오, 추출 프레임, 편집 결과물은 BananaCut 서버로 업로드되거나 저장되지 않습니다.</p>
             </section>
             
             <section>
@@ -39,8 +39,8 @@ export default function PrivacyPage() {
         {lang === 'EN' && (
           <div className="space-y-8">
             <section>
-              <h2 className="font-bold text-xl mb-4">1. Data Processing</h2>
-              <p className="opacity-80">BananaCut processes all images and videos directly within your browser. No original files or edited data are ever uploaded to or stored on our servers.</p>
+              <h2 className="font-bold text-xl mb-4">1. Media File Processing</h2>
+              <p className="opacity-80">Original images/videos, extracted frames, and edited results are not uploaded or stored on BananaCut servers.</p>
             </section>
             
             <section>
@@ -58,8 +58,8 @@ export default function PrivacyPage() {
         {lang === 'JP' && (
           <div className="space-y-8">
             <section>
-              <h2 className="font-bold text-xl mb-4">1. データ処理</h2>
-              <p className="opacity-80">BananaCutは、すべての画像およびビデオ処理をユーザーのブラウザ内で直接実行します。元のファイルや編集データがサーバーに送信または保存されることはありません。</p>
+              <h2 className="font-bold text-xl mb-4">1. メディアファイル処理</h2>
+              <p className="opacity-80">元の画像/ビデオ、抽出されたフレーム、および編集結果がBananaCutサーバーにアップロードされたり保存されたりすることはありません。</p>
             </section>
             
             <section>

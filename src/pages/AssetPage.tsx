@@ -1,26 +1,43 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useLanguage } from '../LanguageContext';
-import { useTheme } from '../ThemeContext';
-import { useStudio } from '../StudioContext';
-import { useFFmpeg } from '../FFmpegContext';
-import { Download, Film, LayoutGrid, Loader2, AlertTriangle, AlertCircle } from 'lucide-react';
-import { useBatchJob } from '../hooks/useBatchJob';
-import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
-import { PerfLogger } from '../utils/performanceLogger';
-import { getFrameDisplayUrl } from '../utils/frameUtils';
-import { Modal } from '../components/Modal';
-import { Copy } from 'lucide-react';
+import React, { useState, useRef, useEffect } from "react";
+import { useLanguage } from "../LanguageContext";
+import { useTheme } from "../ThemeContext";
+import { useStudio } from "../StudioContext";
+import { useFFmpeg } from "../FFmpegContext";
+import {
+  Download,
+  Film,
+  LayoutGrid,
+  Loader2,
+  AlertTriangle,
+  AlertCircle,
+} from "lucide-react";
+import { useBatchJob } from "../hooks/useBatchJob";
+import { generateStrokeMask, applyChromaKeyAdvanced } from "../utils/chromaKey";
+import { PerfLogger } from "../utils/performanceLogger";
+import { getFrameDisplayUrl } from "../utils/frameUtils";
+import { analyzeFrameBounds, Box } from "../utils/boundingBox";
+import { Modal } from "../components/Modal";
+import { Copy, Scan, Maximize, Target } from "lucide-react";
 
 export default function AssetPage() {
   const { lang } = useLanguage();
   const { theme } = useTheme();
   const { frames, setFrames, fps, exclusionStrokes } = useStudio();
   const { ffmpeg, loadState, loadFFmpeg } = useFFmpeg();
-  const { isProcessing: isBatchProcessing, progress: batchProgress, startJob, cancelJob } = useBatchJob();
+  const {
+    isProcessing: isBatchProcessing,
+    progress: batchProgress,
+    startJob,
+    cancelJob,
+  } = useBatchJob();
 
   const [showDirtyModal, setShowDirtyModal] = useState(false);
-  const [dirtyAction, setDirtyAction] = useState<(() => Promise<void>) | null>(null);
-  const [dirtyAnywayAction, setDirtyAnywayAction] = useState<(() => Promise<void>) | null>(null);
+  const [dirtyAction, setDirtyAction] = useState<(() => Promise<void>) | null>(
+    null,
+  );
+  const [dirtyAnywayAction, setDirtyAnywayAction] = useState<
+    (() => Promise<void>) | null
+  >(null);
   const [failedItems, setFailedItems] = useState<number[]>([]);
 
   // Video Export State
@@ -33,33 +50,71 @@ export default function AssetPage() {
   // Sprite Sheet State
   const [columns, setColumns] = useState<number>(4);
   const [spacing, setSpacing] = useState<number>(0);
-  const [autoCrop, setAutoCrop] = useState<boolean>(true);
-  const [alphaThreshold, setAlphaThreshold] = useState<number>(10);
   const [isSpriteProcessing, setIsSpriteProcessing] = useState(false);
   const [spriteUrl, setSpriteUrl] = useState<string | null>(null);
   const [spriteJson, setSpriteJson] = useState<string | null>(null);
   const [spriteWarning, setSpriteWarning] = useState<string | null>(null);
 
-  const isDark = theme === 'dark';
+  // Smart Crop Recommendation State
+  const [sourceDim, setSourceDim] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [stableBox, setStableBox] = useState<Box | null>(null);
+  const [recommendedCanvas, setRecommendedCanvas] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [transparentWasteRatio, setTransparentWasteRatio] = useState<number>(0);
+  const [alphaThreshold, setAlphaThreshold] = useState<number>(10);
+  const [cropPadding, setCropPadding] = useState<number>(8);
+  const [isAnalyzingCrop, setIsAnalyzingCrop] = useState(false);
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
 
-  const processDirtyFrames = async (dirtyIndices: number[]): Promise<number[]> => {
+  // Export Mode
+  const [exportSizeMode, setExportSizeMode] = useState<
+    "original" | "recommendedStableCrop" | "customCanvas"
+  >("original");
+
+  // Custom Canvas Settings
+  const [customWidth, setCustomWidth] = useState<number>(512);
+  const [customHeight, setCustomHeight] = useState<number>(512);
+  const [customAnchor, setCustomAnchor] = useState<
+    "center" | "top" | "bottom" | "left" | "right"
+  >("center");
+  const [customFit, setCustomFit] = useState<"contain" | "cover" | "none">(
+    "contain",
+  );
+
+  const [showCropPreview, setShowCropPreview] = useState(false);
+
+  const isDark = theme === "dark";
+
+  const processDirtyFrames = async (
+    dirtyIndices: number[],
+  ): Promise<number[]> => {
     setFailedItems([]);
     const newFrames = [...frames];
-    
+
     // Load config from localStorage
     const params = {
-      keyingMode: (localStorage.getItem('ck_keyingMode') as any) || 'greenAdvanced',
-      previewMode: 'result' as const,
-      tolerance: Number(localStorage.getItem('ck_tolerance')) || 30,
-      softness: Number(localStorage.getItem('ck_softness')) || 20,
-      enclosedTolerance: Number(localStorage.getItem('ck_enclosedTolerance')) || 10,
-      chromaKeyColor: (localStorage.getItem('ck_chromaKeyColor') as any) || 'White',
-      pickedColor: JSON.parse(localStorage.getItem('ck_pickedColor') || '{"r":255,"g":255,"b":255}'),
-      despill: Number(localStorage.getItem('ck_despill')) || 0,
-      erode: Number(localStorage.getItem('ck_erode')) || 0,
-      dilate: Number(localStorage.getItem('ck_dilate')) || 0,
-      feather: Number(localStorage.getItem('ck_feather')) || 0,
-      alphaContrast: Number(localStorage.getItem('ck_alphaContrast')) || 0,
+      keyingMode:
+        (localStorage.getItem("ck_keyingMode") as any) || "greenAdvanced",
+      previewMode: "result" as const,
+      tolerance: Number(localStorage.getItem("ck_tolerance")) || 30,
+      softness: Number(localStorage.getItem("ck_softness")) || 20,
+      enclosedTolerance:
+        Number(localStorage.getItem("ck_enclosedTolerance")) || 10,
+      chromaKeyColor:
+        (localStorage.getItem("ck_chromaKeyColor") as any) || "White",
+      pickedColor: JSON.parse(
+        localStorage.getItem("ck_pickedColor") || '{"r":255,"g":255,"b":255}',
+      ),
+      despill: Number(localStorage.getItem("ck_despill")) || 0,
+      erode: Number(localStorage.getItem("ck_erode")) || 0,
+      dilate: Number(localStorage.getItem("ck_dilate")) || 0,
+      feather: Number(localStorage.getItem("ck_feather")) || 0,
+      alphaContrast: Number(localStorage.getItem("ck_alphaContrast")) || 0,
     };
 
     return new Promise((resolve) => {
@@ -67,30 +122,46 @@ export default function AssetPage() {
         items: dirtyIndices,
         delayMs: 0,
         processItem: async (idx, resultIndex) => {
-           const frame = newFrames[idx];
-           const img = new Image();
-           img.src = frame.rawUrl;
-           await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
-           
-           const canvas = document.createElement('canvas');
-           canvas.width = img.width;
-           canvas.height = img.height;
-           const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-           ctx.drawImage(img, 0, 0);
-           
-           const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
-           const mask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, idx);
-           PerfLogger.start('AssetPage_applyChromaKeyAdvanced');
-           applyChromaKeyAdvanced(imgData.data, canvas.width, canvas.height, params, mask);
-           PerfLogger.end('AssetPage_applyChromaKeyAdvanced');
-           ctx.putImageData(imgData, 0, 0);
-           
-           const blob = await new Promise<Blob|null>(resolve => canvas.toBlob(resolve, 'image/png'));
-           if (blob) {
-             const newUrl = URL.createObjectURL(blob);
-             if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
-             newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
-           }
+          const frame = newFrames[idx];
+          const img = new Image();
+          img.src = frame.rawUrl;
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+          ctx.drawImage(img, 0, 0);
+
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const mask = generateStrokeMask(
+            canvas.width,
+            canvas.height,
+            exclusionStrokes,
+            idx,
+          );
+          PerfLogger.start("AssetPage_applyChromaKeyAdvanced");
+          applyChromaKeyAdvanced(
+            imgData.data,
+            canvas.width,
+            canvas.height,
+            params,
+            mask,
+          );
+          PerfLogger.end("AssetPage_applyChromaKeyAdvanced");
+          ctx.putImageData(imgData, 0, 0);
+
+          const blob = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob(resolve, "image/png"),
+          );
+          if (blob) {
+            const newUrl = URL.createObjectURL(blob);
+            if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
+            newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
+          }
         },
         onSuccess: () => {
           setFrames(newFrames);
@@ -103,22 +174,24 @@ export default function AssetPage() {
         },
         onError: () => {
           resolve(dirtyIndices);
-        }
+        },
       });
     });
   };
 
   const checkDirtyAndRun = (runAction: () => Promise<void>) => {
-    const dirtyIndices = frames.map((f, i) => (!f.processedUrl || f.dirty) ? i : -1).filter(i => i !== -1);
+    const dirtyIndices = frames
+      .map((f, i) => (!f.processedUrl || f.dirty ? i : -1))
+      .filter((i) => i !== -1);
     if (dirtyIndices.length > 0) {
       setDirtyAction(() => async () => {
-         const failed = await processDirtyFrames(dirtyIndices);
-         if (failed.length === 0) {
-            runAction();
-         }
+        const failed = await processDirtyFrames(dirtyIndices);
+        if (failed.length === 0) {
+          runAction();
+        }
       });
       setDirtyAnywayAction(() => async () => {
-         runAction();
+        runAction();
       });
       setShowDirtyModal(true);
       return;
@@ -129,11 +202,11 @@ export default function AssetPage() {
   // --- Feature A: Transparent Video Export ---
   const executeExportVideo = async () => {
     if (frames.length === 0) return;
-    
+
     setIsVideoProcessing(true);
     let currentFFmpeg = ffmpeg;
     try {
-      if (loadState !== 'loaded' || !currentFFmpeg) {
+      if (loadState !== "loaded" || !currentFFmpeg) {
         currentFFmpeg = await loadFFmpeg();
       }
 
@@ -146,7 +219,7 @@ export default function AssetPage() {
       setShowTechErrorModal(true);
       return;
     }
-    
+
     setVideoProgress(0);
     setVideoUrl(null);
 
@@ -157,37 +230,48 @@ export default function AssetPage() {
         const url = getFrameDisplayUrl(frame, true);
         const response = await fetch(url);
         const buffer = await response.arrayBuffer();
-        await currentFFmpeg.writeFile(`frame_${i.toString().padStart(4, '0')}.png`, new Uint8Array(buffer));
+        await currentFFmpeg.writeFile(
+          `frame_${i.toString().padStart(4, "0")}.png`,
+          new Uint8Array(buffer),
+        );
       }
 
-      currentFFmpeg.on('progress', ({ progress }) => {
+      currentFFmpeg.on("progress", ({ progress }) => {
         setVideoProgress(Math.round(progress * 100));
       });
 
       // Encode to WebM with alpha channel
       // -c:v libvpx-vp9 -pix_fmt yuva420p -auto-alt-ref 0
       await currentFFmpeg.exec([
-        '-framerate', fps.toString(),
-        '-i', 'frame_%04d.png',
-        '-c:v', 'libvpx-vp9',
-        '-pix_fmt', 'yuva420p',
-        '-auto-alt-ref', '0',
-        '-b:v', '2M',
-        'output.webm'
+        "-framerate",
+        fps.toString(),
+        "-i",
+        "frame_%04d.png",
+        "-c:v",
+        "libvpx-vp9",
+        "-pix_fmt",
+        "yuva420p",
+        "-auto-alt-ref",
+        "0",
+        "-b:v",
+        "2M",
+        "output.webm",
       ]);
 
-      const data = await currentFFmpeg.readFile('output.webm');
-      const blob = new Blob([data], { type: 'video/webm' });
+      const data = await currentFFmpeg.readFile("output.webm");
+      const blob = new Blob([data], { type: "video/webm" });
       const url = URL.createObjectURL(blob);
       setVideoUrl(url);
 
       // Cleanup
       for (let i = 0; i < frames.length; i++) {
-        await currentFFmpeg.deleteFile(`frame_${i.toString().padStart(4, '0')}.png`);
+        await currentFFmpeg.deleteFile(
+          `frame_${i.toString().padStart(4, "0")}.png`,
+        );
       }
-      await currentFFmpeg.deleteFile('output.webm');
+      await currentFFmpeg.deleteFile("output.webm");
     } catch (error) {
-      console.error('Video export failed:', error);
+      console.error("Video export failed:", error);
     } finally {
       setIsVideoProcessing(false);
       setVideoProgress(0);
@@ -197,9 +281,39 @@ export default function AssetPage() {
   const handleExportVideo = () => checkDirtyAndRun(executeExportVideo);
 
   // --- Feature B: Sprite Sheet Generator ---
+  const handleAnalyzeCrop = async () => {
+    if (frames.length === 0) return;
+    setIsAnalyzingCrop(true);
+    setAnalyzeProgress(0);
+
+    try {
+      const result = await analyzeFrameBounds(frames, {
+        alphaThreshold,
+        padding: cropPadding,
+        useProcessed: true,
+        onProgress: (current, total) =>
+          setAnalyzeProgress(Math.round((current / total) * 100)),
+      });
+
+      setSourceDim({ width: result.sourceWidth, height: result.sourceHeight });
+      setStableBox(result.stableBox);
+      setRecommendedCanvas(result.recommendedCanvas);
+      setTransparentWasteRatio(result.transparentWasteRatio);
+
+      if (result.stableBox) {
+        setExportSizeMode("recommendedStableCrop");
+      }
+    } catch (err) {
+      console.error("Analyze failed", err);
+    } finally {
+      setIsAnalyzingCrop(false);
+      setAnalyzeProgress(0);
+    }
+  };
+
   const executeExportSprite = async () => {
     if (frames.length === 0) return;
-    
+
     setIsSpriteProcessing(true);
     setSpriteUrl(null);
     setSpriteJson(null);
@@ -207,101 +321,76 @@ export default function AssetPage() {
 
     try {
       // Load all images
-      const images = await Promise.all(frames.map(frame => {
-        return new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = getFrameDisplayUrl(frame, true);
-        });
-      }));
-
-      let frameWidths = images.map(img => img.width);
-      let frameHeights = images.map(img => img.height);
-      let cropBoxes = images.map(img => ({ x: 0, y: 0, w: img.width, h: img.height }));
-
-      if (autoCrop) {
-        // Calculate bounding box for each frame
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-        
-        if (tempCtx) {
-          cropBoxes = images.map(img => {
-            tempCanvas.width = img.width;
-            tempCanvas.height = img.height;
-            tempCtx.clearRect(0, 0, img.width, img.height);
-            tempCtx.drawImage(img, 0, 0);
-            const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
-            const data = imageData.data;
-            
-            let minX = img.width, minY = img.height, maxX = 0, maxY = 0;
-            let hasPixel = false;
-
-            for (let y = 0; y < img.height; y++) {
-              for (let x = 0; x < img.width; x++) {
-                const alpha = data[(y * img.width + x) * 4 + 3];
-                if (alpha > alphaThreshold) {
-                  hasPixel = true;
-                  if (x < minX) minX = x;
-                  if (x > maxX) maxX = x;
-                  if (y < minY) minY = y;
-                  if (y > maxY) maxY = y;
-                }
-              }
-            }
-
-            if (!hasPixel) return { x: 0, y: 0, w: 1, h: 1 }; // Empty frame fallback
-
-            return {
-              x: minX,
-              y: minY,
-              w: maxX - minX + 1,
-              h: maxY - minY + 1
-            };
+      const images = await Promise.all(
+        frames.map((frame) => {
+          return new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = getFrameDisplayUrl(frame, true);
           });
-        }
-      }
-
-      // Find max width and height among all (cropped or uncropped) frames
-      const maxWidth = Math.max(...cropBoxes.map(b => b.w));
-      const maxHeight = Math.max(...cropBoxes.map(b => b.h));
+        }),
+      );
 
       const cols = Math.min(columns, frames.length);
       const rows = Math.ceil(frames.length / cols);
 
-      const finalWidth = cols * maxWidth + (cols + 1) * spacing;
-      const finalHeight = rows * maxHeight + (rows + 1) * spacing;
-      
-      const metadata = {
-        frames: [] as Array<{
-          name: string;
-          x: number;
-          y: number;
-          w: number;
-          h: number;
-          sourceX?: number;
-          sourceY?: number;
-          sourceW?: number;
-          sourceH?: number;
-        }>,
+      let cellWidth = images[0].width;
+      let cellHeight = images[0].height;
+
+      if (exportSizeMode === "recommendedStableCrop" && stableBox) {
+        cellWidth = stableBox.w;
+        cellHeight = stableBox.h;
+      } else if (exportSizeMode === "customCanvas") {
+        cellWidth = customWidth;
+        cellHeight = customHeight;
+      }
+
+      const finalWidth = cols * cellWidth + (cols + 1) * spacing;
+      const finalHeight = rows * cellHeight + (rows + 1) * spacing;
+
+      const metadata: any = {
+        frames: [],
         meta: {
           fps,
           columns: cols,
           rows,
           spacing,
           width: finalWidth,
-          height: finalHeight
-        }
+          height: finalHeight,
+          exportSizeMode,
+          alphaThreshold,
+          padding: cropPadding,
+        },
       };
 
-      if (finalWidth > 8192 || finalHeight > 8192) {
-        setSpriteWarning(lang === 'KR' ? '경고: 캔버스 크기가 8192px를 초과하여 일부 브라우저에서 깨질 수 있습니다.' : lang === 'EN' ? 'Warning: Canvas size exceeds 8192px, which may cause rendering issues in some browsers.' : '警告: キャンバスサイズが8192pxを超えているため、一部のブラウザで表示が崩れる可能性があります。');
+      if (exportSizeMode === "recommendedStableCrop") {
+        metadata.meta.stableBox = stableBox;
+        metadata.meta.recommendedCanvas = recommendedCanvas;
+        metadata.meta.transparentWasteRatio = transparentWasteRatio;
+      } else if (exportSizeMode === "customCanvas") {
+        metadata.meta.customCanvas = {
+          width: customWidth,
+          height: customHeight,
+          fitMode: customFit,
+          anchor: customAnchor,
+        };
       }
 
-      const canvas = document.createElement('canvas');
+      if (finalWidth > 8192 || finalHeight > 8192) {
+        setSpriteWarning(
+          lang === "KR"
+            ? "경고: 캔버스 크기가 8192px를 초과하여 일부 브라우저에서 깨질 수 있습니다."
+            : lang === "EN"
+              ? "Warning: Canvas size exceeds 8192px, which may cause rendering issues in some browsers."
+              : "警告: キャンバスサイズが8192pxを超えているため、一部のブラウザで表示が崩れる可能性があります。",
+        );
+      }
+
+      const canvas = document.createElement("canvas");
       canvas.width = finalWidth;
       canvas.height = finalHeight;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
 
       if (ctx) {
         ctx.clearRect(0, 0, finalWidth, finalHeight);
@@ -309,23 +398,107 @@ export default function AssetPage() {
         images.forEach((img, index) => {
           const col = index % cols;
           const row = Math.floor(index / cols);
-          const box = cropBoxes[index];
 
-          const dx = spacing + col * (maxWidth + spacing) + (maxWidth - box.w) / 2;
-          const dy = spacing + row * (maxHeight + spacing) + (maxHeight - box.h) / 2;
+          const cellX = spacing + col * (cellWidth + spacing);
+          const cellY = spacing + row * (cellHeight + spacing);
 
-          ctx.drawImage(img, box.x, box.y, box.w, box.h, dx, dy, box.w, box.h);
-          
+          let sX = 0,
+            sY = 0,
+            sW = img.width,
+            sH = img.height;
+          let dX = cellX,
+            dY = cellY,
+            dW = cellWidth,
+            dH = cellHeight;
+
+          if (exportSizeMode === "recommendedStableCrop" && stableBox) {
+            sX = stableBox.x;
+            sY = stableBox.y;
+            sW = stableBox.w;
+            sH = stableBox.h;
+          } else if (exportSizeMode === "customCanvas") {
+            if (customFit === "none") {
+              sX = 0;
+              sY = 0;
+              sW = img.width;
+              sH = img.height;
+              dW = img.width;
+              dH = img.height;
+              if (customAnchor === "center") {
+                dX += (cellWidth - dW) / 2;
+                dY += (cellHeight - dH) / 2;
+              } else if (customAnchor === "top") {
+                dX += (cellWidth - dW) / 2;
+              } else if (customAnchor === "bottom") {
+                dX += (cellWidth - dW) / 2;
+                dY += cellHeight - dH;
+              } else if (customAnchor === "left") {
+                dY += (cellHeight - dH) / 2;
+              } else if (customAnchor === "right") {
+                dX += cellWidth - dW;
+                dY += (cellHeight - dH) / 2;
+              }
+            } else if (customFit === "contain") {
+              const scale = Math.min(
+                cellWidth / img.width,
+                cellHeight / img.height,
+              );
+              dW = img.width * scale;
+              dH = img.height * scale;
+              if (customAnchor === "center") {
+                dX += (cellWidth - dW) / 2;
+                dY += (cellHeight - dH) / 2;
+              } else if (customAnchor === "top") {
+                dX += (cellWidth - dW) / 2;
+              } else if (customAnchor === "bottom") {
+                dX += (cellWidth - dW) / 2;
+                dY += cellHeight - dH;
+              } else if (customAnchor === "left") {
+                dY += (cellHeight - dH) / 2;
+              } else if (customAnchor === "right") {
+                dX += cellWidth - dW;
+                dY += (cellHeight - dH) / 2;
+              }
+            } else if (customFit === "cover") {
+              const scale = Math.max(
+                cellWidth / img.width,
+                cellHeight / img.height,
+              );
+              sW = cellWidth / scale;
+              sH = cellHeight / scale;
+              if (customAnchor === "center") {
+                sX = (img.width - sW) / 2;
+                sY = (img.height - sH) / 2;
+              } else if (customAnchor === "top") {
+                sX = (img.width - sW) / 2;
+                sY = 0;
+              } else if (customAnchor === "bottom") {
+                sX = (img.width - sW) / 2;
+                sY = img.height - sH;
+              } else if (customAnchor === "left") {
+                sX = 0;
+                sY = (img.height - sH) / 2;
+              } else if (customAnchor === "right") {
+                sX = img.width - sW;
+                sY = (img.height - sH) / 2;
+              }
+            }
+          }
+
+          ctx.drawImage(img, sX, sY, sW, sH, dX, dY, dW, dH);
+
           metadata.frames.push({
-            name: frames[index].name || `frame_${index.toString().padStart(4, '0')}`,
-            x: Math.floor(dx),
-            y: Math.floor(dy),
-            w: box.w,
-            h: box.h,
-            sourceX: box.x,
-            sourceY: box.y,
-            sourceW: box.w,
-            sourceH: box.h
+            name:
+              frames[index].name ||
+              `frame_${index.toString().padStart(4, "0")}`,
+            x: Math.floor(dX),
+            y: Math.floor(dY),
+            w: Math.floor(dW),
+            h: Math.floor(dH),
+            sourceX: Math.floor(sX),
+            sourceY: Math.floor(sY),
+            sourceW: Math.floor(sW),
+            sourceH: Math.floor(sH),
           });
         });
 
@@ -333,20 +506,22 @@ export default function AssetPage() {
           if (blob) {
             const url = URL.createObjectURL(blob);
             setSpriteUrl(url);
-            
-            const jsonBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+
+            const jsonBlob = new Blob([JSON.stringify(metadata, null, 2)], {
+              type: "application/json",
+            });
             setSpriteJson(URL.createObjectURL(jsonBlob));
           }
           setIsSpriteProcessing(false);
           // Free memory
           canvas.width = 0;
           canvas.height = 0;
-        }, 'image/png');
+        }, "image/png");
       } else {
         setIsSpriteProcessing(false);
       }
     } catch (error) {
-      console.error('Sprite generation failed:', error);
+      console.error("Sprite generation failed:", error);
       setIsSpriteProcessing(false);
     }
   };
@@ -354,30 +529,44 @@ export default function AssetPage() {
   const handleExportSprite = () => checkDirtyAndRun(executeExportSprite);
 
   return (
-    <div className={`flex-1 overflow-y-auto p-4 lg:p-8 ${isDark ? 'bg-[#121212] text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div
+      className={`flex-1 overflow-y-auto p-4 lg:p-8 ${isDark ? "bg-[#121212] text-white" : "bg-gray-50 text-gray-900"}`}
+    >
       <div className="max-w-5xl mx-auto space-y-8">
-        
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2">ASSET</h1>
-          <p className={`${isDark ? 'text-white/60' : 'text-gray-500'}`}>
-            {lang === 'KR' ? (
-              <>추출된 프레임을 전문적인 게임/영상<br />에셋으로 변환하세요.</>
-            ) : lang === 'EN' ? (
-              'Convert extracted frames into professional game/video assets.'
+          <p className={`${isDark ? "text-white/60" : "text-gray-500"}`}>
+            {lang === "KR" ? (
+              <>
+                추출된 프레임을 전문적인 게임/영상
+                <br />
+                에셋으로 변환하세요.
+              </>
+            ) : lang === "EN" ? (
+              "Convert extracted frames into professional game/video assets."
             ) : (
-              '抽出されたフレームをプロフェッショナルなゲーム/映像アセットに変換します。'
+              "抽出されたフレームをプロフェッショナルなゲーム/映像アセットに変換します。"
             )}
           </p>
           {frames.length > 0 && (
             <p className="mt-3 text-sm font-medium text-blue-500 flex flex-wrap gap-4 items-center">
-              <span>{lang === 'KR' ? `공유된 ${frames.length} 프레임으로 에셋을 만듭니다.` : `Creating assets from ${frames.length} shared frames.`}</span>
-              <span className={`px-2 py-0.5 rounded text-xs ${isDark ? 'bg-white/10 text-white/70' : 'bg-gray-100 text-gray-600'}`}>
-                {lang === 'KR' ? '처리됨:' : 'Processed:'} {frames.filter(f => f.processedUrl && !f.dirty).length} / {frames.length}
+              <span>
+                {lang === "KR"
+                  ? `공유된 ${frames.length} 프레임으로 에셋을 만듭니다.`
+                  : `Creating assets from ${frames.length} shared frames.`}
               </span>
-              {frames.some(f => !f.processedUrl || f.dirty) && (
+              <span
+                className={`px-2 py-0.5 rounded text-xs ${isDark ? "bg-white/10 text-white/70" : "bg-gray-100 text-gray-600"}`}
+              >
+                {lang === "KR" ? "처리됨:" : "Processed:"}{" "}
+                {frames.filter((f) => f.processedUrl && !f.dirty).length} /{" "}
+                {frames.length}
+              </span>
+              {frames.some((f) => !f.processedUrl || f.dirty) && (
                 <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 font-semibold flex items-center gap-1 border border-yellow-500/30">
                   <AlertTriangle className="w-3 h-3" />
-                  {lang === 'KR' ? '미적용 프레임:' : 'Unprocessed:'} {frames.filter(f => !f.processedUrl || f.dirty).length}
+                  {lang === "KR" ? "미적용 프레임:" : "Unprocessed:"}{" "}
+                  {frames.filter((f) => !f.processedUrl || f.dirty).length}
                 </span>
               )}
             </p>
@@ -385,148 +574,458 @@ export default function AssetPage() {
         </header>
 
         {frames.length === 0 ? (
-          <div className={`p-12 text-center rounded-2xl border border-dashed ${isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'} flex flex-col items-center justify-center space-y-4`}>
-            <p className={`text-lg ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-              {lang === 'KR' ? '먼저 REMOVE 탭에서 프레임을 추출해주세요.' : lang === 'EN' ? 'Please extract frames in the REMOVE tab first.' : 'まずREMOVEタブでフレームを抽出してください。'}
+          <div
+            className={`p-12 text-center rounded-2xl border border-dashed ${isDark ? "border-white/20 bg-white/5" : "border-gray-300 bg-white"} flex flex-col items-center justify-center space-y-4`}
+          >
+            <p
+              className={`text-lg ${isDark ? "text-white/50" : "text-gray-500"}`}
+            >
+              {lang === "KR"
+                ? "먼저 REMOVE 탭에서 프레임을 추출해주세요."
+                : lang === "EN"
+                  ? "Please extract frames in the REMOVE tab first."
+                  : "まずREMOVEタブでフレームを抽出してください。"}
             </p>
             <button
-               onClick={() => document.dispatchEvent(new CustomEvent('navigate', { detail: 'remove' }))}
-               className="bg-blue-500 text-white px-6 py-2 rounded-full font-medium hover:bg-blue-600 transition-colors shadow-lg"
+              onClick={() =>
+                document.dispatchEvent(
+                  new CustomEvent("navigate", { detail: "remove" }),
+                )
+              }
+              className="bg-blue-500 text-white px-6 py-2 rounded-full font-medium hover:bg-blue-600 transition-colors shadow-lg"
             >
-              {lang === 'KR' ? 'Remove 화면으로 이동' : 'Start from Remove'}
+              {lang === "KR" ? "Remove 화면으로 이동" : "Start from Remove"}
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
             {/* 1. Transparent Video Export */}
-            <div className={`p-6 rounded-2xl border shadow-sm flex flex-col ${isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-gray-200'}`}>
+            <div
+              className={`p-6 rounded-2xl border shadow-sm flex flex-col ${isDark ? "bg-[#1a1a1a] border-white/10" : "bg-white border-gray-200"}`}
+            >
               <div className="flex items-center gap-3 mb-4">
-                <div className={`p-3 rounded-xl ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
-                  <Film className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                <div
+                  className={`p-3 rounded-xl ${isDark ? "bg-blue-500/20" : "bg-blue-100"}`}
+                >
+                  <Film
+                    className={`w-6 h-6 ${isDark ? "text-blue-400" : "text-blue-600"}`}
+                  />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">{lang === 'KR' ? '투명 비디오 내보내기' : lang === 'EN' ? 'Transparent Video Export' : '透明ビデオエクスポート'}</h2>
+                  <h2 className="text-xl font-bold">
+                    {lang === "KR"
+                      ? "투명 비디오 내보내기"
+                      : lang === "EN"
+                        ? "Transparent Video Export"
+                        : "透明ビデオエクスポート"}
+                  </h2>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>WebM (VP9 + Alpha)</span>
-                    <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-red-500/10 text-red-500 border border-red-500/20">Requires FFmpeg fallback engine</span>
+                    <span
+                      className={`text-sm ${isDark ? "text-white/60" : "text-gray-500"}`}
+                    >
+                      WebM (VP9 + Alpha)
+                    </span>
+                    <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-red-500/10 text-red-500 border border-red-500/20">
+                      Requires FFmpeg fallback engine
+                    </span>
                   </div>
                 </div>
               </div>
-              
-              <div className={`flex-1 mb-6 text-sm leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                {lang === 'KR' ? '현재 프레임들을 결합하여 배경이 투명한 동영상 파일(.webm)을 생성합니다. 웹사이트나 영상 편집기에서 바로 사용할 수 있습니다.' : lang === 'EN' ? 'Combines current frames to create a video file (.webm) with a transparent background. Ready to use in websites or video editors.' : '現在のフレームを結合して、背景が透明な動画ファイル(.webm)を作成します。ウェブサイトや動画編集ソフトですぐに使用できます。'}
+
+              <div
+                className={`flex-1 mb-6 text-sm leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
+              >
+                {lang === "KR"
+                  ? "현재 프레임들을 결합하여 배경이 투명한 동영상 파일(.webm)을 생성합니다. 웹사이트나 영상 편집기에서 바로 사용할 수 있습니다."
+                  : lang === "EN"
+                    ? "Combines current frames to create a video file (.webm) with a transparent background. Ready to use in websites or video editors."
+                    : "現在のフレームを結合して、背景が透明な動画ファイル(.webm)を作成します。ウェブサイトや動画編集ソフトですぐに使用できます。"}
               </div>
 
               <div className="mt-auto space-y-4">
                 {isVideoProcessing ? (
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>{lang === 'KR' ? '인코딩 중...' : lang === 'EN' ? 'Encoding...' : 'エンコード中...'}</span>
+                      <span>
+                        {lang === "KR"
+                          ? "인코딩 중..."
+                          : lang === "EN"
+                            ? "Encoding..."
+                            : "エンコード中..."}
+                      </span>
                       <span>{videoProgress}%</span>
                     </div>
-                    <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-gray-200'}`}>
-                      <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${videoProgress}%` }} />
+                    <div
+                      className={`w-full h-2 rounded-full overflow-hidden ${isDark ? "bg-white/10" : "bg-gray-200"}`}
+                    >
+                      <div
+                        className="h-full bg-blue-500 transition-all duration-300"
+                        style={{ width: `${videoProgress}%` }}
+                      />
                     </div>
                   </div>
                 ) : videoUrl ? (
-                  <a 
-                    href={videoUrl} 
+                  <a
+                    href={videoUrl}
                     download="bananacut_transparent.webm"
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all bg-blue-600 text-white hover:bg-blue-700"
                   >
                     <Download className="w-5 h-5" />
-                    {lang === 'KR' ? 'WebM 다운로드' : lang === 'EN' ? 'Download WebM' : 'WebM ダウンロード'}
+                    {lang === "KR"
+                      ? "WebM 다운로드"
+                      : lang === "EN"
+                        ? "Download WebM"
+                        : "WebM ダウンロード"}
                   </a>
                 ) : (
-                  <button 
+                  <button
                     onClick={handleExportVideo}
-                    disabled={loadState === 'loading'}
-                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${loadState !== 'loading' ? 'bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                    disabled={loadState === "loading"}
+                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${loadState !== "loading" ? "bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
                   >
-                    {loadState === 'loading' && <Loader2 className="w-5 h-5 animate-spin" />}
-                    {lang === 'KR' ? '비디오 생성 시작' : lang === 'EN' ? 'Start Video Generation' : 'ビデオ生成開始'}
+                    {loadState === "loading" && (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    )}
+                    {lang === "KR"
+                      ? "비디오 생성 시작"
+                      : lang === "EN"
+                        ? "Start Video Generation"
+                        : "ビデオ生成開始"}
                   </button>
                 )}
               </div>
             </div>
 
             {/* 2. Sprite Sheet Generator */}
-            <div className={`p-6 rounded-2xl border shadow-sm flex flex-col ${isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-gray-200'}`}>
+            <div
+              className={`p-6 rounded-2xl border shadow-sm flex flex-col ${isDark ? "bg-[#1a1a1a] border-white/10" : "bg-white border-gray-200"}`}
+            >
               <div className="flex items-center gap-3 mb-4">
-                <div className={`p-3 rounded-xl ${isDark ? 'bg-green-500/20' : 'bg-green-100'}`}>
-                  <LayoutGrid className={`w-6 h-6 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
+                <div
+                  className={`p-3 rounded-xl ${isDark ? "bg-green-500/20" : "bg-green-100"}`}
+                >
+                  <LayoutGrid
+                    className={`w-6 h-6 ${isDark ? "text-green-400" : "text-green-600"}`}
+                  />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">{lang === 'KR' ? '스프라이트 시트 생성' : lang === 'EN' ? 'Sprite Sheet Generator (Recommended)' : 'スプライトシート生成'}</h2>
+                  <h2 className="text-xl font-bold">
+                    {lang === "KR"
+                      ? "스프라이트 시트 생성"
+                      : lang === "EN"
+                        ? "Sprite Sheet Generator (Recommended)"
+                        : "スプライトシート生成"}
+                  </h2>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>PNG Atlas</span>
-                    <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">Fast browser export</span>
+                    <span
+                      className={`text-sm ${isDark ? "text-white/60" : "text-gray-500"}`}
+                    >
+                      PNG Atlas
+                    </span>
+                    <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+                      Fast browser export
+                    </span>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-4 mb-6">
-                <div>
-                  <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-                    {lang === 'KR' ? '가로 칸수 (Columns)' : lang === 'EN' ? 'Columns' : '列数 (Columns)'}
-                  </label>
-                  <select 
-                    value={columns} 
-                    onChange={(e) => setColumns(Number(e.target.value))}
-                    className={`w-full p-2 rounded-lg border text-sm ${isDark ? 'bg-[#121212] border-white/20 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
-                  >
-                    <option value={4}>4</option>
-                    <option value={8}>8</option>
-                    <option value={10}>10</option>
-                    <option value={16}>16</option>
-                    <option value={frames.length}>{lang === 'KR' ? '한 줄로 (All in one row)' : lang === 'EN' ? 'All in one row' : '1行にすべて'}</option>
-                  </select>
-                </div>
+                {/* Smart Crop Recommendation Panel */}
+                <div
+                  className={`p-4 rounded-xl border ${isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"}`}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold flex items-center gap-2">
+                      <Scan
+                        className={`w-4 h-4 ${isDark ? "text-blue-400" : "text-blue-600"}`}
+                      />
+                      {lang === "KR"
+                        ? "스마트 크롭 추천"
+                        : "Smart Crop Recommendation"}
+                    </h3>
+                  </div>
 
-                <div>
-                  <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-                    {lang === 'KR' ? '간격 (Spacing px)' : lang === 'EN' ? 'Spacing (px)' : '間隔 (Spacing px)'}
-                  </label>
-                  <input 
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    value={spacing} 
-                    onChange={(e) => setSpacing(Number(e.target.value))}
-                    className={`w-full p-2 rounded-lg border text-sm ${isDark ? 'bg-[#121212] border-white/20 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
-                  />
-                </div>
+                  {!stableBox ? (
+                    <div className="space-y-3">
+                      <p
+                        className={`text-xs ${isDark ? "text-white/60" : "text-gray-500"}`}
+                      >
+                        {lang === "KR"
+                          ? "투명 여백과 프레임 흔들림을 분석해 최적의 추천 캔버스 크기를 제안합니다."
+                          : "Analyzes transparent waste and frame stability to propose an optimal canvas size."}
+                      </p>
 
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={autoCrop} 
-                    onChange={(e) => setAutoCrop(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-600"
-                  />
-                  <span className={`text-sm font-medium ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-                    {lang === 'KR' ? 'Auto-Crop (투명 여백 자동 제거)' : lang === 'EN' ? 'Auto-Crop (Trim transparent edges)' : 'Auto-Crop (透明な余白を自動削除)'}
-                  </span>
-                </label>
-                
-                {autoCrop && (
-                  <div className="pl-6">
-                    <div className="flex justify-between items-center mb-1">
-                      <label className={`text-xs font-medium ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
-                        {lang === 'KR' ? '알파 임계값 (Alpha Threshold)' : lang === 'EN' ? 'Alpha Threshold' : 'アルファしきい値'}
-                      </label>
-                      <span className={`text-xs font-mono ${isDark ? 'text-white/80' : 'text-gray-700'}`}>{alphaThreshold}</span>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <label
+                            className={`block text-xs font-medium mb-1 ${isDark ? "text-white/60" : "text-gray-500"}`}
+                          >
+                            Alpha Threshold
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="255"
+                            value={alphaThreshold}
+                            onChange={(e) =>
+                              setAlphaThreshold(Number(e.target.value))
+                            }
+                            className={`w-full p-1.5 text-xs rounded border ${isDark ? "bg-[#121212] border-white/20" : "bg-white border-gray-300"}`}
+                          />
+                        </div>
+                        <div>
+                          <label
+                            className={`block text-xs font-medium mb-1 ${isDark ? "text-white/60" : "text-gray-500"}`}
+                          >
+                            Padding (px)
+                          </label>
+                          <input
+                            type="number"
+                            value={cropPadding}
+                            onChange={(e) =>
+                              setCropPadding(Number(e.target.value))
+                            }
+                            className={`w-full p-1.5 text-xs rounded border ${isDark ? "bg-[#121212] border-white/20" : "bg-white border-gray-300"}`}
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleAnalyzeCrop}
+                        disabled={isAnalyzingCrop}
+                        className={`w-full py-2 text-sm font-medium rounded-lg border transition-colors ${isDark ? "border-blue-500/50 text-blue-400 hover:bg-blue-500/10" : "border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100"} ${isAnalyzingCrop ? "opacity-50 cursor-not-allowed" : ""}`}
+                      >
+                        {isAnalyzingCrop
+                          ? `${lang === "KR" ? "분석 중..." : "Analyzing..."} ${analyzeProgress}%`
+                          : `${lang === "KR" ? "프레임 분석하기" : "Analyze Frames"}`}
+                      </button>
                     </div>
-                    <input 
-                      type="range" 
-                      min="0" max="255" 
-                      value={alphaThreshold}
-                      onChange={(e) => setAlphaThreshold(Number(e.target.value))}
-                      className="w-full accent-green-500"
+                  ) : (
+                    <div className="space-y-3 text-sm">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div
+                          className={`p-2 rounded bg-black/5 dark:bg-white/5`}
+                        >
+                          <p className="text-[10px] uppercase font-bold opacity-60 mb-1">
+                            Current Canvas
+                          </p>
+                          <p className="font-mono">
+                            {sourceDim?.width} × {sourceDim?.height}
+                          </p>
+                        </div>
+                        <div
+                          className={`p-2 rounded bg-blue-500/10 border border-blue-500/20`}
+                        >
+                          <p className="text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 mb-1">
+                            Recommended
+                          </p>
+                          <p className="font-mono font-bold text-blue-700 dark:text-blue-300">
+                            {recommendedCanvas?.width} ×{" "}
+                            {recommendedCanvas?.height}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center text-xs px-1">
+                        <span className="opacity-70">Transparent waste:</span>
+                        <span className="font-bold text-green-600 dark:text-green-400">
+                          {Math.round(transparentWasteRatio * 100)}%
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowCropPreview(true)}
+                          className={`flex-1 py-1.5 text-xs font-medium rounded border ${isDark ? "border-white/20 hover:bg-white/10" : "border-gray-300 hover:bg-gray-100"}`}
+                        >
+                          {lang === "KR" ? "추천 영역 미리보기" : "Preview Box"}
+                        </button>
+                        <button
+                          onClick={() => setStableBox(null)}
+                          className={`py-1.5 px-3 text-xs font-medium rounded border border-transparent opacity-60 hover:opacity-100`}
+                        >
+                          {lang === "KR" ? "다시 분석" : "Recalculate"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t dark:border-white/10">
+                  <label
+                    className={`block text-sm font-bold mb-3 ${isDark ? "text-white" : "text-gray-900"}`}
+                  >
+                    Export Size Mode
+                  </label>
+                  <div className="space-y-2">
+                    <label
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:border-blue-500 transition-colors ${exportSizeMode === "original" ? "border-blue-500 bg-blue-50/50 dark:bg-blue-500/10" : "border-transparent bg-gray-50 dark:bg-[#121212]"}`}
+                    >
+                      <input
+                        type="radio"
+                        checked={exportSizeMode === "original"}
+                        onChange={() => setExportSizeMode("original")}
+                        className="mt-1"
+                      />
+                      <div>
+                        <p className="font-medium text-sm">Original Canvas</p>
+                        <p className="text-xs opacity-60">
+                          Export frames at their original resolution
+                        </p>
+                      </div>
+                    </label>
+
+                    <label
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${!stableBox ? "opacity-50 cursor-not-allowed" : "hover:border-blue-500"} ${exportSizeMode === "recommendedStableCrop" ? "border-blue-500 bg-blue-50/50 dark:bg-blue-500/10" : "border-transparent bg-gray-50 dark:bg-[#121212]"}`}
+                    >
+                      <input
+                        type="radio"
+                        disabled={!stableBox}
+                        checked={exportSizeMode === "recommendedStableCrop"}
+                        onChange={() =>
+                          stableBox &&
+                          setExportSizeMode("recommendedStableCrop")
+                        }
+                        className="mt-1"
+                      />
+                      <div>
+                        <p className="font-medium text-sm text-blue-600 dark:text-blue-400">
+                          Recommended Stable Crop
+                        </p>
+                        <p className="text-xs opacity-60">
+                          Use the smart crop box to safely remove empty space
+                          without jitter
+                        </p>
+                      </div>
+                    </label>
+
+                    <label
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:border-blue-500 transition-colors ${exportSizeMode === "customCanvas" ? "border-blue-500 bg-blue-50/50 dark:bg-blue-500/10" : "border-transparent bg-gray-50 dark:bg-[#121212]"}`}
+                    >
+                      <input
+                        type="radio"
+                        checked={exportSizeMode === "customCanvas"}
+                        onChange={() => setExportSizeMode("customCanvas")}
+                        className="mt-1"
+                      />
+                      <div className="w-full">
+                        <p className="font-medium text-sm">
+                          Custom Canvas Size
+                        </p>
+                        <p className="text-xs opacity-60 mb-2">
+                          Resize and position inside a custom canvas
+                        </p>
+
+                        {exportSizeMode === "customCanvas" && (
+                          <div
+                            className={`mt-3 space-y-3 p-3 rounded-lg border bg-white dark:bg-[#1a1a1a] dark:border-white/10`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[10px] uppercase font-bold opacity-60">
+                                  Width
+                                </label>
+                                <input
+                                  type="number"
+                                  value={customWidth}
+                                  onChange={(e) =>
+                                    setCustomWidth(Number(e.target.value))
+                                  }
+                                  className="w-full p-1.5 text-sm rounded border dark:bg-[#121212] dark:border-white/20 mt-1"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] uppercase font-bold opacity-60">
+                                  Height
+                                </label>
+                                <input
+                                  type="number"
+                                  value={customHeight}
+                                  onChange={(e) =>
+                                    setCustomHeight(Number(e.target.value))
+                                  }
+                                  className="w-full p-1.5 text-sm rounded border dark:bg-[#121212] dark:border-white/20 mt-1"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[10px] uppercase font-bold opacity-60">
+                                  Fit
+                                </label>
+                                <select
+                                  value={customFit}
+                                  onChange={(e) =>
+                                    setCustomFit(e.target.value as any)
+                                  }
+                                  className="w-full p-1.5 text-sm rounded border dark:bg-[#121212] dark:border-white/20 mt-1"
+                                >
+                                  <option value="contain">Contain</option>
+                                  <option value="cover">Cover</option>
+                                  <option value="none">
+                                    None (Actual Size)
+                                  </option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[10px] uppercase font-bold opacity-60">
+                                  Anchor
+                                </label>
+                                <select
+                                  value={customAnchor}
+                                  onChange={(e) =>
+                                    setCustomAnchor(e.target.value as any)
+                                  }
+                                  className="w-full p-1.5 text-sm rounded border dark:bg-[#121212] dark:border-white/20 mt-1"
+                                >
+                                  <option value="center">Center</option>
+                                  <option value="top">Top</option>
+                                  <option value="bottom">Bottom</option>
+                                  <option value="left">Left</option>
+                                  <option value="right">Right</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-4 border-t dark:border-white/10">
+                  <div>
+                    <label
+                      className={`block text-xs font-bold mb-1 opacity-70`}
+                    >
+                      Columns
+                    </label>
+                    <select
+                      value={columns}
+                      onChange={(e) => setColumns(Number(e.target.value))}
+                      className={`w-full p-2 text-sm rounded-lg border ${isDark ? "bg-[#121212] border-white/20" : "bg-white border-gray-300"}`}
+                    >
+                      <option value={4}>4</option>
+                      <option value={8}>8</option>
+                      <option value={10}>10</option>
+                      <option value={16}>16</option>
+                      <option value={frames.length}>All in one row</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      className={`block text-xs font-bold mb-1 opacity-70`}
+                    >
+                      Spacing (px)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={spacing}
+                      onChange={(e) => setSpacing(Number(e.target.value))}
+                      className={`w-full p-2 text-sm rounded-lg border ${isDark ? "bg-[#121212] border-white/20" : "bg-white border-gray-300"}`}
                     />
                   </div>
-                )}
+                </div>
               </div>
 
               {spriteWarning && (
@@ -540,40 +1039,55 @@ export default function AssetPage() {
                 {isSpriteProcessing ? (
                   <div className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold bg-gray-200 text-gray-500 dark:bg-white/10 dark:text-white/50">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    {lang === 'KR' ? '처리 중...' : lang === 'EN' ? 'Processing...' : '処理中...'}
+                    {lang === "KR"
+                      ? "처리 중..."
+                      : lang === "EN"
+                        ? "Processing..."
+                        : "処理中..."}
                   </div>
                 ) : spriteUrl ? (
                   <div className="flex flex-col gap-2">
-                    <a 
-                      href={spriteUrl} 
+                    <a
+                      href={spriteUrl}
                       download="bananacut_spritesheet.png"
                       className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all bg-green-600 text-white hover:bg-green-700"
                     >
                       <Download className="w-5 h-5" />
-                      {lang === 'KR' ? 'PNG 다운로드' : lang === 'EN' ? 'Download PNG' : 'PNG ダウンロード'}
+                      {lang === "KR"
+                        ? "PNG 다운로드"
+                        : lang === "EN"
+                          ? "Download PNG"
+                          : "PNG ダウンロード"}
                     </a>
                     {spriteJson && (
-                      <a 
-                        href={spriteJson} 
+                      <a
+                        href={spriteJson}
                         download="bananacut_spritesheet.json"
-                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${isDark ? 'bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}
+                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${isDark ? "bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]" : "bg-gray-100 text-gray-900 hover:bg-gray-200"}`}
                       >
                         <Download className="w-5 h-5" />
-                        {lang === 'KR' ? 'JSON (메타데이터) 다운로드' : lang === 'EN' ? 'Download JSON (Metadata)' : 'JSON ダウンロード'}
+                        {lang === "KR"
+                          ? "JSON (메타데이터) 다운로드"
+                          : lang === "EN"
+                            ? "Download JSON (Metadata)"
+                            : "JSON ダウンロード"}
                       </a>
                     )}
                   </div>
                 ) : (
-                  <button 
+                  <button
                     onClick={handleExportSprite}
                     className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200`}
                   >
-                    {lang === 'KR' ? '시트 생성 시작' : lang === 'EN' ? 'Start Sheet Generation' : 'シート生成開始'}
+                    {lang === "KR"
+                      ? "시트 생성 시작"
+                      : lang === "EN"
+                        ? "Start Sheet Generation"
+                        : "シート生成開始"}
                   </button>
                 )}
               </div>
             </div>
-
           </div>
         )}
       </div>
@@ -581,77 +1095,120 @@ export default function AssetPage() {
       {/* Dirty Frames Modal */}
       {showDirtyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className={`p-6 rounded-2xl max-w-sm w-full mx-auto shadow-2xl relative ${isDark ? 'bg-[#1a1a1a] text-white' : 'bg-white text-gray-900'}`}>
+          <div
+            className={`p-6 rounded-2xl max-w-sm w-full mx-auto shadow-2xl relative ${isDark ? "bg-[#1a1a1a] text-white" : "bg-white text-gray-900"}`}
+          >
             <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
               <AlertCircle className="w-6 h-6 text-yellow-500" />
-              {lang === 'KR' ? '미적용 프레임 확인' : lang === 'EN' ? 'Unprocessed Frames' : '未適用フレームの確認'}
+              {lang === "KR"
+                ? "미적용 프레임 확인"
+                : lang === "EN"
+                  ? "Unprocessed Frames"
+                  : "未適用フレームの確認"}
             </h3>
-            <p className={`text-sm mb-6 ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-              {lang === 'KR' 
-                ? '크로마키가 적용되지 않은(dirty) 프레임이 있습니다. 다운로드 전에 모든 프레임에 설정을 렌더링해야 합니다.'
-                : lang === 'EN'
-                ? 'There are unprocessed (dirty) frames. All frames must be rendered with your settings before exporting.'
-                : 'クロマキーが適用されていない(dirty)フレームがあります。ダウンロードする前に、すべてのフレームに設定をレンダリングする必要があります。'}
+            <p
+              className={`text-sm mb-6 ${isDark ? "text-white/70" : "text-gray-600"}`}
+            >
+              {lang === "KR"
+                ? "크로마키가 적용되지 않은(dirty) 프레임이 있습니다. 다운로드 전에 모든 프레임에 설정을 렌더링해야 합니다."
+                : lang === "EN"
+                  ? "There are unprocessed (dirty) frames. All frames must be rendered with your settings before exporting."
+                  : "クロマキーが適用されていない(dirty)フレームがあります。ダウンロードする前に、すべてのフレームに設定をレンダリングする必要があります。"}
             </p>
 
             {isBatchProcessing ? (
               <div className="space-y-4">
                 <div className="flex justify-between text-sm">
-                  <span>{lang === 'KR' ? '렌더링 중...' : lang === 'EN' ? 'Rendering...' : 'レンダリング中...'}</span>
+                  <span>
+                    {lang === "KR"
+                      ? "렌더링 중..."
+                      : lang === "EN"
+                        ? "Rendering..."
+                        : "レンダリング中..."}
+                  </span>
                   <span>{batchProgress}%</span>
                 </div>
-                <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-gray-200'}`}>
-                  <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${batchProgress}%` }} />
+                <div
+                  className={`w-full h-2 rounded-full overflow-hidden ${isDark ? "bg-white/10" : "bg-gray-200"}`}
+                >
+                  <div
+                    className="h-full bg-blue-500 transition-all duration-300"
+                    style={{ width: `${batchProgress}%` }}
+                  />
                 </div>
                 {failedItems.length > 0 && (
-                  <p className="text-xs text-red-500">Failed frames: {failedItems.join(', ')}</p>
+                  <p className="text-xs text-red-500">
+                    Failed frames: {failedItems.join(", ")}
+                  </p>
                 )}
                 <button
                   onClick={cancelJob}
                   className="w-full mt-2 py-2.5 rounded-xl font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none dark:border-white/20 dark:text-gray-300 dark:hover:bg-white/5 active:bg-gray-200 dark:active:bg-white/10"
                 >
-                  {lang === 'KR' ? '작업 취소' : lang === 'EN' ? 'Cancel Job' : 'キャンセル'}
+                  {lang === "KR"
+                    ? "작업 취소"
+                    : lang === "EN"
+                      ? "Cancel Job"
+                      : "キャンセル"}
                 </button>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                <button 
+                <button
                   onClick={async () => {
                     if (dirtyAction) {
-                       await dirtyAction();
-                       setShowDirtyModal(false);
+                      await dirtyAction();
+                      setShowDirtyModal(false);
                     }
                   }}
                   className={`w-full py-2.5 rounded-xl font-medium transition-colors ${
-                    isDark ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    isDark
+                      ? "bg-blue-600 hover:bg-blue-500 text-white"
+                      : "bg-blue-600 hover:bg-blue-700 text-white"
                   }`}
                 >
-                  {lang === 'KR' ? 'Process Dirty Frames (적용 및 계속)' : lang === 'EN' ? 'Process Dirty Frames' : '適用して続行'}
+                  {lang === "KR"
+                    ? "Process Dirty Frames (적용 및 계속)"
+                    : lang === "EN"
+                      ? "Process Dirty Frames"
+                      : "適用して続行"}
                 </button>
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={async () => {
                       if (dirtyAnywayAction) {
-                         await dirtyAnywayAction();
-                         setShowDirtyModal(false);
+                        await dirtyAnywayAction();
+                        setShowDirtyModal(false);
                       }
                     }}
                     className={`flex-1 py-2.5 rounded-xl font-medium transition-colors border text-xs sm:text-sm ${
-                      isDark ? 'border-red-500/30 hover:bg-red-500/10 text-red-400' : 'border-red-200 hover:bg-red-50 text-red-600'
+                      isDark
+                        ? "border-red-500/30 hover:bg-red-500/10 text-red-400"
+                        : "border-red-200 hover:bg-red-50 text-red-600"
                     }`}
                   >
-                    {lang === 'KR' ? 'Export Anyway (무시)' : lang === 'EN' ? 'Export Anyway' : '無視してエクスポート'}
+                    {lang === "KR"
+                      ? "Export Anyway (무시)"
+                      : lang === "EN"
+                        ? "Export Anyway"
+                        : "無視してエクスポート"}
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       setShowDirtyModal(false);
                       setDirtyAction(null);
                     }}
                     className={`flex-1 py-2.5 rounded-xl font-medium transition-colors ${
-                      isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                      isDark
+                        ? "bg-white/10 hover:bg-white/20 text-white"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-900"
                     }`}
                   >
-                    {lang === 'KR' ? 'Cancel (취소)' : lang === 'EN' ? 'Cancel' : 'キャンセル'}
+                    {lang === "KR"
+                      ? "Cancel (취소)"
+                      : lang === "EN"
+                        ? "Cancel"
+                        : "キャンセル"}
                   </button>
                 </div>
               </div>
@@ -659,6 +1216,62 @@ export default function AssetPage() {
           </div>
         </div>
       )}
+      <Modal
+        isOpen={showCropPreview && !!stableBox}
+        onClose={() => setShowCropPreview(false)}
+        title="Crop Preview"
+        icon={Target}
+        lang={lang}
+        setLang={() => {}}
+      >
+        <div className="space-y-4">
+          <p className="text-sm opacity-80">
+            {lang === "KR"
+              ? "안정적인 크롭 추천 영역입니다."
+              : "This is the recommended stable crop safe box over the first frame."}
+          </p>
+          <div className="relative border border-white/20 rounded-xl overflow-hidden bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAMUExURf/y8v/v7////+bm5qB8z/gAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAwSURBVBjTY2CgOmAMiQ2wMTA4mIEQIQhBDBwGICkQwcDAYAgUQzFAYg5AjiMwIACA2Q4J/E24k4EAAAAASUVORK5CYII=')] bg-repeat shadow-inner flex items-center justify-center">
+            {frames.length > 0 && sourceDim && (
+              <div
+                className="relative"
+                style={{
+                  width: "100%",
+                  aspectRatio: `${sourceDim.width} / ${sourceDim.height}`,
+                }}
+              >
+                <img
+                  src={getFrameDisplayUrl(frames[0], true)}
+                  alt="Frame preview"
+                  className="absolute inset-0 w-full h-full object-contain"
+                />
+                {stableBox && (
+                  <div
+                    className="absolute border-2 border-blue-500 bg-blue-500/20 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"
+                    style={{
+                      left: `${(stableBox.x / sourceDim.width) * 100}%`,
+                      top: `${(stableBox.y / sourceDim.height) * 100}%`,
+                      width: `${(stableBox.w / sourceDim.width) * 100}%`,
+                      height: `${(stableBox.h / sourceDim.height) * 100}%`,
+                    }}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={() => {
+                setShowCropPreview(false);
+                setExportSizeMode("recommendedStableCrop");
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+            >
+              Apply Recommended Crop
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Technical Error Modal */}
       <Modal
         isOpen={showTechErrorModal}
@@ -670,20 +1283,24 @@ export default function AssetPage() {
       >
         <div className="space-y-4">
           <p className="text-sm">
-            {lang === 'KR' ? '작업 중 기술적인 오류가 발생했습니다. FFmpeg 엔진 로드 문제일 수 있습니다.' : 'A technical error occurred during the operation. This might be an issue with loading the FFmpeg engine.'}
+            {lang === "KR"
+              ? "작업 중 기술적인 오류가 발생했습니다. FFmpeg 엔진 로드 문제일 수 있습니다."
+              : "A technical error occurred during the operation. This might be an issue with loading the FFmpeg engine."}
           </p>
-          
+
           <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-xl bg-gray-100 dark:bg-black/50 p-4 text-xs font-mono text-red-600 dark:text-red-400 border border-gray-200 dark:border-red-500/10">
             {ffmpegError && `[FFmpeg Error]\n${ffmpegError}`}
-            {(!ffmpegError) && 'No technical error available.'}
+            {!ffmpegError && "No technical error available."}
           </pre>
 
           <div className="mt-4 flex justify-end gap-2">
             <button
               onClick={() => {
-                const errText = ffmpegError ? `[FFmpeg Error]\n${ffmpegError}` : 'No error details';
+                const errText = ffmpegError
+                  ? `[FFmpeg Error]\n${ffmpegError}`
+                  : "No error details";
                 navigator.clipboard.writeText(errText);
-                alert('Copied to clipboard');
+                alert("Copied to clipboard");
               }}
               className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/20 transition-colors"
             >
@@ -699,7 +1316,6 @@ export default function AssetPage() {
           </div>
         </div>
       </Modal>
-
     </div>
   );
 }
