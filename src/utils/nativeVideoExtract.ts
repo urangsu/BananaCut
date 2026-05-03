@@ -116,9 +116,10 @@ export async function extractFramesNative(file: File, options: {
         const seekAndWait = async (time: number, retryCount = 0, index: number = -1): Promise<void> => {
           const seekStartT = Date.now();
           let stage = 'seek-start';
+          logDebug(`[nativeVideoExtract] frame ${index} t=${time.toFixed(3)}s stage=${stage} in 0ms | progress ${Math.max(1, index + 1)} / ${totalFrames}`);
           if (Math.abs(video.currentTime - time) < 0.001) {
             stage = 'captured';
-            logDebug(`[nativeVideoExtract] frame ${index} t=${time.toFixed(3)}s stage=${stage} in ${Date.now() - seekStartT}ms`);
+            logDebug(`[nativeVideoExtract] frame ${index} t=${time.toFixed(3)}s stage=${stage} in ${Date.now() - seekStartT}ms | progress ${Math.max(1, index + 1)} / ${totalFrames}`);
             await waitOnePaint();
             return;
           }
@@ -140,7 +141,7 @@ export async function extractFramesNative(file: File, options: {
               handled = true;
               clearEvents();
               stage = 'captured';
-              logDebug(`[nativeVideoExtract] frame ${index} t=${time.toFixed(3)}s stage=${stage} in ${Date.now() - seekStartT}ms`);
+              logDebug(`[nativeVideoExtract] frame ${index} t=${time.toFixed(3)}s stage=${stage} in ${Date.now() - seekStartT}ms | progress ${Math.max(1, index + 1)} / ${totalFrames}`);
               resolve();
             };
 
@@ -160,7 +161,7 @@ export async function extractFramesNative(file: File, options: {
                 }
               } else {
                 stage = 'skipped';
-                logDebug(`[nativeVideoExtract] frame ${index} t=${time.toFixed(3)}s stage=${stage} in ${Date.now() - seekStartT}ms`);
+                logDebug(`[nativeVideoExtract] frame ${index} t=${time.toFixed(3)}s stage=${stage} in ${Date.now() - seekStartT}ms | progress ${Math.max(1, index + 1)} / ${totalFrames}`);
                 reject(err);
               }
             };
@@ -172,6 +173,7 @@ export async function extractFramesNative(file: File, options: {
             const onSeeked = () => {
               if (handled) return;
               stage = 'seeked';
+              logDebug(`[nativeVideoExtract] frame ${index} t=${time.toFixed(3)}s stage=${stage} in ${Date.now() - seekStartT}ms | progress ${Math.max(1, index + 1)} / ${totalFrames}`);
               if (!fastMode && 'requestVideoFrameCallback' in video) {
                 Promise.race([
                   new Promise<void>(r => {
@@ -267,7 +269,7 @@ export async function extractFramesNative(file: File, options: {
             if (onChunk) onChunk([...chunk]);
             if (onProgress) onProgress(1, totalFrames);
             chunk = [];
-            await new Promise(requestAnimationFrame);
+            await waitOnePaint();
           } else {
             if (onProgress) onProgress(i + 1, totalFrames);
             
@@ -276,7 +278,7 @@ export async function extractFramesNative(file: File, options: {
                 onChunk([...chunk]);
               }
               chunk = [];
-              await new Promise(requestAnimationFrame); // yield
+              await waitOnePaint(); // yield
             }
           }
         }
