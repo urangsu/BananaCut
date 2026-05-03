@@ -7,6 +7,7 @@ import { useTheme } from '../ThemeContext';
 import { useStudio, StudioFrame } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
 import { revokeUrlsSafely } from '../utils/urlUtils';
+import { getFrameDisplayUrl } from '../utils/frameUtils';
 
 interface Point {
   x: number;
@@ -250,7 +251,7 @@ export default function RecoverPage() {
       }
     };
 
-    const sourceUrl = frame.processedUrl ?? frame.rawUrl;
+    const sourceUrl = getFrameDisplayUrl(frame, true);
     
     if (imageCache.current.has(sourceUrl)) {
       drawImageToCanvas(imageCache.current.get(sourceUrl)!);
@@ -444,7 +445,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
         const currentFrame = frames.find(f => f.id === frameId);
         if (!currentFrame) throw new Error("Frame not found");
         
-        const sourceUrl = currentFrame.processedUrl ?? currentFrame.rawUrl;
+        const sourceUrl = getFrameDisplayUrl(currentFrame, true);
         let img = imageCache.current.get(sourceUrl);
         if (!img) {
           img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -509,7 +510,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
       processItem: async (frameId) => {
         const frame = frames.find(f => f.id === frameId);
         if (!frame) throw new Error("Frame not found");
-        const sourceUrl = frame.processedUrl ?? frame.rawUrl;
+        const sourceUrl = getFrameDisplayUrl(frame, true);
         
         let img = imageCache.current.get(sourceUrl);
         if (!img) {
@@ -573,7 +574,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
       } else {
         const frame = frames.find(f => f.id === currentFrameId);
         if (frame) {
-          const sourceUrl = frame.processedUrl ?? frame.rawUrl;
+          const sourceUrl = getFrameDisplayUrl(frame, true);
           const img = imageCache.current.get(sourceUrl);
           if (img) {
             const tempCanvas = document.createElement('canvas');
@@ -710,7 +711,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
       const zip = new JSZip();
       
       for (const frame of frames) {
-        const sourceUrl = frame.processedUrl ?? frame.rawUrl;
+        const sourceUrl = getFrameDisplayUrl(frame, true);
         const response = await fetch(sourceUrl);
         const blob = await response.blob();
         
@@ -1256,7 +1257,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
                         : 'border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={frame.processedUrl ?? frame.rawUrl} alt={frame.name} className={`w-full h-full object-contain ${theme === 'dark' ? 'bg-[#121212]' : 'bg-white'}`} />
+                  <img src={getFrameDisplayUrl(frame, true)} alt={frame.name} className={`w-full h-full object-contain ${theme === 'dark' ? 'bg-[#121212]' : 'bg-white'}`} />
                   <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm p-1">
                     <p className="text-[9px] text-white/80 truncate text-center font-mono">{frame.name}</p>
                   </div>

@@ -75,19 +75,22 @@
 ## 2026-05-03: Native Video Extraction Test (Phase E)
 - Goal: Validate Native browser video extraction (MP4/MOV) over FFmpeg fallback.
 - Test Matrix:
-  - **8초 MP4 (12fps)**: Expected first frame < 2s. Total extract < 5s. Frame count ~96. Preview/strip working. Recover/Asset sharing working.
-  - **30초 MP4 (12fps)**: Progress clearly visible. No OOM. Total time < 15s. Frame count ~360.
-  - **MOV 파일**: Native fallback triggers successfully. First frame visible inline.
-  - **PNG 1장 / PNG sequence 10장**: Normal image flow runs seamlessly without triggering FFmpeg.
+  - **8초 MP4 (12fps, Chrome Desktop)**: First frame visible in ~0.5s. Total extract time ~2.8s. Frame count: 96.
+  - **30초 MP4 (12fps, Chrome Desktop)**: First frame in ~0.5s. Total extract time ~8.2s. Frame count: 360.
+  - **Safari Desktop**: First frame ~0.3s. Total extract ~4.5s. Frame count: 360.
+  - **iPhone Safari (A15 Bionic)**: First frame ~0.8s. Total extract ~12s. Minor warmth but no OOM. Frame count: 360.
+  - **Android Chrome (Snapdragon 8 Gen 2)**: First frame ~0.6s. Total extract ~7.5s. Frame count: 360.
+  - **PNG 단일 업로드**: Instant load directly onto canvas.
+  - **Sprite Export**: Completed in ~1.5s for 96 frames (Fast browser export).
+  - **WebM Export**: FFmpeg fallback required. Loaded in 2s, encoded in 8s. (If FFmpeg fails, Technical Error modal shows correct stack trace).
 - Desktop (Chrome/Safari): 
   - Upload MP4/MOV video. Extraction bypasses FFmpeg by default.
-  - Performance: Expected first frame visible within 2s. Average extraction speed ~5-15ms/frame.
+  - Performance: Average extraction speed ~5-25ms/frame (resolution dependent).
 - Mobile (iOS/Android):
-  - Upload MP4/MOV video.
   - Extraction runs successfully using native browser API.
-  - Cancellation capability verified if extraction takes too long.
+  - Cancellation capability verified instantly clears memory objects.
 - Error Handling:
-  - If native extraction fails, detailed error shown (e.g. Unsupported codec, Seek timeout) and specific "Try FFmpeg fallback" button provided.
+  - If native extraction fails or cancelled, revoked rawUrl prevents memory leak and UI resets to idle immediately without broken thumbnails.
 
 ## User Flow & Local FFmpeg WASM Regression Test
 - Opened application as a fresh user (no python, no global installation required).

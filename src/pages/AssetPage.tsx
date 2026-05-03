@@ -7,6 +7,9 @@ import { Download, Film, LayoutGrid, Loader2, AlertTriangle, AlertCircle } from 
 import { useBatchJob } from '../hooks/useBatchJob';
 import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
 import { PerfLogger } from '../utils/performanceLogger';
+import { getFrameDisplayUrl } from '../utils/frameUtils';
+import { Modal } from '../components/Modal';
+import { Copy } from 'lucide-react';
 
 export default function AssetPage() {
   const { lang } = useLanguage();
@@ -23,6 +26,8 @@ export default function AssetPage() {
   // Video Export State
   const [isVideoProcessing, setIsVideoProcessing] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
+  const [ffmpegError, setFfmpegError] = useState<string | null>(null);
+  const [showTechErrorModal, setShowTechErrorModal] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   // Sprite Sheet State
@@ -127,13 +132,18 @@ export default function AssetPage() {
     
     setIsVideoProcessing(true);
     let currentFFmpeg = ffmpeg;
-    if (loadState !== 'loaded' || !currentFFmpeg) {
-      currentFFmpeg = await loadFFmpeg();
-    }
+    try {
+      if (loadState !== 'loaded' || !currentFFmpeg) {
+        currentFFmpeg = await loadFFmpeg();
+      }
 
-    if (!currentFFmpeg) {
+      if (!currentFFmpeg) {
+        throw new Error("FFmpeg instance is null after load attempt");
+      }
+    } catch (err) {
       setIsVideoProcessing(false);
-      alert(lang === 'KR' ? "비디오 엔진 로딩에 실패했습니다." : "Failed to load video engine.");
+      setFfmpegError(err instanceof Error ? err.message : String(err));
+      setShowTechErrorModal(true);
       return;
     }
     
@@ -144,7 +154,7 @@ export default function AssetPage() {
       // Write frames to FFmpeg FS
       for (let i = 0; i < frames.length; i++) {
         const frame = frames[i];
-        const url = frame.processedUrl ?? frame.rawUrl;
+        const url = getFrameDisplayUrl(frame, true);
         const response = await fetch(url);
         const buffer = await response.arrayBuffer();
         await currentFFmpeg.writeFile(`frame_${i.toString().padStart(4, '0')}.png`, new Uint8Array(buffer));
@@ -202,7 +212,7 @@ export default function AssetPage() {
           const img = new Image();
           img.onload = () => resolve(img);
           img.onerror = reject;
-          img.src = frame.processedUrl ?? frame.rawUrl;
+          img.src = getFrameDisplayUrl(frame, true);
         });
       }));
 
@@ -397,7 +407,10 @@ export default function AssetPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold">{lang === 'KR' ? '투명 비디오 내보내기' : lang === 'EN' ? 'Transparent Video Export' : '透明ビデオエクスポート'}</h2>
-                  <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>WebM (VP9 + Alpha)</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>WebM (VP9 + Alpha)</span>
+                    <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-red-500/10 text-red-500 border border-red-500/20">Requires FFmpeg fallback engine</span>
+                  </div>
                 </div>
               </div>
               
@@ -445,8 +458,11 @@ export default function AssetPage() {
                   <LayoutGrid className={`w-6 h-6 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">{lang === 'KR' ? '스프라이트 시트 생성' : lang === 'EN' ? 'Sprite Sheet Generator' : 'スプライトシート生成'}</h2>
-                  <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>PNG Atlas</p>
+                  <h2 className="text-xl font-bold">{lang === 'KR' ? '스프라이트 시트 생성' : lang === 'EN' ? 'Sprite Sheet Generator (Recommended)' : 'スプライトシート生成'}</h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>PNG Atlas</span>
+                    <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">Fast browser export</span>
+                  </div>
                 </div>
               </div>
 
@@ -620,8 +636,8 @@ export default function AssetPage() {
                          setShowDirtyModal(false);
                       }
                     }}
-                    className={`flex-1 py-2.5 rounded-xl font-medium transition-colors border ${
-                      isDark ? 'border-white/20 hover:bg-white/10 text-white' : 'border-gray-200 hover:bg-gray-50 text-gray-900'
+                    className={`flex-1 py-2.5 rounded-xl font-medium transition-colors border text-xs sm:text-sm ${
+                      isDark ? 'border-red-500/30 hover:bg-red-500/10 text-red-400' : 'border-red-200 hover:bg-red-50 text-red-600'
                     }`}
                   >
                     {lang === 'KR' ? 'Export Anyway (무시)' : lang === 'EN' ? 'Export Anyway' : '無視してエクスポート'}
@@ -643,6 +659,47 @@ export default function AssetPage() {
           </div>
         </div>
       )}
+      {/* Technical Error Modal */}
+      <Modal
+        isOpen={showTechErrorModal}
+        onClose={() => setShowTechErrorModal(false)}
+        title="Technical Error Details"
+        icon={AlertCircle}
+        lang={lang}
+        setLang={() => {}}
+      >
+        <div className="space-y-4">
+          <p className="text-sm">
+            {lang === 'KR' ? '작업 중 기술적인 오류가 발생했습니다. FFmpeg 엔진 로드 문제일 수 있습니다.' : 'A technical error occurred during the operation. This might be an issue with loading the FFmpeg engine.'}
+          </p>
+          
+          <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-xl bg-gray-100 dark:bg-black/50 p-4 text-xs font-mono text-red-600 dark:text-red-400 border border-gray-200 dark:border-red-500/10">
+            {ffmpegError && `[FFmpeg Error]\n${ffmpegError}`}
+            {(!ffmpegError) && 'No technical error available.'}
+          </pre>
+
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              onClick={() => {
+                const errText = ffmpegError ? `[FFmpeg Error]\n${ffmpegError}` : 'No error details';
+                navigator.clipboard.writeText(errText);
+                alert('Copied to clipboard');
+              }}
+              className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/20 transition-colors"
+            >
+              <Copy className="h-4 w-4" />
+              Copy Error
+            </button>
+            <button
+              onClick={() => setShowTechErrorModal(false)}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   );
 }

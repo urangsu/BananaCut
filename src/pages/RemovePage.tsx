@@ -8,6 +8,7 @@ import { useFFmpeg } from '../FFmpegContext';
 import { useStudio, BrushStroke } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
 import { revokeUrlsSafely } from '../utils/urlUtils';
+import { getFrameDisplayUrl } from '../utils/frameUtils';
 import { DownloadModal } from '../components/DownloadModal';
 import { useBatchJob } from '../hooks/useBatchJob';
 import { useLanguage } from '../LanguageContext';
@@ -342,7 +343,7 @@ export default function RemovePage() {
       }
     };
     const targetFrame = frames[currentFrame];
-    img.src = (targetFrame.processedUrl && !targetFrame.dirty) ? targetFrame.processedUrl : targetFrame.rawUrl;
+    img.src = getFrameDisplayUrl(targetFrame);
   }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionStrokes, isBrushActive, isPlaying, lastPos, brushSize, drawTick, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -704,10 +705,12 @@ export default function RemovePage() {
       } catch (err) {
         if (err instanceof Error && err.message === 'Aborted') {
           console.log('Video extraction canceled.');
+          setFrames([]);
           setUploadState('idle');
           return;
         }
         console.error("Browser video extraction failed:", err);
+        setFrames([]);
         setNativeExtractError(err instanceof Error ? err.message : 'Unknown native extraction error');
         setUploadState('error');
       }
@@ -785,7 +788,7 @@ export default function RemovePage() {
         for (let i = 0; i < frames.length; i++) {
           const frame = frames[i];
           const img = new Image();
-          img.src = frame.processedUrl && !frame.dirty ? frame.processedUrl : frame.rawUrl;
+          img.src = getFrameDisplayUrl(frame);
           await new Promise((resolve) => {
             img.onload = resolve;
           });
@@ -833,7 +836,7 @@ export default function RemovePage() {
         for (let i = startIdx; i < endIdx; i++) {
           const frame = frames[i];
           const img = new Image();
-          img.src = frame.processedUrl && !frame.dirty ? frame.processedUrl : frame.rawUrl;
+          img.src = getFrameDisplayUrl(frame);
           await new Promise((resolve) => {
             img.onload = resolve;
           });
@@ -957,10 +960,6 @@ export default function RemovePage() {
       : 'bg-black hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 text-white shadow-lg shadow-black/10'
   }`;
   const previewBgClass = `relative border-2 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center transition-colors ${isDark ? 'bg-black/40 border-white/5' : 'bg-gray-100 border-gray-200'}`;
-
-  const getFrameDisplayUrl = (frame: StudioFrame) => {
-    return frame.processedUrl && !frame.dirty ? frame.processedUrl : frame.rawUrl;
-  };
 
   return (
     <div className={`max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen lg:overflow-x-hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>

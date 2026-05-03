@@ -6,11 +6,12 @@ export async function extractFramesNative(file: File, options: {
   maxWidth: number;
   maxHeight: number;
   maxFrames: number;
+  fastMode?: boolean;
   signal?: AbortSignal;
   onProgress?: (current: number, total: number) => void;
   onChunk?: (frames: StudioFrame[]) => void;
 }): Promise<StudioFrame[]> {
-  const { fps, maxWidth, maxHeight, maxFrames, signal, onProgress, onChunk } = options;
+  const { fps, maxWidth, maxHeight, maxFrames, fastMode = false, signal, onProgress, onChunk } = options;
   const url = URL.createObjectURL(file);
   const video = document.createElement('video');
   video.src = url;
@@ -24,28 +25,36 @@ export async function extractFramesNative(file: File, options: {
   const logDebug = (...args: any[]) => { if (isDebug) console.log(...args); };
 
   return new Promise<StudioFrame[]>((resolve, reject) => {
+    let settled = false;
+
     const cleanup = () => {
       URL.revokeObjectURL(url);
     };
 
     if (signal?.aborted) {
+      settled = true;
       cleanup();
       return reject(new Error('Aborted'));
     }
 
     const abortHandler = () => {
+      if (settled) return;
+      settled = true;
       cleanup();
       reject(new Error('Aborted'));
     };
     signal?.addEventListener('abort', abortHandler);
 
     video.onerror = () => {
+      if (settled) return;
+      settled = true;
       signal?.removeEventListener('abort', abortHandler);
       cleanup();
       reject(new Error(`Video metadata failed to load or unsupported video codec (Code. ${video.error?.code}). Try FFmpeg fallback.`));
     };
 
       video.onloadedmetadata = async () => {
+      let outFrames: StudioFrame[] = [];
       try {
         const metadataLoadTime = Date.now() - startTime;
         logDebug(`[nativeVideoExtract] metadata loaded in ${metadataLoadTime}ms`);
@@ -80,76 +89,61 @@ export async function extractFramesNative(file: File, options: {
           throw new Error('Failed to get 2d context for canvas');
         }
 
-        const frames: StudioFrame[] = [];
         let chunk: StudioFrame[] = [];
         
         const seekAndWait = async (time: number): Promise<void> => {
-          video.currentTime = time;
-          
-          if ('requestVideoFrameCallback' in video) {
-            return new Promise<void>((resolve, reject) => {
-              if (signal?.aborted) return reject(new Error('Aborted'));
-              
-              let handled = false;
-              let timeoutId: any;
-              
-              const finish = () => {
-                if (handled) return;
-                handled = true;
-                clearTimeout(timeoutId);
-                resolve();
-              };
-
-              // @ts-ignore
-              video.requestVideoFrameCallback(() => finish());
-
-              timeoutId = setTimeout(() => {
-                if (!handled) {
-                  logDebug(`[nativeVideoExtract] requestVideoFrameCallback timeout fallback at time ${time}`);
-                  finish();
-                }
-              }, 500);
-            });
-          }
-
           return new Promise<void>((resolve, reject) => {
             if (signal?.aborted) return reject(new Error('Aborted'));
             
             let handled = false;
             let timeoutId: any;
-
+            
             const clearEvents = () => {
               video.removeEventListener('seeked', onSeeked);
               video.removeEventListener('error', onError);
+              clearTimeout(timeoutId);
             };
 
             const finish = () => {
               if (handled) return;
               handled = true;
               clearEvents();
-              clearTimeout(timeoutId);
               resolve();
             };
 
-            const onSeeked = () => {
-              finish();
-            };
-            const onError = () => {
+            const fail = (err: Error) => {
               if (handled) return;
               handled = true;
               clearEvents();
-              clearTimeout(timeoutId);
-              reject(new Error('Seek error (timeout or codec issue)'));
+              reject(err);
+            };
+
+            const onError = () => {
+              fail(new Error('Seek error (timeout or codec issue)'));
+            };
+
+            const onSeeked = () => {
+              if (handled) return;
+              
+              if (!fastMode && 'requestVideoFrameCallback' in video) {
+                // @ts-ignore
+                video.requestVideoFrameCallback(() => {
+                  finish();
+                });
+              } else {
+                finish();
+              }
             };
             
             video.addEventListener('seeked', onSeeked);
             video.addEventListener('error', onError);
             
+            video.currentTime = time;
+            
             timeoutId = setTimeout(() => {
-               if(!handled) {
+               if (!handled) {
                    logDebug(`[nativeVideoExtract] seeked timeout fallback at time ${time}`);
-                   clearEvents();
-                   reject(new Error('Seek timeout. Possibly unsupported video codec.'));
+                   fail(new Error('Seek timeout. Possibly unsupported video codec.'));
                }
             }, 600);
           });
@@ -176,7 +170,7 @@ export async function extractFramesNative(file: File, options: {
 
         for (let i = 0; i < totalFrames; i++) {
           if (signal?.aborted) {
-            frames.forEach(f => URL.revokeObjectURL(f.rawUrl));
+            outFrames.forEach(f => URL.revokeObjectURL(f.rawUrl));
             throw new Error('Aborted');
           }
           PerfLogger.start('nativeVideoExtract_frame');
@@ -197,7 +191,7 @@ export async function extractFramesNative(file: File, options: {
             sourceIndex: i
           };
           
-          frames.push(frame);
+          outFrames.push(frame);
           chunk.push(frame);
           
           if (i === 0) {
@@ -234,12 +228,16 @@ export async function extractFramesNative(file: File, options: {
           });
         }
         
+        if (settled) return;
+        settled = true;
         signal?.removeEventListener('abort', abortHandler);
         cleanup();
-        resolve(frames);
+        resolve(outFrames);
       } catch (err) {
-        if (frames && frames.length > 0) {
-          frames.forEach(f => URL.revokeObjectURL(f.rawUrl));
+        if (settled) return;
+        settled = true;
+        if (typeof outFrames !== 'undefined' && outFrames && outFrames.length > 0) {
+          outFrames.forEach(f => URL.revokeObjectURL(f.rawUrl));
         }
         signal?.removeEventListener('abort', abortHandler);
         cleanup();
