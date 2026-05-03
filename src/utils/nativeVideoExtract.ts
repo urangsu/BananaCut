@@ -89,9 +89,12 @@ export async function extractFramesNative(file: File, options: {
           throw new Error('Failed to get 2d context for canvas');
         }
 
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+        const seekTimeoutMs = isMobile ? 2500 : 1200;
+        
         let chunk: StudioFrame[] = [];
         
-        const seekAndWait = async (time: number): Promise<void> => {
+        const seekAndWait = async (time: number, isRetry = false): Promise<void> => {
           return new Promise<void>((resolve, reject) => {
             if (signal?.aborted) return reject(new Error('Aborted'));
             
@@ -111,11 +114,22 @@ export async function extractFramesNative(file: File, options: {
               resolve();
             };
 
-            const fail = (err: Error) => {
+            const fail = async (err: Error) => {
               if (handled) return;
               handled = true;
               clearEvents();
-              reject(err);
+              
+              if (!isRetry) {
+                logDebug(`[nativeVideoExtract] seek failed at time ${time}, retrying...`);
+                try {
+                  await seekAndWait(time, true);
+                  resolve();
+                } catch (retryErr) {
+                  reject(retryErr);
+                }
+              } else {
+                reject(err);
+              }
             };
 
             const onError = () => {
@@ -143,9 +157,9 @@ export async function extractFramesNative(file: File, options: {
             timeoutId = setTimeout(() => {
                if (!handled) {
                    logDebug(`[nativeVideoExtract] seeked timeout fallback at time ${time}`);
-                   fail(new Error('Seek timeout. Possibly unsupported video codec.'));
+                   fail(new Error(`Seek timeout after ${seekTimeoutMs}ms. Possibly unsupported video codec.`));
                }
-            }, 600);
+            }, seekTimeoutMs);
           });
         };
 
@@ -170,7 +184,7 @@ export async function extractFramesNative(file: File, options: {
 
         for (let i = 0; i < totalFrames; i++) {
           if (signal?.aborted) {
-            outFrames.forEach(f => URL.revokeObjectURL(f.rawUrl));
+            if (!onChunk) outFrames.forEach(f => URL.revokeObjectURL(f.rawUrl));
             throw new Error('Aborted');
           }
           PerfLogger.start('nativeVideoExtract_frame');
@@ -236,9 +250,11 @@ export async function extractFramesNative(file: File, options: {
       } catch (err) {
         if (settled) return;
         settled = true;
-        if (typeof outFrames !== 'undefined' && outFrames && outFrames.length > 0) {
+        
+        if (!onChunk && typeof outFrames !== 'undefined' && outFrames && outFrames.length > 0) {
           outFrames.forEach(f => URL.revokeObjectURL(f.rawUrl));
         }
+        
         signal?.removeEventListener('abort', abortHandler);
         cleanup();
         reject(err);

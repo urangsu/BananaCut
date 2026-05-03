@@ -76,6 +76,12 @@ export default function RecoverPage() {
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
 
   useEffect(() => {
+    return () => {
+      imageCache.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('recover_canvasWidth', canvasWidth.toString());
     localStorage.setItem('recover_canvasHeight', canvasHeight.toString());
     localStorage.setItem('recover_fillColor', fillColor);

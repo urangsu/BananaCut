@@ -81,6 +81,7 @@
   - **iPhone Safari (A15 Bionic)**: First frame ~0.8s. Total extract ~12s. Minor warmth but no OOM. Frame count: 360.
   - **Android Chrome (Snapdragon 8 Gen 2)**: First frame ~0.6s. Total extract ~7.5s. Frame count: 360.
   - **PNG 단일 업로드**: Instant load directly onto canvas.
+  - **Recover 이동**: Verified seamless canvas state transfer and brush responsiveness.
   - **Sprite Export**: Completed in ~1.5s for 96 frames (Fast browser export).
   - **WebM Export**: FFmpeg fallback required. Loaded in 2s, encoded in 8s. (If FFmpeg fails, Technical Error modal shows correct stack trace).
 - Desktop (Chrome/Safari): 

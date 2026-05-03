@@ -705,12 +705,24 @@ export default function RemovePage() {
       } catch (err) {
         if (err instanceof Error && err.message === 'Aborted') {
           console.log('Video extraction canceled.');
-          setFrames([]);
+          setFrames(prev => {
+            prev.forEach(f => {
+              URL.revokeObjectURL(f.rawUrl);
+              if (f.processedUrl) URL.revokeObjectURL(f.processedUrl);
+            });
+            return [];
+          });
           setUploadState('idle');
           return;
         }
         console.error("Browser video extraction failed:", err);
-        setFrames([]);
+        setFrames(prev => {
+          prev.forEach(f => {
+            URL.revokeObjectURL(f.rawUrl);
+            if (f.processedUrl) URL.revokeObjectURL(f.processedUrl);
+          });
+          return [];
+        });
         setNativeExtractError(err instanceof Error ? err.message : 'Unknown native extraction error');
         setUploadState('error');
       }
