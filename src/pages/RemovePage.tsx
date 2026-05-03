@@ -731,6 +731,7 @@ export default function RemovePage() {
         });
         setFrames([]);
         setNativeExtractError(err instanceof Error ? `[Native Error]\n${err.message}` : `[Native Error]\nUnknown error`);
+        setExtractionProgress({ current: 0, total: 0 });
         setUploadState('error');
         setIsPlaying(false);
       } finally {

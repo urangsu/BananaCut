@@ -98,6 +98,16 @@ export async function extractFramesNative(file: File, options: {
         let chunk: StudioFrame[] = [];
         
         const seekAndWait = async (time: number, retryCount = 0): Promise<void> => {
+          if (Math.abs(video.currentTime - time) < 0.001) {
+            if (!fastMode && 'requestVideoFrameCallback' in video) {
+              await new Promise<void>((resolve) => {
+                // @ts-ignore
+                video.requestVideoFrameCallback(() => resolve());
+              });
+            }
+            return;
+          }
+
           return new Promise<void>((resolve, reject) => {
             if (signal?.aborted) return reject(new Error('Aborted'));
             
@@ -196,7 +206,11 @@ export async function extractFramesNative(file: File, options: {
           const timestamp = Math.min(i / safeFps, Math.max(0, duration - 0.001));
           
           try {
-            await seekAndWait(timestamp);
+            if (i === 0 && timestamp === 0 && video.currentTime === 0) {
+              // Skip seek if we're perfectly at the start
+            } else {
+              await seekAndWait(timestamp);
+            }
           } catch (err) {
             if (skipFailedFrames && i > 0) { // First frame must secure
               logDebug(`[nativeVideoExtract] Skipping frame ${i} due to seek failure`);
