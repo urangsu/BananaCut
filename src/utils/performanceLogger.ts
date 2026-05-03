@@ -2,13 +2,17 @@
 export class PerfLogger {
   static measures = new Map<string, { start: number, times: number[] }>();
 
+  static isEnabled() {
+    return import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
+  }
+
   static start(name: string) {
-    if (!import.meta.env.DEV) return;
+    if (!this.isEnabled()) return;
     this.measures.set(name, { start: performance.now(), times: this.measures.get(name)?.times || [] });
   }
 
   static end(name: string) {
-    if (!import.meta.env.DEV) return;
+    if (!this.isEnabled()) return;
     const measure = this.measures.get(name);
     if (!measure) return;
     const duration = performance.now() - measure.start;

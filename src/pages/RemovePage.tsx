@@ -627,6 +627,16 @@ export default function RemovePage() {
     const targetFps = overrideFps || fps;
     setImgDims(null); // Reset dimensions for new file
     setExclusionStrokes([]);
+    
+    // Revoke object URLs from previous frames to prevent memory leaks
+    if (frames.length > 0) {
+      frames.forEach(f => {
+        if (f.rawUrl.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
+        if (f.processedUrl && f.processedUrl.startsWith('blob:')) URL.revokeObjectURL(f.processedUrl);
+      });
+      setFrames([]);
+    }
+    
     if (file.type.startsWith('image/')) {
       setUploadState('image-loading');
       const url = URL.createObjectURL(file);
@@ -947,6 +957,10 @@ export default function RemovePage() {
       : 'bg-black hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 text-white shadow-lg shadow-black/10'
   }`;
   const previewBgClass = `relative border-2 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center transition-colors ${isDark ? 'bg-black/40 border-white/5' : 'bg-gray-100 border-gray-200'}`;
+
+  const getFrameDisplayUrl = (frame: StudioFrame) => {
+    return frame.processedUrl && !frame.dirty ? frame.processedUrl : frame.rawUrl;
+  };
 
   return (
     <div className={`max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen lg:overflow-x-hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -1634,33 +1648,23 @@ export default function RemovePage() {
 
                       <div className="grid grid-cols-2 gap-2">
                         <label className="min-w-0">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className={`${segmentLabelClass} truncate`}>{seg.useFrames ? 'START (f)' : 'START (s)'}</span>
-                            <button 
-                              onClick={() => updateSegment(idx, 'useFrames', !seg.useFrames)}
-                              className="text-[9px] bg-white/10 px-1 rounded flex-shrink-0"
-                            >
-                              {seg.useFrames ? (lang === 'KR' ? 'Time' : lang === 'EN' ? 'Time' : '時間') : (lang === 'KR' ? 'Frame' : lang === 'EN' ? 'Frame' : 'フレーム')}
-                            </button>
-                          </div>
+                          <span className="block text-[10px] font-bold text-gray-500 mb-1">START (S)</span>
                           <input 
                             type="number" 
-                            step={seg.useFrames ? "1" : "0.1"}
+                            step="0.1"
                             value={seg.start}
                             onChange={(e) => updateSegment(idx, 'start', parseFloat(e.target.value) || 0)}
-                            className={`${segmentInputClass} w-full px-1.5`}
+                            className={`${segmentInputClass} min-w-0 w-full max-w-[80px] px-1.5`}
                           />
                         </label>
                         <label className="min-w-0">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className={`${segmentLabelClass} truncate`}>{seg.useFrames ? 'END (f)' : 'END (s)'}</span>
-                          </div>
+                          <span className="block text-[10px] font-bold text-gray-500 mb-1">END (S)</span>
                           <input 
                             type="number" 
-                            step={seg.useFrames ? "1" : "0.1"}
+                            step="0.1"
                             value={seg.end}
                             onChange={(e) => updateSegment(idx, 'end', parseFloat(e.target.value) || 0)}
-                            className={`${segmentInputClass} w-full px-1.5`}
+                            className={`${segmentInputClass} min-w-0 w-full max-w-[80px] px-1.5`}
                           />
                         </label>
                       </div>
@@ -1808,6 +1812,7 @@ export default function RemovePage() {
                       key={idx}
                       onClick={(e) => {
                         toggleSelection(idx, e.ctrlKey || e.metaKey, e.shiftKey);
+                        setCurrentFrame(idx);
                         setIsPlaying(false);
                       }}
                       className={`shrink-0 relative h-full aspect-[5/7] rounded-md overflow-hidden border-2 cursor-pointer transition-all ${
@@ -1817,10 +1822,16 @@ export default function RemovePage() {
                       } ${currentFrame === idx ? 'ring-2 ring-inset ring-white/20' : ''}`}
                     >
                       <img 
-                        src={frame.processedUrl && !frame.dirty ? frame.processedUrl : frame.rawUrl} 
+                        src={getFrameDisplayUrl(frame)} 
                         alt={`Frame ${idx}`} 
                         className={`w-full h-full object-contain ${isDark ? 'bg-[#121212]' : 'bg-white'}`} 
-                        onError={(e) => { if (e.currentTarget.src !== frame.rawUrl) e.currentTarget.src = frame.rawUrl; }}
+                        onError={(e) => { 
+                          console.warn(`[RemovePage] thumbnail load error for frame ${idx}. Reverting to rawUrl.`, {
+                            originalUrl: frame.processedUrl,
+                            dirty: frame.dirty
+                          });
+                          if (e.currentTarget.src !== frame.rawUrl) e.currentTarget.src = frame.rawUrl; 
+                        }}
                       />
                       {selectedFrames.has(idx) && (
                         <div className="absolute top-1 right-1 w-3 h-3 bg-purple-500 rounded-full border border-white shadow-sm" />

@@ -17,6 +17,7 @@ export default function AssetPage() {
 
   const [showDirtyModal, setShowDirtyModal] = useState(false);
   const [dirtyAction, setDirtyAction] = useState<(() => Promise<void>) | null>(null);
+  const [dirtyAnywayAction, setDirtyAnywayAction] = useState<(() => Promise<void>) | null>(null);
   const [failedItems, setFailedItems] = useState<number[]>([]);
 
   // Video Export State
@@ -110,6 +111,9 @@ export default function AssetPage() {
          if (failed.length === 0) {
             runAction();
          }
+      });
+      setDirtyAnywayAction(() => async () => {
+         runAction();
       });
       setShowDirtyModal(true);
       return;
@@ -594,18 +598,7 @@ export default function AssetPage() {
                 </button>
               </div>
             ) : (
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => {
-                    setShowDirtyModal(false);
-                    setDirtyAction(null);
-                  }}
-                  className={`flex-1 py-2.5 rounded-xl font-medium transition-colors ${
-                    isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-                  }`}
-                >
-                  {lang === 'KR' ? '취소' : lang === 'EN' ? 'Cancel' : 'キャンセル'}
-                </button>
+              <div className="flex flex-col gap-3">
                 <button 
                   onClick={async () => {
                     if (dirtyAction) {
@@ -613,12 +606,38 @@ export default function AssetPage() {
                        setShowDirtyModal(false);
                     }
                   }}
-                  className={`flex-1 py-2.5 rounded-xl font-medium transition-colors ${
+                  className={`w-full py-2.5 rounded-xl font-medium transition-colors ${
                     isDark ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
                   }`}
                 >
-                  {lang === 'KR' ? '적용 및 계속' : lang === 'EN' ? 'Process & Continue' : '適用して続行'}
+                  {lang === 'KR' ? 'Process Dirty Frames (적용 및 계속)' : lang === 'EN' ? 'Process Dirty Frames' : '適用して続行'}
                 </button>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={async () => {
+                      if (dirtyAnywayAction) {
+                         await dirtyAnywayAction();
+                         setShowDirtyModal(false);
+                      }
+                    }}
+                    className={`flex-1 py-2.5 rounded-xl font-medium transition-colors border ${
+                      isDark ? 'border-white/20 hover:bg-white/10 text-white' : 'border-gray-200 hover:bg-gray-50 text-gray-900'
+                    }`}
+                  >
+                    {lang === 'KR' ? 'Export Anyway (무시)' : lang === 'EN' ? 'Export Anyway' : '無視してエクスポート'}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowDirtyModal(false);
+                      setDirtyAction(null);
+                    }}
+                    className={`flex-1 py-2.5 rounded-xl font-medium transition-colors ${
+                      isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                    }`}
+                  >
+                    {lang === 'KR' ? 'Cancel (취소)' : lang === 'EN' ? 'Cancel' : 'キャンセル'}
+                  </button>
+                </div>
               </div>
             )}
           </div>

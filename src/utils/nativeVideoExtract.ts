@@ -45,18 +45,19 @@ export async function extractFramesNative(file: File, options: {
       reject(new Error(`Video metadata failed to load or unsupported video codec (Code. ${video.error?.code}). Try FFmpeg fallback.`));
     };
 
-    video.onloadedmetadata = async () => {
+      video.onloadedmetadata = async () => {
       try {
-        logDebug(`[nativeVideoExtract] metadata loaded in ${Date.now() - startTime}ms`);
+        const metadataLoadTime = Date.now() - startTime;
+        logDebug(`[nativeVideoExtract] metadata loaded in ${metadataLoadTime}ms`);
         const duration = video.duration;
         if (!duration || !isFinite(duration)) {
-          throw new Error('Invalid video duration');
+          throw new Error('Video metadata failed to load: Invalid video duration');
         }
 
         const safeFps = fps > 0 ? fps : 12;
         const totalFrames = Math.min(maxFrames, Math.max(1, Math.ceil(duration * safeFps)));
         if (totalFrames <= 0) {
-          throw new Error('Video is too short or fps is too small');
+          throw new Error('Video metadata failed to load: Video is too short or fps is too small');
         }
 
         const width = video.videoWidth;
@@ -82,12 +83,41 @@ export async function extractFramesNative(file: File, options: {
         const frames: StudioFrame[] = [];
         let chunk: StudioFrame[] = [];
         
-        const seekAndWait = (time: number): Promise<void> => {
-          return new Promise((res, rej) => {
-            if (signal?.aborted) return rej(new Error('Aborted'));
+        const seekAndWait = async (time: number): Promise<void> => {
+          video.currentTime = time;
+          
+          if ('requestVideoFrameCallback' in video) {
+            return new Promise<void>((resolve, reject) => {
+              if (signal?.aborted) return reject(new Error('Aborted'));
+              
+              let handled = false;
+              let timeoutId: any;
+              
+              const finish = () => {
+                if (handled) return;
+                handled = true;
+                clearTimeout(timeoutId);
+                resolve();
+              };
 
-            let handled = false;
+              // @ts-ignore
+              video.requestVideoFrameCallback(() => finish());
+
+              timeoutId = setTimeout(() => {
+                if (!handled) {
+                  logDebug(`[nativeVideoExtract] requestVideoFrameCallback timeout fallback at time ${time}`);
+                  finish();
+                }
+              }, 500);
+            });
+          }
+
+          return new Promise<void>((resolve, reject) => {
+            if (signal?.aborted) return reject(new Error('Aborted'));
             
+            let handled = false;
+            let timeoutId: any;
+
             const clearEvents = () => {
               video.removeEventListener('seeked', onSeeked);
               video.removeEventListener('error', onError);
@@ -97,14 +127,8 @@ export async function extractFramesNative(file: File, options: {
               if (handled) return;
               handled = true;
               clearEvents();
-              if ('requestVideoFrameCallback' in video) {
-                // @ts-ignore
-                video.requestVideoFrameCallback(() => {
-                  res();
-                });
-              } else {
-                res();
-              }
+              clearTimeout(timeoutId);
+              resolve();
             };
 
             const onSeeked = () => {
@@ -114,21 +138,20 @@ export async function extractFramesNative(file: File, options: {
               if (handled) return;
               handled = true;
               clearEvents();
-              rej(new Error('Seek error (timeout or codec issue)'));
+              clearTimeout(timeoutId);
+              reject(new Error('Seek error (timeout or codec issue)'));
             };
             
             video.addEventListener('seeked', onSeeked);
             video.addEventListener('error', onError);
-            video.currentTime = time;
             
-            // fallback if seeked doesn't fire
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
                if(!handled) {
                    logDebug(`[nativeVideoExtract] seeked timeout fallback at time ${time}`);
-                   // instead of finishing, verify if it's completely hung
-                   finish();
+                   clearEvents();
+                   reject(new Error('Seek timeout. Possibly unsupported video codec.'));
                }
-            }, 500);
+            }, 600);
           });
         };
 
@@ -198,7 +221,18 @@ export async function extractFramesNative(file: File, options: {
         }
 
         const totalTime = Date.now() - startTime;
-        logDebug(`[nativeVideoExtract] Completed ${totalFrames} frames in ${totalTime}ms (avg ${totalTime/totalFrames}ms/frame) @ ${scaledWidth}x${scaledHeight}`);
+        if (isDebug) {
+          const memory = (performance as any).memory;
+          console.table({
+            "Metadata Load (ms)": metadataLoadTime,
+            "First Frame Time (ms)": firstFrameTime,
+            "Total Time (ms)": totalTime,
+            "Total Frames": totalFrames,
+            "Avg ms/frame": (totalTime / totalFrames).toFixed(2),
+            "Resolution": `${scaledWidth}x${scaledHeight}`,
+            "Memory Footprint": memory ? `${Math.round(memory.usedJSHeapSize / 1024 / 1024)} MB` : 'N/A'
+          });
+        }
         
         signal?.removeEventListener('abort', abortHandler);
         cleanup();

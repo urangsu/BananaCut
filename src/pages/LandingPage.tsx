@@ -130,6 +130,7 @@ export default function LandingPage() {
   const { lang, setLang } = useLanguage();
   const [showGetApp, setShowGetApp] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
+  const [isDemoPlaying, setIsDemoPlaying] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [iframeError, setIframeError] = useState(false);
@@ -222,6 +223,12 @@ export default function LandingPage() {
             >
               START REMOVING
             </button>
+            <div className={`flex flex-wrap justify-center gap-3 pt-4 ${isDark ? 'text-white/60' : 'text-gray-600'} text-xs font-bold tracking-widest uppercase`}>
+              <span className="px-3 py-1 rounded-full border border-current bg-transparent">No upload</span>
+              <span className="px-3 py-1 rounded-full border border-current bg-transparent">Local in browser</span>
+              <span className="px-3 py-1 rounded-full border border-current bg-transparent">Free</span>
+              <span className="px-3 py-1 rounded-full border border-current bg-transparent">No ads</span>
+            </div>
           </section>
 
           {/* Trust Blocks */}
@@ -260,7 +267,7 @@ export default function LandingPage() {
           {/* Video Demo Section (For Users & Bots) */}
           <section className="max-w-5xl mx-auto space-y-6">
             <div className={`aspect-video rounded-3xl flex items-center justify-center border overflow-hidden relative shadow-2xl group ${isDark ? 'bg-[#0a0a0a] border-white/10' : 'bg-black border-gray-200'}`}>
-              {!isRevealed ? (
+              {!isDemoPlaying ? (
                 <>
                   <img 
                     src="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg" 
@@ -275,7 +282,7 @@ export default function LandingPage() {
                     <button 
                       onClick={(e) => { 
                         e.preventDefault(); 
-                        setIsRevealed(true); 
+                        setIsDemoPlaying(true); 
                       }}
                       className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-all flex items-center gap-3 shadow-[0_0_40px_rgba(220,38,38,0.5)] group-hover:scale-110 group-hover:shadow-[0_0_60px_rgba(220,38,38,0.8)] pointer-events-auto"
                     >
