@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "postinstall": "npx shx mkdir -p public/ffmpeg && npx shx cp -R node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.* public/ffmpeg/",
+    "postinstall": "npx shx mkdir -p public/ffmpeg && npx shx cp -R node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.* public/ffmpeg/",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
