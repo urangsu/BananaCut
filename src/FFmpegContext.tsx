@@ -56,25 +56,64 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           });
         };
 
+        const probeAsset = async (url: string) => {
+          try {
+            const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+            const contentType = res.headers.get('content-type') || '';
+            const textSample = contentType.includes('text/html')
+              ? await res.clone().text().then(t => t.slice(0, 120)).catch(() => '')
+              : '';
+            return { url, ok: res.ok, status: res.status, contentType, textSample };
+          } catch (e: any) {
+            return { url, ok: false, error: e.message };
+          }
+        };
+
         const localBaseURL = `${window.location.origin}/ffmpeg`;
 
         const loadCoreFromBase = async (baseURL: string, sourceName: string) => {
           const start = Date.now();
           logDebug(`[FFmpeg] Loading from ${sourceName} ${baseURL} start...`);
 
+          const coreUrl = `${baseURL}/ffmpeg-core.js`;
+          const wasmUrl = `${baseURL}/ffmpeg-core.wasm`;
+
+          let coreProbe, wasmProbe;
+          coreProbe = await probeAsset(coreUrl);
+          wasmProbe = await probeAsset(wasmUrl);
+
+          logDebug(`[FFmpeg] Probe ${sourceName}: core=${coreProbe.status}, wasm=${wasmProbe.status}`);
+
+          if (!coreProbe.ok || !wasmProbe.ok) {
+             console.error(`[FFmpeg] Probe failed for ${sourceName}:`, { coreProbe, wasmProbe });
+          }
+
           const toBlobStart = Date.now();
-          const [coreURL, wasmURL] = await Promise.all([
-            toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
-          ]);
-          logDebug(`[FFmpeg] toBlobURL from ${sourceName} completed in ${Date.now() - toBlobStart}ms`);
+          let coreURL, wasmURL;
+          try {
+            [coreURL, wasmURL] = await Promise.all([
+              toBlobURL(coreUrl, 'text/javascript'),
+              toBlobURL(wasmUrl, 'application/wasm')
+            ]);
+            logDebug(`[FFmpeg] toBlobURL from ${sourceName} completed in ${Date.now() - toBlobStart}ms`);
+          } catch (e: any) {
+             const errorMsg = `toBlobURL failed: ${e.message}\nCore Probe: ${JSON.stringify(coreProbe)}\nWasm Probe: ${JSON.stringify(wasmProbe)}`;
+             console.error(`[FFmpeg] toBlobURL error from ${sourceName}:`, e, { coreProbe, wasmProbe });
+             throw new Error(errorMsg);
+          }
 
           const loadStart = Date.now();
-          await ffmpegInstance.load({
-            coreURL,
-            wasmURL
-          });
-          logDebug(`[FFmpeg] ffmpeg.load from ${sourceName} completed in ${Date.now() - loadStart}ms`);
+          try {
+            await ffmpegInstance.load({
+              coreURL,
+              wasmURL
+            });
+            logDebug(`[FFmpeg] ffmpeg.load from ${sourceName} completed in ${Date.now() - loadStart}ms`);
+          } catch (e: any) {
+            const errorMsg = `ffmpeg.load failed: ${e.message}\nCore Probe: ${JSON.stringify(coreProbe)}\nWasm Probe: ${JSON.stringify(wasmProbe)}`;
+            console.error(`[FFmpeg] ffmpeg.load error from ${sourceName}:`, e, { coreProbe, wasmProbe });
+            throw new Error(errorMsg);
+          }
 
           logDebug(`[FFmpeg] Selected Source: ${sourceName}. Total load time: ${Date.now() - start}ms`);
         };
@@ -92,22 +131,22 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           logDebug(`[FFmpeg] Local load failed: ${lastErrorMsg}`);
           try {
              await loadWithTimeout(
-              () => loadCoreFromBase('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm', 'jsdelivr'),
+              () => loadCoreFromBase('https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm', 'unpkg'),
               25000,
-              'jsdelivr'
+              'unpkg'
             );
-          } catch (jsdelivrError: any) {
-            lastErrorMsg = jsdelivrError?.message || String(jsdelivrError);
-            logDebug(`[FFmpeg] jsdelivr load failed: ${lastErrorMsg}`);
+          } catch (unpkgError: any) {
+            lastErrorMsg = unpkgError?.message || String(unpkgError);
+            logDebug(`[FFmpeg] unpkg load failed: ${lastErrorMsg}`);
             try {
               await loadWithTimeout(
-                () => loadCoreFromBase('https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm', 'unpkg'),
+                () => loadCoreFromBase('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm', 'jsdelivr'),
                 25000,
-                'unpkg'
+                'jsdelivr'
               );
-            } catch (unpkgError: any) {
-              lastErrorMsg = unpkgError?.message || String(unpkgError);
-              logDebug(`[FFmpeg] unpkg load failed: ${lastErrorMsg}`);
+            } catch (jsdelivrError: any) {
+              lastErrorMsg = jsdelivrError?.message || String(jsdelivrError);
+              logDebug(`[FFmpeg] jsdelivr load failed: ${lastErrorMsg}`);
               throw new Error(`All FFmpeg load sources failed. Last error: ${lastErrorMsg}`);
             }
           }
