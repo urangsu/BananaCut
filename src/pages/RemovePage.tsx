@@ -759,6 +759,7 @@ export default function RemovePage() {
           });
           setFrames([]);
           setUploadState('idle');
+          setIsPlaying(false);
           return;
         }
         console.error("Browser video extraction failed:", err);
@@ -774,6 +775,7 @@ export default function RemovePage() {
       } finally {
         abortControllerRef.current = null;
         setIsProcessingLocal(false);
+        setExtractionStartMs(null);
       }
       return;
     }
@@ -1185,6 +1187,29 @@ export default function RemovePage() {
                   >
                     {lang === 'KR' ? '추출 취소' : 'Cancel extraction'}
                   </button>
+                  {extractionStalled && (
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (abortControllerRef.current) {
+                          abortControllerRef.current.abort();
+                        }
+                        setNativeExtractError(null);
+                        setSkippedFramesWarning(false);
+                        const currentFps = fps;
+                        const newFps = Math.max(4, Math.floor(currentFps / 2));
+                        setFps(newFps);
+                        if (videoFile) {
+                          await processFile(videoFile, newFps);
+                        }
+                      }}
+                      className="rounded-lg bg-orange-50 hover:bg-orange-100 border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 transition-colors dark:bg-orange-500/10 dark:hover:bg-orange-500/20 dark:border-orange-500/20 dark:text-orange-400"
+                    >
+                      {lang === 'KR' ? `목표 FPS 낮추기 (${fps} -> ${Math.max(4, Math.floor(fps / 2))})` : `Lower FPS (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -2074,6 +2099,12 @@ export default function RemovePage() {
         onDownload={handleDownload}
         isDark={isDark}
       />
+      
+      {new URLSearchParams(window.location.search).get('debug') === '1' && (
+        <div className="fixed bottom-2 left-2 z-[9999] bg-black/80 text-green-400 text-[10px] font-mono px-2 py-1 rounded pointer-events-none">
+          [BananaCut] commit: {import.meta.env.VITE_COMMIT_SHA || 'dev'} | time: {new Date().toISOString()}
+        </div>
+      )}
     </div>
   );
 }

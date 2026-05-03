@@ -98,7 +98,19 @@ export async function extractFramesNative(file: File, options: {
         let chunk: StudioFrame[] = [];
         
         const waitOnePaint = async (): Promise<void> => {
-          await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+          await new Promise<void>(resolve => {
+            let fired = false;
+            requestAnimationFrame(() => {
+              if (fired) return;
+              fired = true;
+              resolve();
+            });
+            setTimeout(() => {
+              if (fired) return;
+              fired = true;
+              resolve();
+            }, 50);
+          });
         };
 
         const seekAndWait = async (time: number, retryCount = 0, index: number = -1): Promise<void> => {
