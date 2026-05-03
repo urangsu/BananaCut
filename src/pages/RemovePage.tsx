@@ -696,6 +696,12 @@ export default function RemovePage() {
 
   const processFile = async (file: File, overrideFps?: number) => {
     const targetFps = overrideFps || fps;
+    
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
     const runId = ++extractionRunIdRef.current;
     const isCurrentRun = () => extractionRunIdRef.current === runId;
     
@@ -742,6 +748,9 @@ export default function RemovePage() {
         setIsPlaying(false);
         setVideoFile(file);
         setUploadState('ready');
+        setExtractionStartMs(null);
+        setExtractionStalled(false);
+        setExtractionProgress({ current: 0, total: 0 });
       } catch (err) {
         if (!isCurrentRun()) {
           URL.revokeObjectURL(url);
@@ -756,9 +765,6 @@ export default function RemovePage() {
     }
     
     if (file.type.includes('video/mp4') || file.type.includes('video/quicktime')) {
-      if (abortControllerRef.current) {
-         abortControllerRef.current.abort();
-      }
       abortControllerRef.current = new AbortController();
       
       setUploadState('video-extracting');
@@ -854,6 +860,10 @@ export default function RemovePage() {
     
     alert(lang === 'KR' ? "MP4, MOV 또는 PNG 파일을 업로드해주세요." : lang === 'EN' ? "Please upload an MP4, MOV, or PNG file." : "MP4、MOV、またはPNGファイルをアップロードしてください。");
     setUploadState('idle');
+    setExtractionStartMs(null);
+    setExtractionStalled(false);
+    setExtractionProgress({ current: 0, total: 0 });
+    setIsPlaying(false);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
