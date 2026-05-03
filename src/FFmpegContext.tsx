@@ -176,6 +176,9 @@ export const FFmpegProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const retry = () => {
+    setLoadState('idle');
+    setError(null);
+    loadingPromiseRef.current = null;
     loadFFmpeg();
   };
 

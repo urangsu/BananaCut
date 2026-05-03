@@ -39,18 +39,7 @@ export default function RemovePage() {
   const MIDDLE_NAME_OPTIONS = GET_MIDDLE_NAME_OPTIONS(lang);
   const { ffmpeg, loadState, error: ffmpegError, retry: retryFFmpeg, loadFFmpeg } = useFFmpeg();
 
-  // Prewarm FFmpeg engine in the background when user enters RemovePage
-  useEffect(() => {
-    if (loadState === 'idle') {
-      const start = () => loadFFmpeg().catch(console.error);
-      if (typeof requestIdleCallback !== 'undefined') {
-        const id = requestIdleCallback(start, { timeout: 1500 });
-        return () => cancelIdleCallback(id);
-      }
-      const id = setTimeout(start, 800);
-      return () => clearTimeout(id);
-    }
-  }, [loadState, loadFFmpeg]);
+  // Prewarm FFmpeg engine in the background is temporarily disabled.
 
   const { 
     frames, setFrames, 
@@ -973,7 +962,7 @@ export default function RemovePage() {
                   </span>
                   <span className="text-xs opacity-60">MP4, MOV, PNG</span>
                   {ffmpegError && uploadState === 'error' && (
-                    <div className="mt-2 text-center w-full flex flex-col items-center">
+                    <div className="mt-2 text-center w-full flex flex-col items-center px-2">
                       <button 
                         onClick={(e) => {
                           e.preventDefault();
@@ -985,8 +974,21 @@ export default function RemovePage() {
                         {showTechError ? 'Hide technical error' : 'Show technical error'}
                       </button>
                       {showTechError && (
-                        <div className="text-[10px] text-red-500 whitespace-pre-wrap max-w-full overflow-x-auto text-left bg-red-500/10 p-2 rounded border border-red-500/20 mb-2">
-                          {ffmpegError}
+                        <div className="w-full relative">
+                          <pre className="text-[10px] text-red-500 w-full max-h-48 overflow-auto whitespace-pre-wrap text-left bg-red-500/10 p-2 rounded border border-red-500/20 mb-2">
+                            {ffmpegError}
+                          </pre>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(ffmpegError);
+                              alert('Copied to clipboard');
+                            }}
+                            className="absolute top-2 right-2 text-[10px] bg-red-500/20 hover:bg-red-500/30 px-2 py-1 rounded text-red-600 dark:text-red-400"
+                          >
+                            Copy
+                          </button>
                         </div>
                       )}
                       <button 
@@ -996,9 +998,9 @@ export default function RemovePage() {
                           setUploadState('idle');
                           retryFFmpeg();
                         }}
-                        className="mt-1 text-[10px] px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-600 dark:text-red-400 rounded transition-colors"
+                        className="mt-1 text-[10px] px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-600 dark:text-red-400 rounded transition-colors border border-red-500/20"
                       >
-                        {lang === 'KR' ? '다시 로드' : 'Retry'}
+                        {lang === 'KR' ? '엔진 다시 로드' : 'Retry Engine Load'}
                       </button>
                     </div>
                   )}
@@ -1049,7 +1051,7 @@ export default function RemovePage() {
                   {uploadState === 'error' ? (lang === 'KR' ? '비디오 대신 이미지를 업로드해보세요.' : 'Try a PNG sequence instead.') : 'MP4, MOV or PNG'}
                 </p>
                 {ffmpegError && uploadState === 'error' && (
-                  <div className="mt-3 flex flex-col items-center max-w-full">
+                  <div className="mt-3 flex flex-col items-center max-w-full w-full px-4">
                     <button 
                       onClick={(e) => {
                         e.preventDefault();
@@ -1061,9 +1063,22 @@ export default function RemovePage() {
                       {showTechError ? 'Hide technical error' : 'Show technical error'}
                     </button>
                     {showTechError && (
-                      <pre className="text-[10px] text-red-500 max-w-full overflow-x-auto whitespace-pre-wrap text-left bg-red-500/10 p-2 rounded border border-red-500/20 mb-2">
-                        {ffmpegError}
-                      </pre>
+                      <div className="w-full relative">
+                        <pre className="text-[10px] text-red-500 w-full max-h-48 overflow-auto whitespace-pre-wrap text-left bg-red-500/10 p-2 rounded border border-red-500/20 mb-2">
+                          {ffmpegError}
+                        </pre>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(ffmpegError);
+                            alert('Copied to clipboard');
+                          }}
+                          className="absolute top-2 right-2 text-[10px] bg-red-500/20 hover:bg-red-500/30 px-2 py-1 flex items-center justify-center rounded text-red-600 dark:text-red-400"
+                        >
+                          Copy
+                        </button>
+                      </div>
                     )}
                     <button 
                       onClick={(e) => {

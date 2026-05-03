@@ -75,13 +75,15 @@
 ## 2026-05-02: User Flow & Local FFmpeg WASM Regression Test
 - Opened application as a fresh user (no python, no global installation required).
 - Navigated to `/remove` route.
-- Vercel 배포 후 `/remove?debug=1` 로 접속
-- FFmpeg context prewarned successfully in the background (`/ffmpeg/ffmpeg-core.wasm` loaded).
+- Vercel 배포 후 `/remove` 일반 접속 (debug=1 없이도 에러 확인 가능)
+- Prewarm이 비활성화되었으므로 진입 시에는 조용함.
 - Uploaded PNG sequence correctly, previewing image sequentially.
-- 8초 MP4 업로드
+- 8초 MP4 업로드 시도 시 FFmpeg WASM 로딩 시작.
 - Network 탭에서 아래 세 파일이 모두 200인지 확인 (실제 배포 포함):
   - `/ffmpeg/ffmpeg-core.js`
   - `/ffmpeg/ffmpeg-core.wasm`
   - `/ffmpeg/ffmpeg-core.worker.js` (보류중이지만 존재는 확인)
-- 20초 안에 `video-extracting`으로 넘어가지 않으면 실패.
+- 로딩 실패 시 상세 오류 JSON trace가 UI에 바로 노출되며 (max-h-48, copy 버튼 가능), 
+  내부에 local, unpkg, jsdelivr 3차 폴백 각각의 실패 원인이 있는지 확인.
+- 20초 안에 `video-extracting`으로 넘어가면 성공.
 - 첫 프레임 preview와 frame strip이 보여야 함.
