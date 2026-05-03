@@ -203,18 +203,18 @@ export default function LandingPage() {
           {/* Hero Section */}
           <section className="text-center space-y-8">
             <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight">
-              Turn AI Video into <br />
+              Turn Video into <br />
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
                 Transparent Assets
               </span>
             </h1>
             <p className={`text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
               {lang === 'KR' ? (
-                <>AI 생성 비디오에서 투명한 에셋을 추출하세요.<br />프레임 추출부터 배경 제거, 섬세한 복구까지 웹 브라우저 안에서 완벽하게.</>
+                <>비디오에서 투명한 에셋을 추출하세요.<br />프레임 추출부터 배경 제거, 섬세한 복구까지 웹 브라우저 안에서 완벽하게.</>
               ) : lang === 'EN' ? (
-                <>Extract transparent assets from AI-generated videos.<br />Extract frames, remove backgrounds, and precisely recover details entirely within your browser.</>
+                <>Extract transparent assets from videos.<br />Extract frames, remove backgrounds, and precisely recover details entirely within your browser.</>
               ) : (
-                <>AI生成ビデオから透明なアセットを抽出します。<br />フレーム抽出から背景削除、精巧なディテール復元まで、すべてブラウザ内で完結。</>
+                <>ビデオから透明なアセットを抽出します。<br />フレーム抽出から背景削除、精巧なディテール復元まで、すべてブラウザ内で完結。</>
               )}
             </p>
             <button 
@@ -223,45 +223,6 @@ export default function LandingPage() {
             >
               START REMOVING
             </button>
-            <div className={`flex flex-wrap justify-center gap-3 pt-4 ${isDark ? 'text-white/60' : 'text-gray-600'} text-xs font-bold tracking-widest uppercase`}>
-              <span className="px-3 py-1 rounded-full border border-current bg-transparent">No upload</span>
-              <span className="px-3 py-1 rounded-full border border-current bg-transparent">Local in browser</span>
-              <span className="px-3 py-1 rounded-full border border-current bg-transparent">Free to start</span>
-              <span className="px-3 py-1 rounded-full border border-current bg-transparent">No account</span>
-            </div>
-          </section>
-
-          {/* Trust Blocks */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto text-center">
-            <div className={`p-8 rounded-3xl flex flex-col items-center gap-4 transition-transform hover:-translate-y-1 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-100 shadow-xl shadow-gray-200/50'}`}>
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>
-                <Smartphone className="w-8 h-8" strokeWidth={1.5} />
-              </div>
-              <h3 className="font-bold text-xl tracking-tight">100% Local Processing</h3>
-              <p className={`text-sm leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
-                {lang === 'KR' ? '모든 작업이 브라우저 내부에서 처리되어 영상을 서버로 전송하지 않습니다.' : 'All processing happens securely inside your browser. No server uploads.'}
-              </p>
-            </div>
-            
-            <div className={`p-8 rounded-3xl flex flex-col items-center gap-4 transition-transform hover:-translate-y-1 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-100 shadow-xl shadow-gray-200/50'}`}>
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'}`}>
-                <Wand2 className="w-8 h-8" strokeWidth={1.5} />
-              </div>
-              <h3 className="font-bold text-xl tracking-tight">Free to Use</h3>
-              <p className={`text-sm leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
-                {lang === 'KR' ? '회원가입 없이 즉시 브라우저에서 투명 에셋 생성을 시작하세요.' : 'Start creating transparent assets instantly in your browser with no sign-ups required.'}
-              </p>
-            </div>
-            
-            <div className={`p-8 rounded-3xl flex flex-col items-center gap-4 transition-transform hover:-translate-y-1 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-100 shadow-xl shadow-gray-200/50'}`}>
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600'}`}>
-                <Shield className="w-8 h-8" strokeWidth={1.5} />
-              </div>
-              <h3 className="font-bold text-xl tracking-tight">Data Privacy</h3>
-              <p className={`text-sm leading-relaxed ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
-                {lang === 'KR' ? '프라이버시를 최우선으로 합니다. 어떠한 민감한 흔적도 남지 않습니다.' : 'Your data privacy is our top priority. We leave no sensitive traces behind.'}
-              </p>
-            </div>
           </section>
 
           {/* Video Demo Section (For Users & Bots) */}
@@ -368,56 +329,50 @@ export default function LandingPage() {
             </p>
           </section>
 
-          {/* Bento Grid Features */}
+          {/* Features (Trust Blocks updated) */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className={`p-8 rounded-3xl border flex flex-col items-center text-center transition-all hover:scale-[1.02] ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-gray-50 border-gray-200 hover:bg-white hover:shadow-xl'}`}>
               <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 relative ${isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
                 <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500/20 to-transparent blur-md"></div>
-                <Scissors className={`w-8 h-8 relative z-10 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} strokeWidth={1} />
+                <Smartphone className={`w-8 h-8 relative z-10 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} strokeWidth={1.5} />
               </div>
               <h3 className="text-xl font-bold mb-3">
-                {lang === 'KR' ? '스마트 크로마키' : lang === 'EN' ? 'Smart Chroma Key' : 'スマートクロマキー'}
+                100% Local Processing
               </h3>
               <p className={isDark ? 'text-white/60' : 'text-gray-600'}>
                 {lang === 'KR' 
-                  ? '이미지 시퀀스나 비디오에서 단색 배경을 쉽게 제거하세요. 허용 오차와 가장자리 부드러움을 조절할 수 있습니다.' 
-                  : lang === 'EN' 
-                    ? 'Easily remove solid background colors from your image sequences or videos with adjustable tolerance and edge softening.' 
-                    : '画像シーケンスやビデオから単色背景を簡単に削除します。許容誤差とエッジの柔らかさを調整できます。'}
+                  ? '모든 작업이 브라우저 내부에서 처리되어 영상을 서버로 전송하지 않습니다.' 
+                  : 'All processing happens securely inside your browser. No server uploads.'}
               </p>
             </div>
             
             <div className={`p-8 rounded-3xl border flex flex-col items-center text-center transition-all hover:scale-[1.02] ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-gray-50 border-gray-200 hover:bg-white hover:shadow-xl'}`}>
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 relative ${isDark ? 'bg-purple-500/10' : 'bg-purple-50'}`}>
-                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-purple-500/20 to-transparent blur-md"></div>
-                <Wand2 className={`w-8 h-8 relative z-10 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} strokeWidth={1} />
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 relative ${isDark ? 'bg-green-500/10' : 'bg-green-50'}`}>
+                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-green-500/20 to-transparent blur-md"></div>
+                <Wand2 className={`w-8 h-8 relative z-10 ${isDark ? 'text-green-400' : 'text-green-600'}`} strokeWidth={1.5} />
               </div>
               <h3 className="text-xl font-bold mb-3">
-                {lang === 'KR' ? '알파 복구' : lang === 'EN' ? 'Alpha Recovery' : 'アルファ復元'}
+                Free to Use
               </h3>
               <p className={isDark ? 'text-white/60' : 'text-gray-600'}>
                 {lang === 'KR' 
-                  ? '실수로 너무 많이 지워졌나요? 스마트 채우기와 브러쉬 도구를 사용하여 반투명 영역의 손실된 디테일을 복구하세요.' 
-                  : lang === 'EN' 
-                    ? 'Accidentally removed too much? Use our smart fill and brush tools to recover lost details in semi-transparent areas.' 
-                    : '誤って消しすぎましたか？スマートフィルとブラシツールを使用して、半透明領域の失われた詳細を復元します。'}
+                  ? '회원가입 없이 즉시 브라우저에서 투명 에셋 생성을 시작하세요.' 
+                  : 'Start creating transparent assets instantly in your browser with no sign-ups required.'}
               </p>
             </div>
 
             <div className={`p-8 rounded-3xl border flex flex-col items-center text-center transition-all hover:scale-[1.02] ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-gray-50 border-gray-200 hover:bg-white hover:shadow-xl'}`}>
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 relative ${isDark ? 'bg-green-500/10' : 'bg-green-50'}`}>
-                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-green-500/20 to-transparent blur-md"></div>
-                <Download className={`w-8 h-8 relative z-10 ${isDark ? 'text-green-400' : 'text-green-600'}`} strokeWidth={1} />
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 relative ${isDark ? 'bg-purple-500/10' : 'bg-purple-50'}`}>
+                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-purple-500/20 to-transparent blur-md"></div>
+                <Shield className={`w-8 h-8 relative z-10 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} strokeWidth={1.5} />
               </div>
               <h3 className="text-xl font-bold mb-3">
-                {lang === 'KR' ? '로컬 프로세싱' : lang === 'EN' ? 'Local Processing' : 'ローカル処理'}
+                Data Privacy
               </h3>
               <p className={isDark ? 'text-white/60' : 'text-gray-600'}>
                 {lang === 'KR' 
-                  ? '파일이 기기를 떠나지 않습니다. 모든 처리는 WebAssembly를 사용하여 브라우저 내에서 안전하게 수행됩니다.' 
-                  : lang === 'EN' 
-                    ? 'Your files never leave your device. All processing is done securely within your browser using WebAssembly.' 
-                    : 'ファイルがデバイスから離れることはありません。すべての処理はWebAssemblyを使用してブラウザ内で安全に行われます。'}
+                  ? '영상과 이미지는 브라우저 안에서 로컬로 처리됩니다. BananaCut은 사용자의 미디어 파일을 서버에 업로드하거나 저장하지 않습니다.' 
+                  : 'Your videos and images are processed locally in your browser. BananaCut does not upload or store your media files on our servers.'}
               </p>
             </div>
           </section>
@@ -463,9 +418,9 @@ export default function LandingPage() {
                 Perfect for AI Creators
               </h2>
               <p className={`text-xl md:text-2xl leading-relaxed max-w-4xl ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-                {lang === 'KR' ? 'Midjourney, Luma, Runway와 같은 AI 생성 모델을 다루는 창작자에게 바나나컷은 \'완벽한 에셋 파이프라인\'을 제공합니다. 크로마키 작업 후 결과물을 이미지로 받는 것을 넘어, 배경이 투명한 WebM 비디오로 추출하거나 게임 엔진용 스프라이트 시트(Sprite Sheet)로 즉시 병합하세요. AI 영상이 프로덕션급 게임/영상 에셋으로 재탄생합니다.' : 
-                 lang === 'EN' ? 'BananaCut offers a \'complete asset pipeline\' for creators using AI generation models like Midjourney, Luma, and Runway. Go beyond simple image sequences—export your chroma-keyed results as transparent WebM videos or merge them instantly into game-ready sprite sheets. Transform raw AI videos into production-grade assets.' : 
-                 'Midjourney、Luma、RunwayなどのAI生成モデルを扱うクリエイターに、BananaCutは「完璧なアセットパイプライン」を提供します。クロマキー作業後、背景が透明なWebMビデオとして書き出したり、ゲームエンジン用のスプライトシートに即座に結合したりできます。AI動画がプロ仕様のゲーム/映像アセットに生まれ変わります。'}
+                {lang === 'KR' ? 'Seedance, Veo, Midjourney와 같은 최신 생성 모델을 다루는 창작자에게 바나나컷은 \'완벽한 에셋 파이프라인\'을 제공합니다. 크로마키 작업 후 결과물을 이미지로 받는 것을 넘어, 배경이 투명한 WebM 비디오로 추출하거나 게임 엔진용 스프라이트 시트(Sprite Sheet)로 즉시 병합하세요. 생성된 영상이 프로덕션급 게임/영상 에셋으로 재탄생합니다.' : 
+                 lang === 'EN' ? 'BananaCut offers a \'complete asset pipeline\' for creators using the latest generative models like Seedance, Veo, and Midjourney. Go beyond simple image sequences—export your chroma-keyed results as transparent WebM videos or merge them instantly into game-ready sprite sheets. Transform generated videos into production-grade assets.' : 
+                 'Seedance、Veo、Midjourneyなどの最新の生成モデルを扱うクリエイターに、BananaCutは「完璧なアセットパイプライン」を提供します。クロマキー作業後、背景が透明なWebMビデオとして書き出したり、ゲームエンジン用のスプライトシートに即座に結合したりできます。生成された動画がプロ仕様のゲーム/映像アセットに生まれ変わります。'}
               </p>
             </div>
 
