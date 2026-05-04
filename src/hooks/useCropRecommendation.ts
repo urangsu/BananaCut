@@ -17,30 +17,14 @@ export function useCropRecommendation() {
   const [isAnalyzingCrop, setIsAnalyzingCrop] = useState(false);
   const [cropAnalysisProgress, setCropAnalysisProgress] = useState({ current: 0, total: 0 });
 
-  const analyze = useCallback(async (
-    frames: StudioFrame[],
-    processFrames: (indices: number[]) => Promise<StudioFrame[] | null>
-  ): Promise<{ box: Box | null; reason: 'processing-failed' | 'no-box' | null }> => {
-    let dirtyIndices: number[] = [];
-    frames.forEach((f, i) => {
-      if (!f.processedUrl || f.dirty) dirtyIndices.push(i);
-    });
-    
-    let framesToAnalyze = frames;
-    if (dirtyIndices.length > 0) {
-      const updatedFrames = await processFrames(dirtyIndices);
-      if (updatedFrames) {
-        framesToAnalyze = updatedFrames;
-      } else {
-        return { box: null, reason: 'processing-failed' };
-      }
-    }
-
+  const analyzeProcessedFrames = useCallback(async (
+    frames: StudioFrame[]
+  ): Promise<{ box: Box | null; reason: 'no-box' | null }> => {
     setIsAnalyzingCrop(true);
-    setCropAnalysisProgress({ current: 0, total: framesToAnalyze.length });
+    setCropAnalysisProgress({ current: 0, total: frames.length });
     
     try {
-      const result = await analyzeFrameBounds(framesToAnalyze, {
+      const result = await analyzeFrameBounds(frames, {
         alphaThreshold: 10,
         padding: 5,
         useProcessed: true,
@@ -67,6 +51,6 @@ export function useCropRecommendation() {
     setCropSettings,
     isAnalyzingCrop,
     cropAnalysisProgress,
-    analyze
+    analyzeProcessedFrames
   };
 }

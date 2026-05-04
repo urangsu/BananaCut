@@ -119,7 +119,7 @@ export default function RemovePage() {
     setCropSettings, 
     isAnalyzingCrop, 
     cropAnalysisProgress, 
-    analyze 
+    analyzeProcessedFrames 
   } = useCropRecommendation();
 
   const [isDragging, setIsDragging] = useState(false);
@@ -127,34 +127,33 @@ export default function RemovePage() {
   const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
 
   const handleAnalyzeCrop = async () => {
-    const dirtyCount = frames.filter((f) => !f.processedUrl || f.dirty).length;
-    if (dirtyCount > 0) {
+    const dirtyIndices = frames.map((_, i) => i).filter(i => !frames[i].processedUrl || frames[i].dirty);
+    
+    let framesToAnalyze = frames;
+
+    if (dirtyIndices.length > 0) {
       const confirmed = confirm(lang === 'KR' 
-        ? `${dirtyCount}개의 프레임이 아직 적용되지 않았습니다. 여백 분석을 위해 먼저 현재 설정을 적용할까요?` 
+        ? `${dirtyIndices.length}개의 프레임이 아직 적용되지 않았습니다. 여백 분석을 위해 먼저 현재 설정을 적용할까요?` 
         : lang === 'EN'
-        ? `${dirtyCount} frames are not processed. Apply current settings before crop analysis?`
-        : `${dirtyCount} フレームが未処理です。クロップ分析の前に現在の設定を適用しますか？`);
+        ? `${dirtyIndices.length} frames are not processed. Apply current settings before crop analysis?`
+        : `${dirtyIndices.length} フレームが未処理です。クロップ分析の前に現在の設定を適用しますか？`);
       
       if (!confirmed) return;
+
+      const { frames: processedFrames, failedIndices } = await processTargetFrames(dirtyIndices);
+      if (failedIndices.length > 0) {
+        alert(lang === 'KR' ? `일부 프레임은 적용되었지만, 실패한 프레임(${failedIndices.join(', ')})이 있어 여백 분석을 중단했습니다.`
+              : lang === 'EN' ? `Some frames were applied, but crop analysis was stopped because these frames failed: ${failedIndices.join(', ')}.`
+              : `一部のフレームは適用されましたが、失敗したフレーム(${failedIndices.join(', ')})があるためクロップ分析を中止しました。`);
+        return;
+      }
+      framesToAnalyze = processedFrames || frames;
     }
 
-    const { frames: processedFrames, failedIndices } = await processTargetFrames(frames.map((_, i) => i).filter(i => !frames[i].processedUrl || frames[i].dirty));
-    
-    // Pass the updated frames to analyze if processing was successful, or continue with current frames if nothing to process
-    const framesToAnalyze = processedFrames || frames;
+    const { box, reason } = await analyzeProcessedFrames(framesToAnalyze);
 
-    const analyzeResult = await analyze(framesToAnalyze, async (indices) => {
-        const result = await processTargetFrames(indices);
-        return result.frames;
-    });
-
-    if (!analyzeResult.box) {
-        if (analyzeResult.reason === 'processing-failed') {
-            const msg = lang === 'KR' ? `분석을 위해 프레임을 처리하는 중 오류가 발생했습니다 (실패한 프레임: ${failedIndices.join(', ')}). 먼저 수동으로 적용을 시도하세요.` 
-                    : lang === 'EN' ? `Failed to process frames for analysis (failed indices: ${failedIndices.join(', ')}). Try applying manually first.`
-                    : `分析用のフレーム処理に失敗しました (失敗したフレーム: ${failedIndices.join(', ')}).`;
-            alert(msg);
-        } else {
+    if (!box) {
+        if (reason === 'no-box') {
             alert(lang === 'KR' ? '추천할 수 있는 여백이 없거나 처리할 수 없습니다.' : lang === 'EN' ? 'No margins found or unable to analyze.' : '分析可能な余白がありません。');
         }
     }
