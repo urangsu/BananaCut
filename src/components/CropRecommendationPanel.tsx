@@ -56,9 +56,9 @@ export function CropRecommendationPanel({
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={() => setCropSettings((prev: any) => ({ ...prev, isPreviewing: false }))}
-                      className={`w-full py-1 text-xs font-medium rounded ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                      className={`w-full py-1 text-xs font-bold rounded ${isDark ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                     >
-                        {lang === 'KR' ? '미리보기 종료' : lang === 'EN' ? 'Exit Preview' : 'プレビューを終了'}
+                        {lang === 'KR' ? '미리보기 종료 (Exit Preview)' : lang === 'EN' ? 'Exit Preview' : 'プレビューを終了'}
                     </button>
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input 

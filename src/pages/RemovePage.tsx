@@ -138,21 +138,21 @@ export default function RemovePage() {
       if (!confirmed) return;
     }
 
-    const { frames: processedFrames, failedCount } = await processTargetFrames(frames.map((_, i) => i).filter(i => !frames[i].processedUrl || frames[i].dirty));
+    const { frames: processedFrames, failedCount, failedIndices } = await processTargetFrames(frames.map((_, i) => i).filter(i => !frames[i].processedUrl || frames[i].dirty));
     
     // Pass the updated frames to analyze if processing was successful, or continue with current frames if nothing to process
     const framesToAnalyze = processedFrames || frames;
 
-    const box = await analyze(framesToAnalyze, async (indices) => {
+    const analyzeResult = await analyze(framesToAnalyze, async (indices) => {
         const result = await processTargetFrames(indices);
         return result.frames;
     });
 
-    if (!box) {
-        if (failedCount > 0) {
-            const msg = lang === 'KR' ? `${failedCount}개의 프레임 적용에 실패했습니다. 실패한 부분을 수정하고 다시 시도하세요.` 
-                    : lang === 'EN' ? `Analysis aborted. ${failedCount} frames failed to process.`
-                    : `${failedCount} フレームの処理に失敗しました。`;
+    if (!analyzeResult.box) {
+        if (analyzeResult.reason === 'processing-failed') {
+            const msg = lang === 'KR' ? `분석을 위해 프레임을 처리하는 중 오류가 발생했습니다 (실패한 프레임: ${failedIndices.join(', ')}). 먼저 수동으로 적용을 시도하세요.` 
+                    : lang === 'EN' ? `Failed to process frames for analysis (failed indices: ${failedIndices.join(', ')}). Try applying manually first.`
+                    : `分析用のフレーム処理に失敗しました (失敗したフレーム: ${failedIndices.join(', ')}).`;
             alert(msg);
         } else {
             alert(lang === 'KR' ? '추천할 수 있는 여백이 없거나 처리할 수 없습니다.' : lang === 'EN' ? 'No margins found or unable to analyze.' : '分析可能な余白がありません。');
@@ -160,11 +160,11 @@ export default function RemovePage() {
     }
   };
 
-  const processTargetFrames = async (targetIndices: number[]): Promise<{ frames: StudioFrame[] | null; failedCount: number }> => {
-    if (targetIndices.length === 0) return { frames: null, failedCount: 0 };
+  const processTargetFrames = async (targetIndices: number[]): Promise<{ frames: StudioFrame[] | null; failedCount: number; failedIndices: number[] }> => {
+    if (targetIndices.length === 0) return { frames: frames, failedCount: 0, failedIndices: [] };
     setFailedItems([]);
     const newFrames = [...frames];
-    let failedResultCount = 0;
+    let failedIndices: number[] = [];
     
     await startJob<number, void>({
       items: targetIndices,
@@ -215,8 +215,8 @@ export default function RemovePage() {
       }
     });
 
-    if (failedResultCount > 0) return { frames: null, failedCount: failedResultCount };
-    return { frames: newFrames, failedCount: 0 };
+    if (failedIndices.length > 0) return { frames: null, failedCount: failedIndices.length, failedIndices };
+    return { frames: newFrames, failedCount: 0, failedIndices: [] };
   };
   const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set([0]));
   

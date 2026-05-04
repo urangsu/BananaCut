@@ -20,7 +20,7 @@ export function useCropRecommendation() {
   const analyze = useCallback(async (
     frames: StudioFrame[],
     processFrames: (indices: number[]) => Promise<StudioFrame[] | null>
-  ) => {
+  ): Promise<{ box: Box | null; reason: 'processing-failed' | 'no-box' | null }> => {
     let dirtyIndices: number[] = [];
     frames.forEach((f, i) => {
       if (!f.processedUrl || f.dirty) dirtyIndices.push(i);
@@ -32,7 +32,7 @@ export function useCropRecommendation() {
       if (updatedFrames) {
         framesToAnalyze = updatedFrames;
       } else {
-        return null;
+        return { box: null, reason: 'processing-failed' };
       }
     }
 
@@ -54,8 +54,9 @@ export function useCropRecommendation() {
           enabledForExport: false,
           isPreviewing: true
         });
+        return { box: result.stableBox, reason: null };
       }
-      return result.stableBox;
+      return { box: null, reason: 'no-box' };
     } finally {
       setIsAnalyzingCrop(false);
     }
