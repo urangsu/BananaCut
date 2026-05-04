@@ -42,6 +42,7 @@ export function useMediaImport({
   const abortControllerRef = useRef<AbortController | null>(null);
   const extractionRunIdRef = useRef(0);
   const extractionProgressRef = useRef({ current: 0, lastUpdated: 0 });
+  const activeImportFramesRef = useRef<StudioFrame[]>([]);
 
   const isExtracting = uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading';
 
@@ -82,7 +83,11 @@ export function useMediaImport({
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    frames.forEach(revokeFrameUrls);
+    
+    const allFrames = new Set([...frames, ...activeImportFramesRef.current]);
+    allFrames.forEach(revokeFrameUrls);
+    
+    activeImportFramesRef.current = [];
     setFrames([]);
     setUploadState('idle');
     setExtractionStartMs(null);
@@ -187,6 +192,7 @@ export function useMediaImport({
                return;
              }
              accumulatedFrames = [...accumulatedFrames, ...chunk];
+             activeImportFramesRef.current = accumulatedFrames;
              setFrames(accumulatedFrames);
              if (accumulatedFrames.length === chunk.length) {
                 setCurrentFrame(0);

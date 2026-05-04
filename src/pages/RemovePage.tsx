@@ -1,6 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
 import { Upload, Play, Square, Download, Settings, Loader2, Sliders, ChevronDown, Brush, Eraser, MousePointer2, X, Flag, Pipette, Crop } from 'lucide-react';
 import JSZip from 'jszip';
 import { useTheme } from '../ThemeContext';
@@ -15,8 +13,8 @@ import { useMediaImport } from '../hooks/useMediaImport';
 import { useLanguage } from '../LanguageContext';
 import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
 import { PerfLogger } from '../utils/performanceLogger';
-import { extractFramesNative } from '../utils/nativeVideoExtract';
-import { analyzeFrameBounds, Box } from '../utils/boundingBox';
+import { useCropRecommendation } from '../hooks/useCropRecommendation';
+import { CropRecommendationPanel } from '../components/CropRecommendationPanel';
 
 /*
   Feature Design: Artifact Cleanup (Future Enhancement)
@@ -116,70 +114,25 @@ export default function RemovePage() {
 
   const [showTechErrorModal, setShowTechErrorModal] = useState(false);
   
-  const [cropSettings, setCropSettings] = useState<{
-    box: Box | null;
-    recommendedCanvas: { width: number; height: number } | null;
-    enabledForExport: boolean;
-    isPreviewing: boolean;
-  }>({
-    box: null,
-    recommendedCanvas: null,
-    enabledForExport: false,
-    isPreviewing: false
-  });
-  const [isAnalyzingCrop, setIsAnalyzingCrop] = useState(false);
-  const [cropAnalysisProgress, setCropAnalysisProgress] = useState({ current: 0, total: 0 });
+  const { 
+    cropSettings, 
+    setCropSettings, 
+    isAnalyzingCrop, 
+    cropAnalysisProgress, 
+    analyze 
+  } = useCropRecommendation();
+
+  const framesRef = useRef(frames);
+  useEffect(() => { framesRef.current = frames; }, [frames]);
 
   const [isDragging, setIsDragging] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
 
   const handleAnalyzeCrop = async () => {
-    let dirtyIndices: number[] = [];
-    frames.forEach((f, i) => {
-      if (!f.processedUrl || f.dirty) dirtyIndices.push(i);
-    });
-    
-    if (dirtyIndices.length > 0) {
-      const confirmed = confirm(lang === 'KR' 
-        ? `${dirtyIndices.length}개의 프레임이 적용되지 않았습니다. 여백 분석을 위해 먼저 적용할까요?` 
-        : lang === 'EN'
-        ? `${dirtyIndices.length} frames are not processed. Apply them first to analyze crop?`
-        : `${dirtyIndices.length} フレームが適用されていません。クロップの分析の前に適用しますか？`);
-        
-      if (confirmed) {
-        await processTargetFrames(dirtyIndices);
-      } else {
-        return;
-      }
-    }
-
-    setIsAnalyzingCrop(true);
-    setCropAnalysisProgress({ current: 0, total: frames.length });
-    
-    try {
-      const result = await analyzeFrameBounds(frames, {
-        alphaThreshold: 10,
-        padding: 5,
-        useProcessed: true,
-        onProgress: (current, total) => setCropAnalysisProgress({ current, total })
-      });
-      
-      if (result.stableBox) {
-        setCropSettings({
-          box: result.stableBox,
-          recommendedCanvas: result.recommendedCanvas,
-          enabledForExport: false,
-          isPreviewing: true
-        });
-      } else {
+    const box = await analyze(frames, processTargetFrames);
+    if (!box) {
         alert(lang === 'KR' ? '추천할 수 있는 여백이 없거나 처리할 수 없습니다.' : lang === 'EN' ? 'No margins found or unable to analyze.' : '分析可能な余白がありません。');
-      }
-    } catch(err) {
-      console.error(err);
-      alert('Error analyzing crop bounds');
-    } finally {
-      setIsAnalyzingCrop(false);
     }
   };
 
@@ -638,6 +591,12 @@ export default function RemovePage() {
   };
 
   const animationFrameRef = useRef<number>();
+
+  useEffect(() => {
+    if (cropSettings.isPreviewing) {
+        setIsBrushActive(false);
+    }
+  }, [cropSettings.isPreviewing]);
 
   useEffect(() => {
     return () => {
@@ -1651,6 +1610,19 @@ export default function RemovePage() {
                   )}
                 </div>
               </div>
+
+              <CropRecommendationPanel
+                isDark={isDark}
+                lang={lang}
+                panelClass={isDark ? "bg-white/5 border border-white/10 p-4 rounded-xl" : "bg-white border border-gray-200 p-4 rounded-xl shadow-sm"}
+                isExtracting={isExtracting}
+                isAnalyzingCrop={isAnalyzingCrop}
+                cropAnalysisProgress={cropAnalysisProgress}
+                cropSettings={cropSettings}
+                setCropSettings={setCropSettings}
+                handleAnalyzeCrop={handleAnalyzeCrop}
+                framesLength={frames.length}
+              />
 
               <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
                 <div className="flex justify-between items-center mb-3">
