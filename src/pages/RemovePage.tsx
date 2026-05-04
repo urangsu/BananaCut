@@ -138,7 +138,7 @@ export default function RemovePage() {
       if (!confirmed) return;
     }
 
-    const { frames: processedFrames, failedCount, failedIndices } = await processTargetFrames(frames.map((_, i) => i).filter(i => !frames[i].processedUrl || frames[i].dirty));
+    const { frames: processedFrames, failedIndices } = await processTargetFrames(frames.map((_, i) => i).filter(i => !frames[i].processedUrl || frames[i].dirty));
     
     // Pass the updated frames to analyze if processing was successful, or continue with current frames if nothing to process
     const framesToAnalyze = processedFrames || frames;
@@ -211,7 +211,7 @@ export default function RemovePage() {
       onPartialSuccess: (_, failed) => {
         setFrames(newFrames);
         setFailedItems(failed);
-        failedResultCount = failed.length;
+        failedIndices = failed;
       }
     });
 
