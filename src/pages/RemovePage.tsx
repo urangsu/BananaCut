@@ -138,21 +138,33 @@ export default function RemovePage() {
       if (!confirmed) return;
     }
 
-    const box = await analyze(frames, processTargetFrames);
+    const { frames: processedFrames, failedCount } = await processTargetFrames(frames.map((_, i) => i).filter(i => !frames[i].processedUrl || frames[i].dirty));
+    
+    // Pass the updated frames to analyze if processing was successful, or continue with current frames if nothing to process
+    const framesToAnalyze = processedFrames || frames;
+
+    const box = await analyze(framesToAnalyze, async (indices) => {
+        const result = await processTargetFrames(indices);
+        return result.frames;
+    });
+
     if (!box) {
-        if (failedItems.length > 0 || frames.some(f => !f.processedUrl || f.dirty)) {
-            alert(lang === 'KR' ? '일부 프레임 적용에 실패하여 여백 분석을 중단했습니다.' : lang === 'EN' ? 'Analysis aborted due to frame processing failure.' : 'フレーム処理に失敗したため分析を中断しました。');
+        if (failedCount > 0) {
+            const msg = lang === 'KR' ? `${failedCount}개의 프레임 적용에 실패했습니다. 실패한 부분을 수정하고 다시 시도하세요.` 
+                    : lang === 'EN' ? `Analysis aborted. ${failedCount} frames failed to process.`
+                    : `${failedCount} フレームの処理に失敗しました。`;
+            alert(msg);
         } else {
             alert(lang === 'KR' ? '추천할 수 있는 여백이 없거나 처리할 수 없습니다.' : lang === 'EN' ? 'No margins found or unable to analyze.' : '分析可能な余白がありません。');
         }
     }
   };
 
-  const processTargetFrames = async (targetIndices: number[]) => {
-    if (targetIndices.length === 0) return null;
+  const processTargetFrames = async (targetIndices: number[]): Promise<{ frames: StudioFrame[] | null; failedCount: number }> => {
+    if (targetIndices.length === 0) return { frames: null, failedCount: 0 };
     setFailedItems([]);
     const newFrames = [...frames];
-    let failedResult: number[] = [];
+    let failedResultCount = 0;
     
     await startJob<number, void>({
       items: targetIndices,
@@ -199,12 +211,12 @@ export default function RemovePage() {
       onPartialSuccess: (_, failed) => {
         setFrames(newFrames);
         setFailedItems(failed);
-        failedResult = failed;
+        failedResultCount = failed.length;
       }
     });
 
-    if (failedResult.length > 0) return null;
-    return newFrames;
+    if (failedResultCount > 0) return { frames: null, failedCount: failedResultCount };
+    return { frames: newFrames, failedCount: 0 };
   };
   const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set([0]));
   
