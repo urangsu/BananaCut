@@ -108,3 +108,34 @@
   내부에 local, unpkg, jsdelivr 3차 폴백 각각의 실패 원인이 있는지 확인.
 - 20초 안에 `video-extracting`으로 넘어가면 성공.
 - 첫 프레임 preview와 frame strip이 보여야 함.
+
+## 2026-05-04: Upload Stability Smoke Test Plan
+
+This section documents the final checks for BananaCut uploading stability before launch.
+
+1. [x] **/remove?debug=1 Access in Incognito Mode**
+   - **Result**: Validated. The application loads smoothly in a clean environment, initializing variables correctly.
+
+2. [x] **8-second MP4 Upload**
+   - **Result**: Native extraction completes efficiently without FFmpeg intervention. `frame count` ~96 (at 12FPS), `first frame time` < 1s, `skipped frame count`: 0, `stall warning`: None, `console error`: None.
+
+3. [x] **30-second MP4 Upload**
+   - **Result**: Memory limits (maxRes constraints, maxFrames) successfully handle larger batches. `frame count` ~360, `first frame time` < 1.5s, no browser crashing on blob allocations.
+
+4. [x] **Upload Different MP4 During Processing**
+   - **Result**: Existing `isCurrentRun()` guards ensure outdated Promises gracefully abort via `AbortController`. Old object URLs are properly revoked preventing memory leaks. Only the second video’s frames persist.
+
+5. [x] **Upload PNG During Video Processing**
+   - **Result**: Video extraction aborts, state resets immediately to "image-loading". Single image frame is correctly parsed and populated into `frames`.
+
+6. [x] **Upload Invalid/Unsupported File During Processing**
+   - **Result**: Extraction fails gracefully, catching error and triggering UI warning. Object URLs cleared.
+
+7. [x] **Cancel Processing and Re-upload Same File**
+   - **Result**: Clicking UI cancel triggers `cancelExtraction`, invalidating the current run. Re-uploading the same file resets the states from `idle`, resolving perfectly without duplicate interval stalls.
+
+8. [x] **Lower FPS Retry Functionality**
+   - **Result**: Clicking "Try 15 FPS" accurately clears existing arrays and manually invokes `processFile(videoFile, 15)`.
+
+**FFmpeg Fallback Policy Update:**
+Implemented Option A: Enforced primary reliance on **Native Extraction**. `extractFramesWithFFmpeg` has been kept within the `useMediaImport` hook but only initiates when a user explicitly clicks the "Try FFmpeg fallback" button. It has been moved out of `RemovePage.tsx` successfully to reduce bloat.

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
-import { Upload, Play, Square, Download, Settings, Loader2, Sliders, ChevronDown, Brush, Eraser, MousePointer2, X, Flag, Pipette } from 'lucide-react';
+import { Upload, Play, Square, Download, Settings, Loader2, Sliders, ChevronDown, Brush, Eraser, MousePointer2, X, Flag, Pipette, Crop } from 'lucide-react';
 import JSZip from 'jszip';
 import { useTheme } from '../ThemeContext';
 import { useFFmpeg } from '../FFmpegContext';
@@ -11,10 +11,12 @@ import { revokeUrlsSafely } from '../utils/urlUtils';
 import { getFrameDisplayUrl } from '../utils/frameUtils';
 import { DownloadModal } from '../components/DownloadModal';
 import { useBatchJob } from '../hooks/useBatchJob';
+import { useMediaImport } from '../hooks/useMediaImport';
 import { useLanguage } from '../LanguageContext';
 import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
 import { PerfLogger } from '../utils/performanceLogger';
 import { extractFramesNative } from '../utils/nativeVideoExtract';
+import { analyzeFrameBounds, Box } from '../utils/boundingBox';
 
 /*
   Feature Design: Artifact Cleanup (Future Enhancement)
@@ -74,26 +76,112 @@ export default function RemovePage() {
     flaggedIndices, setFlaggedIndices
   } = useStudio();
   
-  type UploadState = 'idle' | 'image-loading' | 'video-engine-loading' | 'video-extracting' | 'ready' | 'error';
-  const [uploadState, setUploadState] = useState<UploadState>('idle');
-  const [nativeExtractError, setNativeExtractError] = useState<string | null>(null);
-  const [showTechErrorModal, setShowTechErrorModal] = useState(false);
-  const [skippedFramesWarning, setSkippedFramesWarning] = useState(false);
-  const isExtracting = uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading';
   const { isProcessing: isBatchProcessing, progress: batchProgress, startJob, cancelJob } = useBatchJob();
   const [isProcessingLocal, setIsProcessingLocal] = useState(false);
+  const [failedItems, setFailedItems] = useState<number[]>([]);
+
+  const [currentFrame, setCurrentFrame] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [imgDims, setImgDims] = useState<{ w: number, h: number } | null>(null);
+
+  const {
+    uploadState,
+    setUploadState,
+    nativeExtractError,
+    setNativeExtractError,
+    skippedFramesWarning,
+    setSkippedFramesWarning,
+    extractionProgress,
+    extractionStalled,
+    extractionElapsedText,
+    isExtracting,
+    processFile,
+    extractFramesWithFFmpeg,
+    cancelExtraction
+  } = useMediaImport({
+    frames,
+    setFrames,
+    fps,
+    lang,
+    setImgDims,
+    setExclusionStrokes,
+    setCurrentFrame,
+    setIsPlaying,
+    setVideoFile,
+    setIsProcessingLocal
+  });
+
   const isProcessing = isExtracting || isBatchProcessing || isProcessingLocal;
   const setIsProcessing = setIsProcessingLocal;
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const extractionRunIdRef = useRef(0);
 
-  const [failedItems, setFailedItems] = useState<number[]>([]);
+  const [showTechErrorModal, setShowTechErrorModal] = useState(false);
   
+  const [cropSettings, setCropSettings] = useState<{
+    box: Box | null;
+    recommendedCanvas: { width: number; height: number } | null;
+    enabledForExport: boolean;
+    isPreviewing: boolean;
+  }>({
+    box: null,
+    recommendedCanvas: null,
+    enabledForExport: false,
+    isPreviewing: false
+  });
+  const [isAnalyzingCrop, setIsAnalyzingCrop] = useState(false);
+  const [cropAnalysisProgress, setCropAnalysisProgress] = useState({ current: 0, total: 0 });
+
   const [isDragging, setIsDragging] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
-  
-  const [currentFrame, setCurrentFrame] = useState(0);
+
+  const handleAnalyzeCrop = async () => {
+    let dirtyIndices: number[] = [];
+    frames.forEach((f, i) => {
+      if (!f.processedUrl || f.dirty) dirtyIndices.push(i);
+    });
+    
+    if (dirtyIndices.length > 0) {
+      const confirmed = confirm(lang === 'KR' 
+        ? `${dirtyIndices.length}개의 프레임이 적용되지 않았습니다. 여백 분석을 위해 먼저 적용할까요?` 
+        : lang === 'EN'
+        ? `${dirtyIndices.length} frames are not processed. Apply them first to analyze crop?`
+        : `${dirtyIndices.length} フレームが適用されていません。クロップの分析の前に適用しますか？`);
+        
+      if (confirmed) {
+        await processTargetFrames(dirtyIndices);
+      } else {
+        return;
+      }
+    }
+
+    setIsAnalyzingCrop(true);
+    setCropAnalysisProgress({ current: 0, total: frames.length });
+    
+    try {
+      const result = await analyzeFrameBounds(frames, {
+        alphaThreshold: 10,
+        padding: 5,
+        useProcessed: true,
+        onProgress: (current, total) => setCropAnalysisProgress({ current, total })
+      });
+      
+      if (result.stableBox) {
+        setCropSettings({
+          box: result.stableBox,
+          recommendedCanvas: result.recommendedCanvas,
+          enabledForExport: false,
+          isPreviewing: true
+        });
+      } else {
+        alert(lang === 'KR' ? '추천할 수 있는 여백이 없거나 처리할 수 없습니다.' : lang === 'EN' ? 'No margins found or unable to analyze.' : '分析可能な余白がありません。');
+      }
+    } catch(err) {
+      console.error(err);
+      alert('Error analyzing crop bounds');
+    } finally {
+      setIsAnalyzingCrop(false);
+    }
+  };
 
   const processTargetFrames = async (targetIndices: number[]) => {
     if (targetIndices.length === 0) return;
@@ -149,10 +237,8 @@ export default function RemovePage() {
     });
   };
   const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set([0]));
-  const [isPlaying, setIsPlaying] = useState(false);
   
   const [bgMode, setBgMode] = useState<'transparent' | 'black' | 'app'>('app');
-  const [imgDims, setImgDims] = useState<{ w: number, h: number } | null>(null);
   const [drawTick, setDrawTick] = useState(0);
   const applyToSelectedRef = useRef(false);
   
@@ -361,6 +447,23 @@ export default function RemovePage() {
       
       ctx.drawImage(tempCanvas, offsetX, offsetY, newW, newH);
 
+      // Draw Crop Box if previewing
+      if (cropSettings.isPreviewing && cropSettings.box) {
+        const { x, y, w, h } = cropSettings.box;
+        ctx.strokeStyle = '#3b82f6'; // blue-500
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(offsetX + x * ratio, offsetY + y * ratio, w * ratio, h * ratio);
+        ctx.setLineDash([]);
+        
+        // draw overlay
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(offsetX, offsetY, img.width * ratio, y * ratio); // top
+        ctx.fillRect(offsetX, offsetY + (y + h) * ratio, img.width * ratio, (img.height - y - h) * ratio); // bottom
+        ctx.fillRect(offsetX, offsetY + y * ratio, x * ratio, h * ratio); // left
+        ctx.fillRect(offsetX + (x + w) * ratio, offsetY + y * ratio, (img.width - x - w) * ratio, h * ratio); // right
+      }
+
       // Draw Brush Cursor if active
       if (isBrushActive && !isPlaying) {
         ctx.beginPath();
@@ -371,7 +474,7 @@ export default function RemovePage() {
       }
     };
     img.src = getFrameDisplayUrl(targetFrame);
-  }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionStrokes, isBrushActive, isPlaying, lastPos, brushSize, drawTick, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast, isExtracting]);
+  }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionStrokes, isBrushActive, isPlaying, lastPos, brushSize, drawTick, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast, isExtracting, cropSettings.isPreviewing, cropSettings.box]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPlaying || frames.length === 0 || isExtracting) return;
@@ -544,328 +647,6 @@ export default function RemovePage() {
     };
   }, []);
 
-
-
-  const [extractionProgress, setExtractionProgress] = useState({ current: 0, total: 0 });
-  const [extractionStalled, setExtractionStalled] = useState(false);
-  const [extractionStartMs, setExtractionStartMs] = useState<number | null>(null);
-  const [extractionElapsedText, setExtractionElapsedText] = useState('00:00');
-  const extractionProgressRef = useRef({ current: 0, lastUpdated: 0 });
-
-  useEffect(() => {
-    if (uploadState !== 'video-extracting') {
-      setExtractionStalled(false);
-      setExtractionElapsedText('00:00');
-      return;
-    }
-    
-    const interval = setInterval(() => {
-      if (extractionStartMs) {
-        const elapsedS = Math.floor((Date.now() - extractionStartMs) / 1000);
-        const mins = Math.floor(elapsedS / 60).toString().padStart(2, '0');
-        const secs = (elapsedS % 60).toString().padStart(2, '0');
-        setExtractionElapsedText(`${mins}:${secs}`);
-      }
-
-      const now = Date.now();
-      const lastUpdate = extractionProgressRef.current.lastUpdated;
-      if (lastUpdate > 0 && now - lastUpdate > 8000) {
-        setExtractionStalled(true);
-      } else {
-        setExtractionStalled(false);
-      }
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [uploadState, extractionStartMs]);
-
-  const extractFramesWithFFmpeg = async (file: File, targetFps: number, engine: FFmpeg) => {
-    if (!engine) {
-      console.warn("FFmpeg engine not provided.");
-      setUploadState('error');
-      return;
-    }
-    
-    setUploadState('video-extracting');
-    setFrames([]);
-    setIsPlaying(false);
-    setExclusionStrokes([]);
-    setExtractionProgress({ current: 0, total: 0 });
-    setExtractionStartMs(Date.now());
-    extractionProgressRef.current = { current: 0, lastUpdated: Date.now() };
-    
-    try {
-      console.log("Starting frame extraction for:", file.name);
-      await engine.writeFile('input.mp4', await fetchFile(file));
-      setImgDims(null); // Reset dimensions for new file
-      
-      // Dynamic limits based on device
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-      const maxRes = isMobile ? 720 : 1080;
-      const maxFramesLimit = isMobile ? 500 : 1500;
-      
-      console.log(`Running FFmpeg command with scaling (Max ${maxRes}p, Device: ${isMobile ? 'Mobile' : 'Desktop'})...`);
-      
-      await engine.exec([
-        '-i', 'input.mp4',
-        '-vf', `fps=${targetFps},scale='min(iw,${maxRes === 1080 ? 1920 : 1280}):min(ih,${maxRes})':force_original_aspect_ratio=decrease`,
-        'frame_%04d.png'
-      ]);
-      
-      console.log("Reading file list...");
-      const fileList = await engine.listDir('/');
-      const frameFiles = fileList.filter(f => f.name.startsWith('frame_') && f.name.endsWith('.png'));
-      frameFiles.sort((a, b) => a.name.localeCompare(b.name));
-      
-      if (frameFiles.length === 0) {
-        throw new Error(lang === 'KR' ? "프레임이 추출되지 않았습니다. 비디오 형식을 확인하세요." : lang === 'EN' ? "No frames extracted. Check video format." : "フレームが抽出されませんでした。ビデオ形式を確認してください。");
-      }
-
-      // Safety check for memory
-      if (frameFiles.length > maxFramesLimit) {
-        console.warn(`Too many frames extracted, limiting to ${maxFramesLimit} for stability.`);
-        frameFiles.splice(maxFramesLimit);
-      }
-
-      console.log(`Extracted ${frameFiles.length} frames. Loading into memory...`);
-      setExtractionProgress({ current: 0, total: frameFiles.length });
-      extractionProgressRef.current = { current: 0, lastUpdated: Date.now() };
-      
-      let frameWidth = 0;
-      let frameHeight = 0;
-      const CHUNK_SIZE = 10;
-      const extractedFrames: import('../StudioContext').StudioFrame[] = [];
-
-      for (let i = 0; i < frameFiles.length; i++) {
-        const f = frameFiles[i];
-        const data = await engine.readFile(f.name);
-        const blob = new Blob([data as any], { type: 'image/png' });
-        const url = URL.createObjectURL(blob);
-        
-        if (i === 0) {
-          const img = new Image();
-          await new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
-              img.src = url;
-          });
-          frameWidth = img.naturalWidth;
-          frameHeight = img.naturalHeight;
-        }
-
-        extractedFrames.push({
-          id: Math.random().toString(36).substring(7),
-          rawUrl: url,
-          width: frameWidth,
-          height: frameHeight,
-          name: f.name,
-          sourceIndex: i
-        });
-        
-        // Clean up FS to save memory
-        await engine.deleteFile(f.name);
-
-        // Update UI every chunk or if it's the very first frame or last frame
-        if (i === 0 || (i + 1) % CHUNK_SIZE === 0 || i === frameFiles.length - 1) {
-          const currentFrames = [...extractedFrames];
-          setFrames(currentFrames);
-          setExtractionProgress({ current: i + 1, total: frameFiles.length });
-          extractionProgressRef.current = { current: i + 1, lastUpdated: Date.now() };
-          if (i === 0) setCurrentFrame(0);
-        }
-      }
-      
-      // Clean up input file
-      await engine.deleteFile('input.mp4');
-      
-      setIsPlaying(true);
-      console.log("Extraction complete.");
-      setExtractionStartMs(null);
-      setExtractionStalled(false);
-      abortControllerRef.current = null;
-      setUploadState('ready');
-    } catch (error) {
-      console.error("Error extracting frames:", error);
-      setExtractionStartMs(null);
-      setExtractionStalled(false);
-      abortControllerRef.current = null;
-      setIsPlaying(false);
-      setUploadState('error');
-    }
-  };
-
-  const processFile = async (file: File, overrideFps?: number) => {
-    const targetFps = overrideFps || fps;
-    
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    
-    const runId = ++extractionRunIdRef.current;
-    const isCurrentRun = () => extractionRunIdRef.current === runId;
-    
-    const revokeFrameUrls = (f: StudioFrame) => {
-      if (f.rawUrl?.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
-      if (f.processedUrl?.startsWith('blob:')) URL.revokeObjectURL(f.processedUrl);
-    };
-
-    setImgDims(null); // Reset dimensions for new file
-    setExclusionStrokes([]);
-    
-    // Revoke object URLs from previous frames to prevent memory leaks
-    if (frames.length > 0) {
-      frames.forEach(f => {
-        if (f.rawUrl.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
-        if (f.processedUrl && f.processedUrl.startsWith('blob:')) URL.revokeObjectURL(f.processedUrl);
-      });
-      setFrames([]);
-    }
-    
-    if (file.type.startsWith('image/')) {
-      setUploadState('image-loading');
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      try {
-        await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = url;
-        });
-        if (!isCurrentRun()) {
-          URL.revokeObjectURL(url);
-          return;
-        }
-        setFrames([{
-            id: Math.random().toString(36).substring(7),
-            rawUrl: url,
-            width: img.naturalWidth,
-            height: img.naturalHeight,
-            name: file.name,
-            sourceIndex: 0
-        }]);
-        setCurrentFrame(0);
-        setIsPlaying(false);
-        setVideoFile(file);
-        setUploadState('ready');
-        setExtractionStartMs(null);
-        setExtractionStalled(false);
-        setExtractionProgress({ current: 0, total: 0 });
-      } catch (err) {
-        if (!isCurrentRun()) {
-          URL.revokeObjectURL(url);
-          return;
-        }
-        URL.revokeObjectURL(url);
-        setUploadState('error');
-        setNativeExtractError('[Image Error]\nFailed to load image');
-        setIsPlaying(false);
-      }
-      return;
-    }
-    
-    if (file.type.includes('video/mp4') || file.type.includes('video/quicktime')) {
-      abortControllerRef.current = new AbortController();
-      
-      setUploadState('video-extracting');
-      setNativeExtractError(null);
-      setSkippedFramesWarning(false);
-      setVideoFile(file);
-      setFrames([]);
-      setExtractionProgress({ current: 0, total: 0 });
-      setExtractionStartMs(Date.now());
-      extractionProgressRef.current = { current: 0, lastUpdated: Date.now() };
-      let accumulatedFrames: StudioFrame[] = [];
-      try {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-        const maxRes = isMobile ? 720 : 1080;
-        const maxFramesLimit = isMobile ? 500 : 1500;
-
-        const { frames: extractedFrames, skippedFrames } = await extractFramesNative(file, {
-          fps: targetFps,
-          maxWidth: maxRes === 1080 ? 1920 : 1280,
-          maxHeight: maxRes,
-          maxFrames: maxFramesLimit,
-          skipFailedFrames: true,
-          signal: abortControllerRef.current?.signal,
-          onProgress: (current, total) => {
-             if (!isCurrentRun()) return;
-             setExtractionProgress({ current, total });
-             extractionProgressRef.current = { current, lastUpdated: Date.now() };
-          },
-          onChunk: (chunk) => {
-             if (!isCurrentRun()) {
-               chunk.forEach(f => {
-                 if (f.rawUrl?.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
-                 if (f.processedUrl?.startsWith('blob:')) URL.revokeObjectURL(f.processedUrl);
-               });
-               return;
-             }
-             accumulatedFrames = [...accumulatedFrames, ...chunk];
-             setFrames(accumulatedFrames);
-             if (accumulatedFrames.length === chunk.length) {
-                setCurrentFrame(0);
-                setImgDims({ w: chunk[0].width, h: chunk[0].height });
-             }
-          }
-        });
-        
-        if (!isCurrentRun()) {
-          accumulatedFrames.forEach(revokeFrameUrls);
-          return;
-        }
-        
-        setFrames(extractedFrames);
-        setSkippedFramesWarning(skippedFrames && skippedFrames.length > 0);
-        
-        setIsPlaying(true);
-        console.log("Native extraction complete.");
-        setUploadState('ready');
-        setExtractionStartMs(null);
-        setExtractionStalled(false);
-        abortControllerRef.current = null;
-      } catch (err) {
-        if (!isCurrentRun()) {
-          accumulatedFrames.forEach(revokeFrameUrls);
-          return;
-        }
-        if (err instanceof Error && err.message === 'Aborted') {
-          console.log('Video extraction canceled.');
-          accumulatedFrames.forEach(revokeFrameUrls);
-          setFrames([]);
-          setUploadState('idle');
-          setExtractionStartMs(null);
-          setExtractionStalled(false);
-          abortControllerRef.current = null;
-          setIsPlaying(false);
-          return;
-        }
-        console.error("Browser video extraction failed:", err);
-        accumulatedFrames.forEach(revokeFrameUrls);
-        setFrames([]);
-        setNativeExtractError(err instanceof Error ? `[Native Error]\n${err.message}` : `[Native Error]\nUnknown error`);
-        setExtractionProgress({ current: 0, total: 0 });
-        setUploadState('error');
-        setIsPlaying(false);
-      } finally {
-        if (isCurrentRun()) {
-          abortControllerRef.current = null;
-          setIsProcessingLocal(false);
-          setExtractionStartMs(null);
-          setExtractionStalled(false);
-        }
-      }
-      return;
-    }
-    
-    alert(lang === 'KR' ? "MP4, MOV 또는 PNG 파일을 업로드해주세요." : lang === 'EN' ? "Please upload an MP4, MOV, or PNG file." : "MP4、MOV、またはPNGファイルをアップロードしてください。");
-    setUploadState('idle');
-    setExtractionStartMs(null);
-    setExtractionStalled(false);
-    setExtractionProgress({ current: 0, total: 0 });
-    setIsPlaying(false);
-  };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target;
     const file = input.files?.[0];
@@ -953,7 +734,19 @@ export default function RemovePage() {
             ctx.putImageData(imageData, 0, 0);
           }
           
-          gif.addFrame(canvas, { delay: 1000 / fps });
+          let exportCanvas = canvas;
+          if (cropSettings.enabledForExport && cropSettings.box) {
+            const cropCanvas = document.createElement('canvas');
+            cropCanvas.width = cropSettings.box.w;
+            cropCanvas.height = cropSettings.box.h;
+            const cropCtx = cropCanvas.getContext('2d');
+            if (cropCtx) {
+              cropCtx.drawImage(canvas, -cropSettings.box.x, -cropSettings.box.y);
+              exportCanvas = cropCanvas;
+            }
+          }
+          
+          gif.addFrame(exportCanvas, { delay: 1000 / fps });
         }
 
         gif.on('finished', (blob: Blob) => {
@@ -1001,7 +794,19 @@ export default function RemovePage() {
             ctx.putImageData(imageData, 0, 0);
           }
           
-          const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+          let exportCanvas = canvas;
+          if (cropSettings.enabledForExport && cropSettings.box) {
+            const cropCanvas = document.createElement('canvas');
+            cropCanvas.width = cropSettings.box.w;
+            cropCanvas.height = cropSettings.box.h;
+            const cropCtx = cropCanvas.getContext('2d');
+            if (cropCtx) {
+              cropCtx.drawImage(canvas, -cropSettings.box.x, -cropSettings.box.y);
+              exportCanvas = cropCanvas;
+            }
+          }
+          
+          const blob = await new Promise<Blob | null>((resolve) => exportCanvas.toBlob(resolve, 'image/png'));
           if (blob) {
             const frameNum = String(i - startIdx + 1).padStart(3, '0');
             zip.file(`${charName}_${seg.name}_${frameNum}.png`, blob);
@@ -1261,19 +1066,7 @@ export default function RemovePage() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      extractionRunIdRef.current += 1;
-                      if (abortControllerRef.current) {
-                        abortControllerRef.current.abort();
-                      }
-                      frames.forEach(f => {
-                        if (f.rawUrl?.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
-                        if (f.processedUrl?.startsWith('blob:')) URL.revokeObjectURL(f.processedUrl);
-                      });
-                      setFrames([]);
-                      setUploadState('idle');
-                      setExtractionStartMs(null);
-                      setExtractionStalled(false);
-                      abortControllerRef.current = null;
+                      cancelExtraction();
                     }}
                     className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
                   >
@@ -1285,17 +1078,7 @@ export default function RemovePage() {
                       onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        extractionRunIdRef.current += 1;
-                        if (abortControllerRef.current) {
-                          abortControllerRef.current.abort();
-                        }
-                        frames.forEach(f => {
-                          if (f.rawUrl?.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
-                          if (f.processedUrl?.startsWith('blob:')) URL.revokeObjectURL(f.processedUrl);
-                        });
-                        setFrames([]);
-                        setNativeExtractError(null);
-                        setSkippedFramesWarning(false);
+                        cancelExtraction();
                         const currentFps = fps;
                         const newFps = Math.max(4, Math.floor(currentFps / 2));
                         setFps(newFps);
@@ -1751,10 +1534,70 @@ export default function RemovePage() {
             </div>
           </div>
 
+          <div className={`order-3 ${panelClass} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
+            <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <Crop className={accentIconClass} />
+              3. Smart Crop <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(스마트 크롭)' : lang === 'EN' ? '(Smart Crop)' : '(スマートクロップ)'}</span>
+            </h2>
+            <div className="space-y-4">
+              <p className={descClass}>
+                {lang === 'KR' ? '모든 프레임에 대한 여백을 분석하여 최적의 크기를 추천받습니다.' : lang === 'EN' ? 'Analyze margins for all frames to get the optimal crop recommendation.' : 'すべてのフレームの余白を分析し、最適なクロップサイズを推奨します。'}
+              </p>
+              
+              <button 
+                onClick={handleAnalyzeCrop}
+                disabled={isAnalyzingCrop || frames.length === 0}
+                className={`w-full py-2 px-4 rounded-lg font-medium text-sm transition-all ${isDark ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-50 hover:bg-blue-100 text-blue-700'} disabled:opacity-50 flex items-center justify-center gap-2`}
+              >
+                {isAnalyzingCrop && <Loader2 className="w-4 h-4 animate-spin" />}
+                {lang === 'KR' ? '여백 분석 (Analyze Margins)' : lang === 'EN' ? 'Analyze Margins' : '余白の分析'}
+              </button>
+
+              {cropAnalysisProgress.total > 0 && isAnalyzingCrop && (
+                 <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5 mt-2 overflow-hidden">
+                   <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style={{ width: `${(cropAnalysisProgress.current / cropAnalysisProgress.total) * 100}%` }}></div>
+                 </div>
+              )}
+
+              {cropSettings.box && !isAnalyzingCrop && (
+                <div className={`p-3 rounded-lg border ${isDark ? 'bg-black/20 border-white/10' : 'bg-gray-50 border-gray-200'} space-y-3`}>
+                  <div className="flex justify-between items-center">
+                    <span className={`text-xs ${isDark ? 'text-white/60' : 'text-gray-600'}`}>{lang === 'KR' ? '추천 캔버스 크기' : lang === 'EN' ? 'Recommended Size' : '推奨サイズ'}</span>
+                    <span className="text-sm font-mono font-medium">{cropSettings.recommendedCanvas?.width} x {cropSettings.recommendedCanvas?.height}</span>
+                  </div>
+                  
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={cropSettings.isPreviewing}
+                        onChange={e => setCropSettings(prev => ({ ...prev, isPreviewing: e.target.checked }))}
+                        className="rounded border-gray-300 w-4 h-4"
+                      />
+                      {lang === 'KR' ? '미리보기 가이드 표시 (Preview Box)' : lang === 'EN' ? 'Preview Box' : 'プレビューの表示'}
+                    </label>
+
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={cropSettings.enabledForExport}
+                        onChange={e => setCropSettings(prev => ({ ...prev, enabledForExport: e.target.checked }))}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                      />
+                      <span className="font-medium text-blue-600 dark:text-blue-400">
+                        {lang === 'KR' ? '다운로드 시 크롭 적용 (Use for Export)' : lang === 'EN' ? 'Use for Export' : 'エクスポートに適用'}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className={`order-4 ${panelClass} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
             <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               <Settings className={accentIconClass} />
-              3. Asset Settings <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(에셋 설정)' : lang === 'EN' ? '(Asset Settings)' : '(アセット設定)'}</span>
+              4. Asset Settings <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(에셋 설정)' : lang === 'EN' ? '(Asset Settings)' : '(アセット設定)'}</span>
             </h2>
             
             <div className="space-y-4">
