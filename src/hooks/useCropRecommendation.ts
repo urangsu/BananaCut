@@ -19,7 +19,7 @@ export function useCropRecommendation() {
 
   const analyze = useCallback(async (
     frames: StudioFrame[],
-    processFrames: (indices: number[]) => Promise<StudioFrame[] | void>
+    processFrames: (indices: number[]) => Promise<StudioFrame[] | null>
   ) => {
     let dirtyIndices: number[] = [];
     frames.forEach((f, i) => {

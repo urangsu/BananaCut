@@ -122,9 +122,6 @@ export default function RemovePage() {
     analyze 
   } = useCropRecommendation();
 
-  const framesRef = useRef(frames);
-  useEffect(() => { framesRef.current = frames; }, [frames]);
-
   const [isDragging, setIsDragging] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
@@ -137,7 +134,7 @@ export default function RemovePage() {
   };
 
   const processTargetFrames = async (targetIndices: number[]) => {
-    if (targetIndices.length === 0) return;
+    if (targetIndices.length === 0) return null;
     setFailedItems([]);
     const newFrames = [...frames];
     
@@ -188,6 +185,8 @@ export default function RemovePage() {
         setFailedItems(failed);
       }
     });
+
+    return newFrames;
   };
   const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set([0]));
   
@@ -415,6 +414,13 @@ export default function RemovePage() {
         ctx.fillRect(offsetX, offsetY + (y + h) * ratio, img.width * ratio, (img.height - y - h) * ratio); // bottom
         ctx.fillRect(offsetX, offsetY + y * ratio, x * ratio, h * ratio); // left
         ctx.fillRect(offsetX + (x + w) * ratio, offsetY + y * ratio, (img.width - x - w) * ratio, h * ratio); // right
+        
+        // draw badge
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.9)';
+        ctx.fillRect(offsetX + 10, offsetY + 10, 100, 30);
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText('Crop Preview', offsetX + 20, offsetY + 30);
       }
 
       // Draw Brush Cursor if active

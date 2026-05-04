@@ -54,6 +54,12 @@ export function CropRecommendationPanel({
                   </div>
                   
                   <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => setCropSettings((prev: any) => ({ ...prev, isPreviewing: false }))}
+                      className={`w-full py-1 text-xs font-medium rounded ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                    >
+                        {lang === 'KR' ? '미리보기 종료' : lang === 'EN' ? 'Exit Preview' : 'プレビューを終了'}
+                    </button>
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input 
                         type="checkbox" 
