@@ -29,7 +29,11 @@ export function useCropRecommendation() {
     let framesToAnalyze = frames;
     if (dirtyIndices.length > 0) {
       const updatedFrames = await processFrames(dirtyIndices);
-      if (updatedFrames) framesToAnalyze = updatedFrames;
+      if (updatedFrames) {
+        framesToAnalyze = updatedFrames;
+      } else {
+        return null;
+      }
     }
 
     setIsAnalyzingCrop(true);

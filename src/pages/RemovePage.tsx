@@ -127,9 +127,24 @@ export default function RemovePage() {
   const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
 
   const handleAnalyzeCrop = async () => {
+    const dirtyCount = frames.filter((f) => !f.processedUrl || f.dirty).length;
+    if (dirtyCount > 0) {
+      const confirmed = confirm(lang === 'KR' 
+        ? `${dirtyCount}개의 프레임이 아직 적용되지 않았습니다. 여백 분석을 위해 먼저 현재 설정을 적용할까요?` 
+        : lang === 'EN'
+        ? `${dirtyCount} frames are not processed. Apply current settings before crop analysis?`
+        : `${dirtyCount} フレームが未処理です。クロップ分析の前に現在の設定を適用しますか？`);
+      
+      if (!confirmed) return;
+    }
+
     const box = await analyze(frames, processTargetFrames);
     if (!box) {
-        alert(lang === 'KR' ? '추천할 수 있는 여백이 없거나 처리할 수 없습니다.' : lang === 'EN' ? 'No margins found or unable to analyze.' : '分析可能な余白がありません。');
+        if (failedItems.length > 0 || frames.some(f => !f.processedUrl || f.dirty)) {
+            alert(lang === 'KR' ? '일부 프레임 적용에 실패하여 여백 분석을 중단했습니다.' : lang === 'EN' ? 'Analysis aborted due to frame processing failure.' : 'フレーム処理に失敗したため分析を中断しました。');
+        } else {
+            alert(lang === 'KR' ? '추천할 수 있는 여백이 없거나 처리할 수 없습니다.' : lang === 'EN' ? 'No margins found or unable to analyze.' : '分析可能な余白がありません。');
+        }
     }
   };
 
@@ -137,6 +152,7 @@ export default function RemovePage() {
     if (targetIndices.length === 0) return null;
     setFailedItems([]);
     const newFrames = [...frames];
+    let failedResult: number[] = [];
     
     await startJob<number, void>({
       items: targetIndices,
@@ -183,9 +199,11 @@ export default function RemovePage() {
       onPartialSuccess: (_, failed) => {
         setFrames(newFrames);
         setFailedItems(failed);
+        failedResult = failed;
       }
     });
 
+    if (failedResult.length > 0) return null;
     return newFrames;
   };
   const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set([0]));
@@ -415,7 +433,7 @@ export default function RemovePage() {
         ctx.fillRect(offsetX, offsetY + y * ratio, x * ratio, h * ratio); // left
         ctx.fillRect(offsetX + (x + w) * ratio, offsetY + y * ratio, (img.width - x - w) * ratio, h * ratio); // right
         
-        // draw badge
+        // draw badge (TODO: move this badge to a DOM overlay instead of drawing on canvas)
         ctx.fillStyle = 'rgba(59, 130, 246, 0.9)';
         ctx.fillRect(offsetX + 10, offsetY + 10, 100, 30);
         ctx.fillStyle = 'white';
@@ -436,7 +454,7 @@ export default function RemovePage() {
   }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionStrokes, isBrushActive, isPlaying, lastPos, brushSize, drawTick, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast, isExtracting, cropSettings.isPreviewing, cropSettings.box]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (isPlaying || frames.length === 0 || isExtracting) return;
+    if (isPlaying || frames.length === 0 || isExtracting || cropSettings.isPreviewing) return;
 
     if (isPickingColor) {
       const canvas = canvasRef.current;
