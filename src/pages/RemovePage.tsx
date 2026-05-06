@@ -616,7 +616,7 @@ export default function RemovePage() {
   };
 
 
-  const handleDownload = async (type: 'withRaw' | 'resultOnly' | 'gif', exportSizeMode: 'original' | 'recommendedStableCrop' | 'custom') => {
+  const handleDownload = async (type: 'withRaw' | 'resultOnly' | 'gif') => {
     if (frames.length === 0) return;
     
     trackEvent('Download_Asset');
@@ -716,7 +716,6 @@ export default function RemovePage() {
       }
       
       zip.file('export_metadata.json', JSON.stringify({
-          exportSizeMode,
           cropApplied: false
       }, null, 2));
       
@@ -818,7 +817,8 @@ export default function RemovePage() {
   const previewBgClass = `relative border-2 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center transition-colors ${isDark ? 'bg-black/40 border-white/5' : 'bg-gray-100 border-gray-200'}`;
 
   return (
-    <div className={`max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen lg:overflow-x-hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
+    <>
+      <div className={`max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen lg:overflow-x-hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
       <header className={`hidden lg:block mb-8 border-b pb-6 shrink-0 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
         <h1 className="text-3xl font-semibold tracking-tight">REMOVE <span className={`text-xl font-normal ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{lang === 'KR' ? '(투명화)' : lang === 'EN' ? '(Chroma Key)' : '(クロマキー)'}</span></h1>
         <p className={`mt-2 text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{lang === 'KR' ? 'In-Browser White Background Removal' : lang === 'EN' ? 'In-Browser White Background Removal' : 'ブラウザ内での白背景削除'}</p>
@@ -1450,20 +1450,7 @@ export default function RemovePage() {
                 {lang === 'KR' ? '모든 프레임에 대한 여백을 분석하여 최적의 크기를 추천받습니다.' : lang === 'EN' ? 'Analyze margins for all frames to get the optimal crop recommendation.' : 'すべてのフレームの余白を分析し、最適なクロップサイズを推奨します。'}
               </p>
               
-              <button 
-                onClick={handleAnalyzeCrop}
-                disabled={isAnalyzingCrop || frames.length === 0}
-                className={`w-full py-2 px-4 rounded-lg font-medium text-sm transition-all ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'} disabled:opacity-50 flex items-center justify-center gap-2`}
-              >
-                {isAnalyzingCrop && <Loader2 className="w-4 h-4 animate-spin" />}
-                {lang === 'KR' ? '여백 분석 (Analyze Margins)' : lang === 'EN' ? 'Analyze Margins' : '余白の分析'}
-              </button>
 
-              {cropAnalysisProgress.total > 0 && isAnalyzingCrop && (
-                 <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5 mt-2 overflow-hidden">
-                   <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style={{ width: `${(cropAnalysisProgress.current / cropAnalysisProgress.total) * 100}%` }}></div>
-                 </div>
-              )}
 
               </div>
             </div>
@@ -1856,71 +1843,71 @@ export default function RemovePage() {
             </div>
           )}
         </div>
-      </div>
-      {showTechErrorModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-900 p-5 shadow-2xl border border-gray-200 dark:border-gray-800">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold dark:text-white">Video Engine Error</h2>
-              <button
-                type="button"
-                onClick={() => setShowTechErrorModal(false)}
-                className="rounded-lg px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors"
-              >
-                Close
-              </button>
-            </div>
+        {showTechErrorModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-900 p-5 shadow-2xl border border-gray-200 dark:border-gray-800">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-bold dark:text-white">Video Engine Error</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowTechErrorModal(false)}
+                  className="rounded-lg px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
 
-            <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-xl bg-gray-100 dark:bg-black/50 p-4 text-xs font-mono text-red-600 dark:text-red-400 border border-gray-200 dark:border-red-500/10">
-              {nativeExtractError && `${nativeExtractError}\n\n`}
-              {ffmpegError && `[FFmpeg Error]\n${ffmpegError}`}
-              {(!nativeExtractError && !ffmpegError) && 'No technical error available.'}
-            </pre>
+              <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-xl bg-gray-100 dark:bg-black/50 p-4 text-xs font-mono text-red-600 dark:text-red-400 border border-gray-200 dark:border-red-500/10">
+                {nativeExtractError && `${nativeExtractError}\n\n`}
+                {ffmpegError && `[FFmpeg Error]\n${ffmpegError}`}
+                {(!nativeExtractError && !ffmpegError) && 'No technical error available.'}
+              </pre>
 
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const errText = [
-                    nativeExtractError ? `${nativeExtractError}` : '',
-                    ffmpegError ? `[FFmpeg Error]\n${ffmpegError}` : ''
-                  ].filter(Boolean).join('\n\n');
-                  navigator.clipboard.writeText(errText || 'No error details');
-                  alert('Copied to clipboard');
-                }}
-                className="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors dark:text-gray-300"
-              >
-                Copy Error
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowTechErrorModal(false);
-                  setUploadState('idle');
-                  retryFFmpeg();
-                }}
-                className="rounded-lg bg-red-600 hover:bg-red-700 px-3 py-2 text-sm font-semibold text-white transition-colors"
-              >
-                Retry Engine Load
-              </button>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const errText = [
+                      nativeExtractError ? `${nativeExtractError}` : '',
+                      ffmpegError ? `[FFmpeg Error]\n${ffmpegError}` : ''
+                    ].filter(Boolean).join('\n\n');
+                    navigator.clipboard.writeText(errText || 'No error details');
+                    alert('Copied to clipboard');
+                  }}
+                  className="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors dark:text-gray-300"
+                >
+                  Copy Error
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTechErrorModal(false);
+                    setUploadState('idle');
+                    retryFFmpeg();
+                  }}
+                  className="rounded-lg bg-red-600 hover:bg-red-700 px-3 py-2 text-sm font-semibold text-white transition-colors"
+                >
+                  Retry Engine Load
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : null}
-
-      <DownloadModal
-        isOpen={showDownloadModal}
-        onClose={() => setShowDownloadModal(false)}
-        lang={downloadLang}
-        onDownload={handleDownload}
-        isDark={isDark}
-      />
-      
-      {new URLSearchParams(window.location.search).get('debug') === '1' && (
-        <div className="fixed bottom-2 left-2 z-[9999] bg-black/80 text-green-400 text-[10px] font-mono px-2 py-1 rounded pointer-events-none">
-          [BananaCut] commit: {import.meta.env.VITE_COMMIT_SHA || 'dev'} | time: {new Date().toISOString()}
-        </div>
-      )}
-    </div>
+        )}
+        
+        <DownloadModal
+          isOpen={showDownloadModal}
+          onClose={() => setShowDownloadModal(false)}
+          lang={downloadLang}
+          onDownload={handleDownload}
+          isDark={isDark}
+        />
+        
+        {new URLSearchParams(window.location.search).get('debug') === '1' && (
+          <div className="fixed bottom-2 left-2 z-[9999] bg-black/80 text-green-400 text-[10px] font-mono px-2 py-1 rounded pointer-events-none">
+            [BananaCut] commit: {import.meta.env.VITE_COMMIT_SHA || 'dev'} | time: {new Date().toISOString()}
+          </div>
+        )}
+      </div>
+    </>
   );
 }

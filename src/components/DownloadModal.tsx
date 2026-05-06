@@ -6,7 +6,7 @@ interface DownloadModalProps {
   isOpen: boolean;
   onClose: () => void;
   lang: 'KR' | 'EN' | 'JP';
-  onDownload: (type: 'withRaw' | 'resultOnly' | 'gif', exportSizeMode: 'original' | 'recommendedStableCrop' | 'custom') => void;
+  onDownload: (type: 'withRaw' | 'resultOnly' | 'gif', exportSizeMode?: 'original' | 'recommendedStableCrop' | 'custom') => void;
   isDark: boolean;
 }
 
