@@ -56,7 +56,7 @@ export function CropRecommendationPanel({
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={() => setCropSettings((prev: any) => ({ ...prev, isPreviewing: false }))}
-                      className={`w-full py-1 text-xs font-bold rounded ${isDark ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                      className={`w-full py-1 text-xs font-bold rounded ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
                     >
                         {lang === 'KR' ? '미리보기 종료 (Exit Preview)' : lang === 'EN' ? 'Exit Preview' : 'プレビューを終了'}
                     </button>
@@ -70,16 +70,23 @@ export function CropRecommendationPanel({
                       {lang === 'KR' ? '미리보기 가이드 표시 (Preview Box)' : lang === 'EN' ? 'Preview Box' : 'プレビューの表示'}
                     </label>
 
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={cropSettings.enabledForExport}
-                        onChange={e => setCropSettings((prev: any) => ({ ...prev, enabledForExport: e.target.checked }))}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                      />
-                      <span className="font-medium text-blue-600 dark:text-blue-400">
-                        {lang === 'KR' ? '다운로드 시 크롭 적용 (Use for Export)' : lang === 'EN' ? 'Use for Export' : 'エクスポートに適用'}
-                      </span>
+                    <label className="flex flex-col gap-2 cursor-pointer">
+                      <div className="flex items-center gap-2 text-sm">
+                        <input 
+                          type="checkbox" 
+                          checked={cropSettings.enabledForExport}
+                          onChange={e => setCropSettings((prev: any) => ({ ...prev, enabledForExport: e.target.checked }))}
+                          className="rounded border-gray-300 w-4 h-4"
+                        />
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                          {lang === 'KR' ? '다운로드 시 크롭 적용' : lang === 'EN' ? 'Use for Export' : 'エクスポートに適用'}
+                        </span>
+                      </div>
+                      {cropSettings.enabledForExport && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 ml-6">
+                            {lang === 'KR' ? '추천 크롭이 다운로드 시 적용됩니다.' : lang === 'EN' ? 'Recommended crop will be applied when exporting.' : 'エクスポート時に推奨クロップが適用されます。'}
+                          </p>
+                      )}
                     </label>
                   </div>
                 </div>

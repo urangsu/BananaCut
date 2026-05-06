@@ -688,9 +688,11 @@ export default function RemovePage() {
     });
   };
 
-  const handleDownload = async (type: 'withRaw' | 'resultOnly' | 'gif') => {
+  const handleDownload = async (type: 'withRaw' | 'resultOnly' | 'gif', exportSizeMode: 'original' | 'recommendedStableCrop' | 'custom') => {
     if (frames.length === 0) return;
     
+    const applyCrop = exportSizeMode === 'recommendedStableCrop' && cropSettings.box;
+
     trackEvent('Download_Asset');
     setIsProcessing(true);
     setShowDownloadModal(false);
@@ -700,8 +702,8 @@ export default function RemovePage() {
         const gif = new GIF({
           workers: 2,
           quality: 10,
-          width: imgDims?.w || 512,
-          height: imgDims?.h || 512,
+          width: applyCrop ? cropSettings.box.w : (imgDims?.w || 512),
+          height: applyCrop ? cropSettings.box.h : (imgDims?.h || 512),
           transparent: 'rgba(0,0,0,0)'
         });
 
@@ -729,7 +731,7 @@ export default function RemovePage() {
           }
           
           let exportCanvas = canvas;
-          if (cropSettings.enabledForExport && cropSettings.box) {
+          if (applyCrop) {
             const cropCanvas = document.createElement('canvas');
             cropCanvas.width = cropSettings.box.w;
             cropCanvas.height = cropSettings.box.h;
@@ -789,7 +791,7 @@ export default function RemovePage() {
           }
           
           let exportCanvas = canvas;
-          if (cropSettings.enabledForExport && cropSettings.box) {
+          if (applyCrop) {
             const cropCanvas = document.createElement('canvas');
             cropCanvas.width = cropSettings.box.w;
             cropCanvas.height = cropSettings.box.h;
@@ -806,6 +808,20 @@ export default function RemovePage() {
             zip.file(`${charName}_${seg.name}_${frameNum}.png`, blob);
           }
         }
+      }
+      
+      if (applyCrop) {
+          zip.file('metadata.json', JSON.stringify({
+              exportSizeMode,
+              stableBox: cropSettings.box,
+              recommendedCanvas: cropSettings.recommendedCanvas,
+              cropApplied: true
+          }, null, 2));
+      } else {
+          zip.file('metadata.json', JSON.stringify({
+              exportSizeMode,
+              cropApplied: false
+          }, null, 2));
       }
       
       if (type === 'withRaw') {
