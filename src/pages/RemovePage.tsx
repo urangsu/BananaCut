@@ -145,12 +145,12 @@ export default function RemovePage() {
          const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
          const mask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, idx);
          
-         PerfLogger.start('processTargetFrames_applyChromaKey');
+         PerfLogger.start('processFramesForDownload_applyChromaKey');
          applyChromaKeyAdvanced(imgData.data, canvas.width, canvas.height, {
            keyingMode, previewMode: 'result', tolerance, softness, enclosedTolerance,
            chromaKeyColor, pickedColor, despill, erode, dilate, feather, alphaContrast
          }, mask);
-         PerfLogger.end('processTargetFrames_applyChromaKey');
+         PerfLogger.end('processFramesForDownload_applyChromaKey');
          
          ctx.putImageData(imgData, 0, 0);
          
