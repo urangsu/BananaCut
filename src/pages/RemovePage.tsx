@@ -1477,7 +1477,7 @@ export default function RemovePage() {
                   <button 
                     onClick={() => processTargetFrames(Array.from(selectedFrames))}
                     disabled={selectedFrames.size === 0 || isProcessing}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2"
+                    className={`w-full py-2 font-bold rounded-lg transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2 ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
                   >
                     {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                     {lang === 'KR' ? `선택 항목 적용 (${selectedFrames.size})` : lang === 'EN' ? `Process Selected (${selectedFrames.size})` : `選択を適用 (${selectedFrames.size})`}
@@ -1557,7 +1557,7 @@ export default function RemovePage() {
               <button 
                 onClick={handleAnalyzeCrop}
                 disabled={isAnalyzingCrop || frames.length === 0}
-                className={`w-full py-2 px-4 rounded-lg font-medium text-sm transition-all ${isDark ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-50 hover:bg-blue-100 text-blue-700'} disabled:opacity-50 flex items-center justify-center gap-2`}
+                className={`w-full py-2 px-4 rounded-lg font-medium text-sm transition-all ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'} disabled:opacity-50 flex items-center justify-center gap-2`}
               >
                 {isAnalyzingCrop && <Loader2 className="w-4 h-4 animate-spin" />}
                 {lang === 'KR' ? '여백 분석 (Analyze Margins)' : lang === 'EN' ? 'Analyze Margins' : '余白の分析'}

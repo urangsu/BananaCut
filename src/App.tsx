@@ -200,13 +200,13 @@ function Layout({ children }: { children: React.ReactNode }) {
           {/* GET APP Button */}
           <button
             onClick={() => setShowGetApp(true)}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide transition-all shadow-lg ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
               isDark 
-                ? 'bg-blue-500 hover:bg-blue-400 text-white shadow-blue-500/20' 
-                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'
+                ? 'bg-white/5 hover:bg-white/10 text-white border-white/10' 
+                : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200'
             }`}
           >
-            <Smartphone className="w-3.5 h-3.5" strokeWidth={2.5} />
+            <Smartphone className="w-3.5 h-3.5" />
             {lang === 'KR' ? '앱 다운로드' : lang === 'EN' ? 'GET APP' : 'アプリ入手'}
           </button>
           
