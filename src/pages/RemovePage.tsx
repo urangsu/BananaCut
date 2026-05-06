@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Play, Square, Download, Settings, Loader2, Sliders, ChevronDown, Brush, Eraser, MousePointer2, X, Flag, Pipette, Crop } from 'lucide-react';
+import { Upload, Play, Square, Download, Settings, Loader2, Sliders, ChevronDown, Brush, Eraser, MousePointer2, X, Flag, Pipette } from 'lucide-react';
 import JSZip from 'jszip';
 import { useTheme } from '../ThemeContext';
 import { useFFmpeg } from '../FFmpegContext';
@@ -116,7 +116,7 @@ export default function RemovePage() {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
 
-  const processTargetFrames = async (targetIndices: number[]): Promise<{ frames: StudioFrame[] | null; failedCount: number; failedIndices: number[] }> => {
+  const processFramesForDownload = async (targetIndices: number[]): Promise<{ frames: StudioFrame[] | null; failedCount: number; failedIndices: number[] }> => {
     if (targetIndices.length === 0) return { frames: frames, failedCount: 0, failedIndices: [] };
     setFailedItems([]);
     const newFrames = [...frames];
@@ -1371,7 +1371,7 @@ export default function RemovePage() {
                 <label className={labelClass}>{lang === 'KR' ? '적용 (Apply Process)' : lang === 'EN' ? 'Apply Process' : '適用する'}</label>
                 <div className="flex flex-col gap-2 mt-2">
                   <button 
-                    onClick={() => processTargetFrames(Array.from(selectedFrames))}
+                    onClick={() => processFramesForDownload(Array.from(selectedFrames))}
                     disabled={selectedFrames.size === 0 || isProcessing}
                     className={`w-full py-2 font-bold rounded-lg transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2 ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
                   >
@@ -1379,7 +1379,7 @@ export default function RemovePage() {
                     {lang === 'KR' ? `선택 항목 적용 (${selectedFrames.size})` : lang === 'EN' ? `Process Selected (${selectedFrames.size})` : `選択を適用 (${selectedFrames.size})`}
                   </button>
                   <button 
-                    onClick={() => processTargetFrames(Array.from({ length: frames.length }, (_, i) => i))}
+                    onClick={() => processFramesForDownload(Array.from({ length: frames.length }, (_, i) => i))}
                     disabled={frames.length === 0 || isProcessing}
                     className={`w-full py-2 font-bold rounded-lg transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2 ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-200 hover:bg-gray-300 text-black'}`}
                   >
@@ -1436,22 +1436,6 @@ export default function RemovePage() {
                   disabled={isExtracting || (videoFile?.type.startsWith('image/') ?? false)}
                   className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
                 />
-              </div>
-            </div>
-          </div>
-
-          <div className={`order-3 ${panelClass} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
-            <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              <Crop className={accentIconClass} />
-              3. Smart Crop <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(스마트 크롭)' : lang === 'EN' ? '(Smart Crop)' : '(スマートクロップ)'}</span>
-            </h2>
-            <div className="space-y-4">
-              <p className={descClass}>
-                {lang === 'KR' ? '모든 프레임에 대한 여백을 분석하여 최적의 크기를 추천받습니다.' : lang === 'EN' ? 'Analyze margins for all frames to get the optimal crop recommendation.' : 'すべてのフレームの余白を分析し、最適なクロップサイズを推奨します。'}
-              </p>
-              
-
-
               </div>
             </div>
           </div>
