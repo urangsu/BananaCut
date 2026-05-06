@@ -75,8 +75,9 @@ export function CropRecommendationPanel({
                         <input 
                           type="checkbox" 
                           checked={cropSettings.enabledForExport}
+                          disabled={!cropSettings.box}
                           onChange={e => setCropSettings((prev: any) => ({ ...prev, enabledForExport: e.target.checked }))}
-                          className="rounded border-gray-300 w-4 h-4"
+                          className="rounded border-gray-300 w-4 h-4 disabled:opacity-50"
                         />
                         <span className="font-medium text-gray-700 dark:text-gray-300">
                           {lang === 'KR' ? '다운로드 시 크롭 적용' : lang === 'EN' ? 'Use for Export' : 'エクスポートに適用'}

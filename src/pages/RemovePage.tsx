@@ -688,10 +688,54 @@ export default function RemovePage() {
     });
   };
 
+  const getExportCropBox = () => {
+    if (cropSettings.enabledForExport && cropSettings.box) {
+      return cropSettings.box;
+    }
+    return null;
+  };
+
+  const drawFrameToExportCanvas = (
+    img: CanvasImageSource,
+    cropBox: { x: number; y: number; w: number; h: number } | null
+  ): HTMLCanvasElement => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('No canvas context');
+
+    if (cropBox) {
+      canvas.width = cropBox.w;
+      canvas.height = cropBox.h;
+      ctx.drawImage(
+        img,
+        cropBox.x,
+        cropBox.y,
+        cropBox.w,
+        cropBox.h,
+        0,
+        0,
+        cropBox.w,
+        cropBox.h
+      );
+    } else {
+      // Need width/height. If it's an HTMLImageElement it has them, if Canvas it has them.
+      // CanvasImageSource doesn't directly have width/height access
+      // I'll assume they have width/height for now, which they do in this context.
+      const w = (img as any).width;
+      const h = (img as any).height;
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(img, 0, 0);
+    }
+
+    return canvas;
+  };
+
   const handleDownload = async (type: 'withRaw' | 'resultOnly' | 'gif', exportSizeMode: 'original' | 'recommendedStableCrop' | 'custom') => {
     if (frames.length === 0) return;
     
-    const applyCrop = exportSizeMode === 'recommendedStableCrop' && cropSettings.box;
+    const cropBox = getExportCropBox();
+    const applyCrop = exportSizeMode === 'recommendedStableCrop' && cropBox;
 
     trackEvent('Download_Asset');
     setIsProcessing(true);
@@ -702,8 +746,8 @@ export default function RemovePage() {
         const gif = new GIF({
           workers: 2,
           quality: 10,
-          width: applyCrop ? cropSettings.box.w : (imgDims?.w || 512),
-          height: applyCrop ? cropSettings.box.h : (imgDims?.h || 512),
+          width: applyCrop ? cropBox.w : (imgDims?.w || 512),
+          height: applyCrop ? cropBox.h : (imgDims?.h || 512),
           transparent: 'rgba(0,0,0,0)'
         });
 
@@ -730,17 +774,8 @@ export default function RemovePage() {
             ctx.putImageData(imageData, 0, 0);
           }
           
-          let exportCanvas = canvas;
-          if (applyCrop) {
-            const cropCanvas = document.createElement('canvas');
-            cropCanvas.width = cropSettings.box.w;
-            cropCanvas.height = cropSettings.box.h;
-            const cropCtx = cropCanvas.getContext('2d');
-            if (cropCtx) {
-              cropCtx.drawImage(canvas, -cropSettings.box.x, -cropSettings.box.y);
-              exportCanvas = cropCanvas;
-            }
-          }
+          
+          const exportCanvas = drawFrameToExportCanvas(canvas, cropBox);
           
           gif.addFrame(exportCanvas, { delay: 1000 / fps });
         }
@@ -790,17 +825,7 @@ export default function RemovePage() {
             ctx.putImageData(imageData, 0, 0);
           }
           
-          let exportCanvas = canvas;
-          if (applyCrop) {
-            const cropCanvas = document.createElement('canvas');
-            cropCanvas.width = cropSettings.box.w;
-            cropCanvas.height = cropSettings.box.h;
-            const cropCtx = cropCanvas.getContext('2d');
-            if (cropCtx) {
-              cropCtx.drawImage(canvas, -cropSettings.box.x, -cropSettings.box.y);
-              exportCanvas = cropCanvas;
-            }
-          }
+          const exportCanvas = drawFrameToExportCanvas(canvas, cropBox);
           
           const blob = await new Promise<Blob | null>((resolve) => exportCanvas.toBlob(resolve, 'image/png'));
           if (blob) {
@@ -811,14 +836,14 @@ export default function RemovePage() {
       }
       
       if (applyCrop) {
-          zip.file('metadata.json', JSON.stringify({
+          zip.file('export_metadata.json', JSON.stringify({
               exportSizeMode,
-              stableBox: cropSettings.box,
+              stableBox: cropBox,
               recommendedCanvas: cropSettings.recommendedCanvas,
               cropApplied: true
           }, null, 2));
       } else {
-          zip.file('metadata.json', JSON.stringify({
+          zip.file('export_metadata.json', JSON.stringify({
               exportSizeMode,
               cropApplied: false
           }, null, 2));
