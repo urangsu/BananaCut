@@ -695,10 +695,43 @@ export default function RemovePage() {
     return null;
   };
 
-  const drawFrameToExportCanvas = (
-    img: CanvasImageSource,
+  const cropCanvas = (
+    canvas: HTMLCanvasElement,
     cropBox: { x: number; y: number; w: number; h: number } | null
   ): HTMLCanvasElement => {
+    if (!cropBox) return canvas;
+
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = cropBox.w;
+    cropCanvas.height = cropBox.h;
+    const cropCtx = cropCanvas.getContext('2d');
+    if (!cropCtx) throw new Error('No canvas context');
+
+    cropCtx.drawImage(
+      canvas,
+      cropBox.x,
+      cropBox.y,
+      cropBox.w,
+      cropBox.h,
+      0,
+      0,
+      cropBox.w,
+      cropBox.h
+    );
+    return cropCanvas;
+  };
+
+  const drawFrameToExportCanvas = async (
+    url: string,
+    cropBox: { x: number; y: number; w: number; h: number } | null
+  ): Promise<HTMLCanvasElement> => {
+    const img = new Image();
+    img.src = url;
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('No canvas context');
@@ -718,13 +751,8 @@ export default function RemovePage() {
         cropBox.h
       );
     } else {
-      // Need width/height. If it's an HTMLImageElement it has them, if Canvas it has them.
-      // CanvasImageSource doesn't directly have width/height access
-      // I'll assume they have width/height for now, which they do in this context.
-      const w = (img as any).width;
-      const h = (img as any).height;
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = img.width;
+      canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
     }
 
@@ -759,7 +787,7 @@ export default function RemovePage() {
             img.onload = resolve;
           });
           
-          const canvas = document.createElement('canvas');
+          const canvas = document.createElement('canvas'); // Chroma-keyer
           canvas.width = img.width;
           canvas.height = img.height;
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -774,8 +802,7 @@ export default function RemovePage() {
             ctx.putImageData(imageData, 0, 0);
           }
           
-          
-          const exportCanvas = drawFrameToExportCanvas(canvas, cropBox);
+          const exportCanvas = cropCanvas(canvas, cropBox);
           
           gif.addFrame(exportCanvas, { delay: 1000 / fps });
         }
@@ -825,12 +852,13 @@ export default function RemovePage() {
             ctx.putImageData(imageData, 0, 0);
           }
           
-          const exportCanvas = drawFrameToExportCanvas(canvas, cropBox);
+          const exportCanvas = cropCanvas(canvas, cropBox);
           
           const blob = await new Promise<Blob | null>((resolve) => exportCanvas.toBlob(resolve, 'image/png'));
           if (blob) {
             const frameNum = String(i - startIdx + 1).padStart(3, '0');
-            zip.file(`${charName}_${seg.name}_${frameNum}.png`, blob);
+            const resultDir = type === 'withRaw' ? 'result/' : '';
+            zip.file(`${resultDir}${charName}_${seg.name}_${frameNum}.png`, blob);
           }
         }
       }
@@ -840,7 +868,8 @@ export default function RemovePage() {
               exportSizeMode,
               stableBox: cropBox,
               recommendedCanvas: cropSettings.recommendedCanvas,
-              cropApplied: true
+              cropApplied: true,
+              rawFramesPreservedOriginalCanvas: type === 'withRaw'
           }, null, 2));
       } else {
           zip.file('export_metadata.json', JSON.stringify({
@@ -854,7 +883,7 @@ export default function RemovePage() {
           const response = await fetch(frames[i].processedUrl ?? frames[i].rawUrl);
           const blob = await response.blob();
           const frameNum = String(i + 1).padStart(3, '0');
-          zip.file(`${charName}_raw_${frameNum}.png`, blob);
+          zip.file(`raw/${charName}_raw_${frameNum}.png`, blob);
         }
       }
       
