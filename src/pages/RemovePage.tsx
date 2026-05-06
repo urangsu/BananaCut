@@ -13,8 +13,6 @@ import { useMediaImport } from '../hooks/useMediaImport';
 import { useLanguage } from '../LanguageContext';
 import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
 import { PerfLogger } from '../utils/performanceLogger';
-import { useCropRecommendation } from '../hooks/useCropRecommendation';
-import { CropRecommendationPanel } from '../components/CropRecommendationPanel';
 
 /*
   Feature Design: Artifact Cleanup (Future Enhancement)
@@ -114,50 +112,9 @@ export default function RemovePage() {
 
   const [showTechErrorModal, setShowTechErrorModal] = useState(false);
   
-  const { 
-    cropSettings, 
-    setCropSettings, 
-    isAnalyzingCrop, 
-    cropAnalysisProgress, 
-    analyzeProcessedFrames 
-  } = useCropRecommendation();
-
   const [isDragging, setIsDragging] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
-
-  const handleAnalyzeCrop = async () => {
-    const dirtyIndices = frames.map((_, i) => i).filter(i => !frames[i].processedUrl || frames[i].dirty);
-    
-    let framesToAnalyze = frames;
-
-    if (dirtyIndices.length > 0) {
-      const confirmed = confirm(lang === 'KR' 
-        ? `${dirtyIndices.length}개의 프레임이 아직 적용되지 않았습니다. 여백 분석을 위해 먼저 현재 설정을 적용할까요?` 
-        : lang === 'EN'
-        ? `${dirtyIndices.length} frames are not processed. Apply current settings before crop analysis?`
-        : `${dirtyIndices.length} フレームが未処理です。クロップ分析の前に現在の設定を適用しますか？`);
-      
-      if (!confirmed) return;
-
-      const { frames: processedFrames, failedIndices } = await processTargetFrames(dirtyIndices);
-      if (failedIndices.length > 0) {
-        alert(lang === 'KR' ? `일부 프레임은 적용되었지만, 실패한 프레임(${failedIndices.join(', ')})이 있어 여백 분석을 중단했습니다.`
-              : lang === 'EN' ? `Some frames were applied, but crop analysis was stopped because these frames failed: ${failedIndices.join(', ')}.`
-              : `一部のフレームは適用されましたが、失敗したフレーム(${failedIndices.join(', ')})があるためクロップ分析を中止しました。`);
-        return;
-      }
-      framesToAnalyze = processedFrames || frames;
-    }
-
-    const { box, reason } = await analyzeProcessedFrames(framesToAnalyze);
-
-    if (!box) {
-        if (reason === 'no-box') {
-            alert(lang === 'KR' ? '추천할 수 있는 여백이 없거나 처리할 수 없습니다.' : lang === 'EN' ? 'No margins found or unable to analyze.' : '分析可能な余白がありません。');
-        }
-    }
-  };
 
   const processTargetFrames = async (targetIndices: number[]): Promise<{ frames: StudioFrame[] | null; failedCount: number; failedIndices: number[] }> => {
     if (targetIndices.length === 0) return { frames: frames, failedCount: 0, failedIndices: [] };
@@ -428,30 +385,6 @@ export default function RemovePage() {
       
       ctx.drawImage(tempCanvas, offsetX, offsetY, newW, newH);
 
-      // Draw Crop Box if previewing
-      if (cropSettings.isPreviewing && cropSettings.box) {
-        const { x, y, w, h } = cropSettings.box;
-        ctx.strokeStyle = '#3b82f6'; // blue-500
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]);
-        ctx.strokeRect(offsetX + x * ratio, offsetY + y * ratio, w * ratio, h * ratio);
-        ctx.setLineDash([]);
-        
-        // draw overlay
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(offsetX, offsetY, img.width * ratio, y * ratio); // top
-        ctx.fillRect(offsetX, offsetY + (y + h) * ratio, img.width * ratio, (img.height - y - h) * ratio); // bottom
-        ctx.fillRect(offsetX, offsetY + y * ratio, x * ratio, h * ratio); // left
-        ctx.fillRect(offsetX + (x + w) * ratio, offsetY + y * ratio, (img.width - x - w) * ratio, h * ratio); // right
-        
-        // draw badge (TODO: move this badge to a DOM overlay instead of drawing on canvas)
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.9)';
-        ctx.fillRect(offsetX + 10, offsetY + 10, 100, 30);
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 12px sans-serif';
-        ctx.fillText('Crop Preview', offsetX + 20, offsetY + 30);
-      }
-
       // Draw Brush Cursor if active
       if (isBrushActive && !isPlaying) {
         ctx.beginPath();
@@ -462,10 +395,10 @@ export default function RemovePage() {
       }
     };
     img.src = getFrameDisplayUrl(targetFrame);
-  }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionStrokes, isBrushActive, isPlaying, lastPos, brushSize, drawTick, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast, isExtracting, cropSettings.isPreviewing, cropSettings.box]);
+  }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionStrokes, isBrushActive, isPlaying, lastPos, brushSize, drawTick, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast, isExtracting]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (isPlaying || frames.length === 0 || isExtracting || cropSettings.isPreviewing) return;
+    if (isPlaying || frames.length === 0 || isExtracting) return;
 
     if (isPickingColor) {
       const canvas = canvasRef.current;
@@ -628,12 +561,6 @@ export default function RemovePage() {
   const animationFrameRef = useRef<number>();
 
   useEffect(() => {
-    if (cropSettings.isPreviewing) {
-        setIsBrushActive(false);
-    }
-  }, [cropSettings.isPreviewing]);
-
-  useEffect(() => {
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -688,83 +615,10 @@ export default function RemovePage() {
     });
   };
 
-  const getExportCropBox = () => {
-    if (cropSettings.enabledForExport && cropSettings.box) {
-      return cropSettings.box;
-    }
-    return null;
-  };
-
-  const cropCanvas = (
-    canvas: HTMLCanvasElement,
-    cropBox: { x: number; y: number; w: number; h: number } | null
-  ): HTMLCanvasElement => {
-    if (!cropBox) return canvas;
-
-    const cropCanvas = document.createElement('canvas');
-    cropCanvas.width = cropBox.w;
-    cropCanvas.height = cropBox.h;
-    const cropCtx = cropCanvas.getContext('2d');
-    if (!cropCtx) throw new Error('No canvas context');
-
-    cropCtx.drawImage(
-      canvas,
-      cropBox.x,
-      cropBox.y,
-      cropBox.w,
-      cropBox.h,
-      0,
-      0,
-      cropBox.w,
-      cropBox.h
-    );
-    return cropCanvas;
-  };
-
-  const drawFrameToExportCanvas = async (
-    url: string,
-    cropBox: { x: number; y: number; w: number; h: number } | null
-  ): Promise<HTMLCanvasElement> => {
-    const img = new Image();
-    img.src = url;
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
-
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('No canvas context');
-
-    if (cropBox) {
-      canvas.width = cropBox.w;
-      canvas.height = cropBox.h;
-      ctx.drawImage(
-        img,
-        cropBox.x,
-        cropBox.y,
-        cropBox.w,
-        cropBox.h,
-        0,
-        0,
-        cropBox.w,
-        cropBox.h
-      );
-    } else {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-    }
-
-    return canvas;
-  };
 
   const handleDownload = async (type: 'withRaw' | 'resultOnly' | 'gif', exportSizeMode: 'original' | 'recommendedStableCrop' | 'custom') => {
     if (frames.length === 0) return;
     
-    const cropBox = getExportCropBox();
-    const applyCrop = exportSizeMode === 'recommendedStableCrop' && cropBox;
-
     trackEvent('Download_Asset');
     setIsProcessing(true);
     setShowDownloadModal(false);
@@ -774,8 +628,8 @@ export default function RemovePage() {
         const gif = new GIF({
           workers: 2,
           quality: 10,
-          width: applyCrop ? cropBox.w : (imgDims?.w || 512),
-          height: applyCrop ? cropBox.h : (imgDims?.h || 512),
+          width: imgDims?.w || 512,
+          height: imgDims?.h || 512,
           transparent: 'rgba(0,0,0,0)'
         });
 
@@ -802,9 +656,8 @@ export default function RemovePage() {
             ctx.putImageData(imageData, 0, 0);
           }
           
-          const exportCanvas = cropCanvas(canvas, cropBox);
           
-          gif.addFrame(exportCanvas, { delay: 1000 / fps });
+          gif.addFrame(canvas, { delay: 1000 / fps });
         }
 
         gif.on('finished', (blob: Blob) => {
@@ -852,9 +705,8 @@ export default function RemovePage() {
             ctx.putImageData(imageData, 0, 0);
           }
           
-          const exportCanvas = cropCanvas(canvas, cropBox);
           
-          const blob = await new Promise<Blob | null>((resolve) => exportCanvas.toBlob(resolve, 'image/png'));
+          const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
           if (blob) {
             const frameNum = String(i - startIdx + 1).padStart(3, '0');
             const resultDir = type === 'withRaw' ? 'result/' : '';
@@ -863,20 +715,10 @@ export default function RemovePage() {
         }
       }
       
-      if (applyCrop) {
-          zip.file('export_metadata.json', JSON.stringify({
-              exportSizeMode,
-              stableBox: cropBox,
-              recommendedCanvas: cropSettings.recommendedCanvas,
-              cropApplied: true,
-              rawFramesPreservedOriginalCanvas: type === 'withRaw'
-          }, null, 2));
-      } else {
-          zip.file('export_metadata.json', JSON.stringify({
-              exportSizeMode,
-              cropApplied: false
-          }, null, 2));
-      }
+      zip.file('export_metadata.json', JSON.stringify({
+          exportSizeMode,
+          cropApplied: false
+      }, null, 2));
       
       if (type === 'withRaw') {
         for (let i = 0; i < frames.length; i++) {
@@ -1623,38 +1465,7 @@ export default function RemovePage() {
                  </div>
               )}
 
-              {cropSettings.box && !isAnalyzingCrop && (
-                <div className={`p-3 rounded-lg border ${isDark ? 'bg-black/20 border-white/10' : 'bg-gray-50 border-gray-200'} space-y-3`}>
-                  <div className="flex justify-between items-center">
-                    <span className={`text-xs ${isDark ? 'text-white/60' : 'text-gray-600'}`}>{lang === 'KR' ? '추천 캔버스 크기' : lang === 'EN' ? 'Recommended Size' : '推奨サイズ'}</span>
-                    <span className="text-sm font-mono font-medium">{cropSettings.recommendedCanvas?.width} x {cropSettings.recommendedCanvas?.height}</span>
-                  </div>
-                  
-                  <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={cropSettings.isPreviewing}
-                        onChange={e => setCropSettings(prev => ({ ...prev, isPreviewing: e.target.checked }))}
-                        className="rounded border-gray-300 w-4 h-4"
-                      />
-                      {lang === 'KR' ? '미리보기 가이드 표시 (Preview Box)' : lang === 'EN' ? 'Preview Box' : 'プレビューの表示'}
-                    </label>
-
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={cropSettings.enabledForExport}
-                        onChange={e => setCropSettings(prev => ({ ...prev, enabledForExport: e.target.checked }))}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                      />
-                      <span className="font-medium text-blue-600 dark:text-blue-400">
-                        {lang === 'KR' ? '다운로드 시 크롭 적용 (Use for Export)' : lang === 'EN' ? 'Use for Export' : 'エクスポートに適用'}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </div>
 
@@ -1715,19 +1526,6 @@ export default function RemovePage() {
                   )}
                 </div>
               </div>
-
-              <CropRecommendationPanel
-                isDark={isDark}
-                lang={lang}
-                panelClass={isDark ? "bg-white/5 border border-white/10 p-4 rounded-xl" : "bg-white border border-gray-200 p-4 rounded-xl shadow-sm"}
-                isExtracting={isExtracting}
-                isAnalyzingCrop={isAnalyzingCrop}
-                cropAnalysisProgress={cropAnalysisProgress}
-                cropSettings={cropSettings}
-                setCropSettings={setCropSettings}
-                handleAnalyzeCrop={handleAnalyzeCrop}
-                framesLength={frames.length}
-              />
 
               <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
                 <div className="flex justify-between items-center mb-3">
@@ -2108,7 +1906,7 @@ export default function RemovePage() {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       <DownloadModal
         isOpen={showDownloadModal}

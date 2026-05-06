@@ -361,6 +361,8 @@ export default function AssetPage() {
           exportSizeMode,
           alphaThreshold,
           padding: cropPadding,
+          cropApplied: exportSizeMode === "recommendedStableCrop" && !!stableBox,
+          rawFramesPreservedOriginalCanvas: true
         },
       };
 
@@ -640,6 +642,10 @@ export default function AssetPage() {
                   : lang === "EN"
                     ? "Combines current frames to create a video file (.webm) with a transparent background. Ready to use in websites or video editors."
                     : "現在のフレームを結合して、背景が透明な動画ファイル(.webm)を作成します。ウェブサイトや動画編集ソフトですぐに使用できます。"}
+                
+                <p className={`mt-2 text-xs opacity-70 ${isDark ? "text-blue-300" : "text-blue-700"}`}>
+                  {lang === "KR" ? "Smart Crop은 현재 Sprite Sheet export에만 적용됩니다." : "Smart Crop currently applies to Sprite Sheet export only."}
+                </p>
               </div>
 
               <div className="mt-auto space-y-4">
