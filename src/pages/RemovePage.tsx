@@ -1604,7 +1604,7 @@ export default function RemovePage() {
                   : `${dirtyIndices.length} フレームが適用されていません。自動的に適用してダウンロードしますか？`);
                 
                 if (confirmed) {
-                  await processTargetFrames(dirtyIndices);
+                  await processFramesForDownload(dirtyIndices);
                   setShowDownloadModal(true);
                 } else {
                   alert(lang === 'KR' 
@@ -1891,6 +1891,7 @@ export default function RemovePage() {
             [BananaCut] commit: {import.meta.env.VITE_COMMIT_SHA || 'dev'} | time: {new Date().toISOString()}
           </div>
         )}
+      </div>
       </div>
     </>
   );
