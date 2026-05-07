@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Play, Square, Download, Settings, Loader2, Sliders, ChevronDown, Brush, Eraser, MousePointer2, X, Flag, Pipette } from 'lucide-react';
 import JSZip from 'jszip';
 import { useTheme } from '../ThemeContext';
-import { useFFmpeg } from '../FFmpegContext';
 import { useStudio, BrushStroke, StudioFrame } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
 import { revokeUrlsSafely } from '../utils/urlUtils';
@@ -57,7 +56,6 @@ export default function RemovePage() {
   const { isDark } = useTheme();
   const { lang } = useLanguage();
   const MIDDLE_NAME_OPTIONS = GET_MIDDLE_NAME_OPTIONS(lang);
-  const { ffmpeg, loadState, error: ffmpegError, retry: retryFFmpeg, loadFFmpeg } = useFFmpeg();
 
   // Prewarm FFmpeg engine in the background is temporarily disabled.
 
@@ -109,8 +107,6 @@ export default function RemovePage() {
 
   const isProcessing = isExtracting || isBatchProcessing || isProcessingLocal;
   const setIsProcessing = setIsProcessingLocal;
-
-  const [showTechErrorModal, setShowTechErrorModal] = useState(false);
   
   const [isDragging, setIsDragging] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -869,44 +865,6 @@ export default function RemovePage() {
                 </label>
                 {uploadState === 'error' && (
                   <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (!videoFile) return;
-                        setUploadState('video-engine-loading');
-                        let currentFFmpeg = ffmpeg;
-                        if (loadState !== 'loaded' || !currentFFmpeg) {
-                          currentFFmpeg = await loadFFmpeg();
-                        }
-                        if (!currentFFmpeg) {
-                          setUploadState('error');
-                          if (ffmpegError) {
-                             setShowTechErrorModal(true);
-                          }
-                          return;
-                        }
-                        await extractFramesWithFFmpeg(videoFile, fps, currentFFmpeg);
-                      }}
-                      className="rounded-lg bg-red-50 hover:bg-red-100 px-3 py-2 text-xs font-semibold text-red-600 transition-colors"
-                    >
-                      {lang === 'KR' ? 'FFmpeg 폴백 시도' : 'Try FFmpeg fallback'}
-                    </button>
-                    
-                    {ffmpegError && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setShowTechErrorModal(true);
-                        }}
-                        className={`rounded-lg border px-3 py-2 text-xs font-semibold hover:opacity-80 transition-opacity ${isDark ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'}`}
-                      >
-                        {lang === 'KR' ? '상세 기술 정보' : 'Technical Details'}
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
@@ -1003,7 +961,7 @@ export default function RemovePage() {
 
             {uploadState === 'error' && (
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                {nativeExtractError && !ffmpegError && (
+                {nativeExtractError && (
                   <>
                     <button
                       type="button"
@@ -1037,45 +995,6 @@ export default function RemovePage() {
                       {lang === 'KR' ? `목표 FPS 낮추기 (${fps} -> ${Math.max(4, Math.floor(fps / 2))})` : `Lower FPS (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`}
                     </button>
                   </>
-                )}
-
-                <button
-                  type="button"
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!videoFile) return;
-                    setUploadState('video-engine-loading');
-                    let currentFFmpeg = ffmpeg;
-                    if (loadState !== 'loaded' || !currentFFmpeg) {
-                      currentFFmpeg = await loadFFmpeg();
-                    }
-                    if (!currentFFmpeg) {
-                      setUploadState('error');
-                      if (ffmpegError) {
-                         setShowTechErrorModal(true);
-                      }
-                      return;
-                    }
-                    await extractFramesWithFFmpeg(videoFile, fps, currentFFmpeg);
-                  }}
-                  className="rounded-lg bg-red-50 hover:bg-red-100 px-3 py-2 text-xs font-semibold text-red-600 transition-colors"
-                >
-                  {ffmpegError ? (lang === 'KR' ? 'FFmpeg 재시도' : 'Retry FFmpeg') : (lang === 'KR' ? 'FFmpeg 폴백 시도' : 'Try FFmpeg fallback')}
-                </button>
-                
-                {(ffmpegError || nativeExtractError) && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowTechErrorModal(true);
-                    }}
-                    className={`rounded-lg border px-3 py-2 text-xs font-semibold hover:opacity-80 transition-opacity ${isDark ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'}`}
-                  >
-                    {lang === 'KR' ? '상세 기술 정보' : 'Technical Details'}
-                  </button>
                 )}
               </div>
             )}
@@ -1827,56 +1746,6 @@ export default function RemovePage() {
             </div>
           )}
         </div>
-        {showTechErrorModal && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-900 p-5 shadow-2xl border border-gray-200 dark:border-gray-800">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-bold dark:text-white">Video Engine Error</h2>
-                <button
-                  type="button"
-                  onClick={() => setShowTechErrorModal(false)}
-                  className="rounded-lg px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-
-              <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-xl bg-gray-100 dark:bg-black/50 p-4 text-xs font-mono text-red-600 dark:text-red-400 border border-gray-200 dark:border-red-500/10">
-                {nativeExtractError && `${nativeExtractError}\n\n`}
-                {ffmpegError && `[FFmpeg Error]\n${ffmpegError}`}
-                {(!nativeExtractError && !ffmpegError) && 'No technical error available.'}
-              </pre>
-
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const errText = [
-                      nativeExtractError ? `${nativeExtractError}` : '',
-                      ffmpegError ? `[FFmpeg Error]\n${ffmpegError}` : ''
-                    ].filter(Boolean).join('\n\n');
-                    navigator.clipboard.writeText(errText || 'No error details');
-                    alert('Copied to clipboard');
-                  }}
-                  className="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors dark:text-gray-300"
-                >
-                  Copy Error
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowTechErrorModal(false);
-                    setUploadState('idle');
-                    retryFFmpeg();
-                  }}
-                  className="rounded-lg bg-red-600 hover:bg-red-700 px-3 py-2 text-sm font-semibold text-white transition-colors"
-                >
-                  Retry Engine Load
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
         
         <DownloadModal
           isOpen={showDownloadModal}
