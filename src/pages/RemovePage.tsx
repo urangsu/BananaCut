@@ -57,8 +57,6 @@ export default function RemovePage() {
   const { lang } = useLanguage();
   const MIDDLE_NAME_OPTIONS = GET_MIDDLE_NAME_OPTIONS(lang);
 
-  // Prewarm FFmpeg engine in the background is temporarily disabled.
-
   const { 
     frames, setFrames, 
     videoFile, setVideoFile, 
@@ -90,7 +88,6 @@ export default function RemovePage() {
     extractionElapsedText,
     isExtracting,
     processFile,
-    extractFramesWithFFmpeg,
     cancelExtraction
   } = useMediaImport({
     frames,
@@ -855,18 +852,14 @@ export default function RemovePage() {
                   )}
                   <span className="font-medium text-center">
                     {uploadState === 'image-loading' ? (lang === 'KR' ? '이미지 불러오는 중...' : 'Loading image...') :
-                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? 'FFmpeg 대체 엔진 로딩 중...' : 'Loading FFmpeg fallback engine...') :
+                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...') :
                      uploadState === 'video-extracting' ? (lang === 'KR' ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과` : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`) :
-                     uploadState === 'error' ? (lang === 'KR' ? '브라우저 추출 실패. FFmpeg 재시도 또는 PNG를 사용하세요.' : 'Browser extraction failed. Try FFmpeg fallback or PNG sequence.') :
+                     uploadState === 'error' ? (lang === 'KR' ? '브라우저 추출 실패. PNG를 사용하세요.' : 'Browser extraction failed. Try PNG sequence instead.') :
                      uploadState === 'ready' ? `${frames.length} frames ready` :
                      (lang === 'KR' ? '파일 선택' : 'Select File')}
                   </span>
                   <span className="text-xs opacity-60">MP4, MOV, PNG</span>
                 </label>
-                {uploadState === 'error' && (
-                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -903,9 +896,9 @@ export default function RemovePage() {
                 
                 <p className={`mb-2 text-sm font-semibold ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
                     {uploadState === 'image-loading' ? (lang === 'KR' ? '이미지 불러오는 중...' : 'Loading image...') :
-                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? 'FFmpeg 대체 엔진 로딩 중...' : 'Loading FFmpeg fallback engine...') :
+                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...') :
                      uploadState === 'video-extracting' ? (lang === 'KR' ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과` : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`) :
-                     uploadState === 'error' ? (lang === 'KR' ? '브라우저 추출 실패. FFmpeg 재시도 또는 PNG를 사용하세요.' : 'Browser extraction failed. Try FFmpeg fallback or PNG sequence.') :
+                     uploadState === 'error' ? (lang === 'KR' ? '브라우저 추출 실패. PNG를 사용하세요.' : 'Browser extraction failed. Try PNG sequence instead.') :
                      uploadState === 'ready' ? `${frames.length} frames ready` :
                      (lang === 'KR' ? '파일 업로드 (클릭 또는 드래그)' : 'Click to upload or drag and drop')}
                 </p>
