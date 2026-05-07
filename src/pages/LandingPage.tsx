@@ -14,6 +14,8 @@ import {
   Play,
   PlaySquare,
   Shield,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { trackEvent } from "../lib/analytics";
@@ -155,14 +157,14 @@ function ScratchOverlay({
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
   const { lang, setLang } = useLanguage();
   const [showGetApp, setShowGetApp] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
-  const [isDemoPlaying, setIsDemoPlaying] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [iframeError, setIframeError] = useState(false);
+  const [demoVideoError, setDemoVideoError] = useState(false);
+  const [isVideoFailed, setIsVideoFailed] = useState(false);
 
   return (
     <div
@@ -200,6 +202,23 @@ export default function LandingPage() {
               </button>
             ))}
           </div>
+          
+          <button
+            onClick={toggleTheme}
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            className={`w-9 h-9 rounded-full border backdrop-blur-md transition-all flex items-center justify-center shrink-0 ${
+              isDark
+                ? "bg-white/5 border-white/10 text-white/80 hover:bg-white/10"
+                : "bg-white/70 border-gray-200 text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            {isDark ? (
+              <Sun className="w-[18px] h-[18px]" strokeWidth={1.75} />
+            ) : (
+              <Moon className="w-[18px] h-[18px]" strokeWidth={1.75} />
+            )}
+          </button>
+
           <div className="hidden md:flex items-center gap-4">
             <button
               onClick={() => setShowGetApp(true)}
@@ -249,60 +268,26 @@ export default function LandingPage() {
           {/* Hero Section */}
           <section className="text-center space-y-8">
             <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight">
-              {lang === "KR" ? (
-                <>
-                  AI 영상과 캐릭터를
-                  <br />
-                  <span className={isDark ? "text-blue-400" : "text-blue-600"}>
-                    바로 쓸 수 있는 투명 에셋으로
-                  </span>
-                </>
-              ) : lang === "EN" ? (
-                <>
-                  Turn videos and generated characters into <br />
-                  <span className={isDark ? "text-blue-400" : "text-blue-600"}>
-                    usable transparent assets
-                  </span>
-                </>
-              ) : (
-                <>
-                  動画や生成キャラクターを
-                  <br />
-                  <span className={isDark ? "text-blue-400" : "text-blue-600"}>
-                    すぐ使える透過アセットに
-                  </span>
-                </>
-              )}
+              Remove Backgrounds.<br />
+              <span className={isDark ? "text-blue-400" : "text-blue-600"}>
+                Make It Yours.
+              </span>
             </h1>
             <p
               className={`text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${isDark ? "text-white/60" : "text-gray-600"}`}
             >
-              {lang === "KR" ? (
-                <>
-                  브라우저 안에서 프레임 분할, 배경 제거, 수동 보정, 스프라이트
-                  시트 생성을 한 번에 처리합니다.
-                </>
-              ) : lang === "EN" ? (
-                <>
-                  Split frames, remove backgrounds, clean edges, and export
-                  sprite sheets directly in your browser.
-                </>
-              ) : (
-                <>
-                  ブラウザ内でフレーム分割、背景除去、手動補正、スプライトシート出力まで完結します。
-                </>
-              )}
+              {lang === "KR"
+                ? "영상과 프레임을 브라우저에서 다듬고, 바로 쓸 수 있는 에셋으로 내보내세요."
+                : lang === "EN"
+                  ? "Clean up videos and frames, then export transparent assets directly in your browser."
+                  : "動画やフレームをブラウザで整理し、すぐ使えるアセットとして書き出せます。"}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
                 onClick={() => navigate("/remove")}
                 className="px-10 py-4 rounded-full text-lg font-bold transition-all bg-black text-white hover:bg-gray-800 hover:scale-105 shadow-xl uppercase tracking-tight"
               >
-                {lang === "KR"
-                  ? "바로 시작하기"
-                  : lang === "EN"
-                    ? "Start Cutting"
-                    : "はじめる"}
+                Start Cutting
               </button>
               <button
                 onClick={() => {
@@ -311,11 +296,7 @@ export default function LandingPage() {
                 }}
                 className={`px-10 py-4 rounded-full text-lg font-bold transition-all border-2 ${isDark ? "border-white text-white hover:bg-white hover:text-black" : "border-black text-black hover:bg-black hover:text-white"} hover:scale-105 uppercase tracking-tight`}
               >
-                {lang === "KR"
-                  ? "샘플로 체험하기"
-                  : lang === "EN"
-                    ? "Try Sample Project"
-                    : "サンプルを試す"}
+                Try Sample Project
               </button>
             </div>
           </section>
@@ -325,68 +306,53 @@ export default function LandingPage() {
             <div
               className={`aspect-video rounded-3xl flex items-center justify-center border overflow-hidden relative shadow-2xl group ${isDark ? "bg-[#0a0a0a] border-white/10" : "bg-black border-gray-200"}`}
             >
-              {!isDemoPlaying ? (
-                <>
-                  <img
-                    src="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg"
-                    alt="BananaCut Demo Thumbnail"
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors pointer-events-none" />
-                  <div className="absolute flex flex-col items-center justify-center pointer-events-none">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setIsDemoPlaying(true);
-                      }}
-                      className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-all flex items-center gap-3 shadow-[0_0_40px_rgba(220,38,38,0.5)] group-hover:scale-110 group-hover:shadow-[0_0_60px_rgba(220,38,38,0.8)] pointer-events-auto"
-                    >
-                      <PlaySquare className="w-6 h-6" />
-                      {lang === "KR"
-                        ? "YouTube에서 데모 보기"
-                        : lang === "EN"
-                          ? "Watch demo"
-                          : "デモを見る"}
-                    </button>
-                    <p
-                      className={`mt-6 text-sm font-medium px-4 py-2 rounded-full backdrop-blur-md ${isDark ? "text-white/80 bg-black/40" : "text-gray-900 bg-white/60"}`}
-                    >
-                      {lang === "KR"
-                        ? "클릭 시 동영상이 재생됩니다."
-                        : lang === "EN"
-                          ? "Click to play video."
-                          : "クリックして再生"}
-                    </p>
-                  </div>
-                </>
-              ) : iframeError ? (
+              {demoVideoError ? (
                 <div className="flex flex-col items-center justify-center text-white/50 space-y-4">
                   <PlaySquare className="w-12 h-12 opacity-50" />
                   <p>
                     {lang === "KR"
-                      ? "동영상을 로드하지 못했습니다."
-                      : "Failed to load video."}
+                      ? "데모 영상을 불러오지 못했습니다."
+                      : lang === "EN"
+                        ? "Demo video could not be loaded."
+                        : "デモ動画を読み込めませんでした。"}
                   </p>
                   <a
                     href="https://www.youtube.com/watch?v=rTOB6sX-zA8"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+                    className="px-6 py-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors flex items-center gap-2 font-medium"
                   >
-                    Open in YouTube
+                    <PlaySquare className="w-5 h-5" />
+                    {lang === "KR"
+                      ? "YouTube에서 보기"
+                      : lang === "EN"
+                        ? "Watch on YouTube"
+                        : "YouTubeで見る"}
                   </a>
                 </div>
+              ) : !isVideoFailed ? (
+                <video
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  controls={false}
+                  poster="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={() => setIsVideoFailed(true)}
+                >
+                  <source src="/videos/bananacut-demo.webm" type="video/webm" />
+                  <source src="/videos/bananacut-demo.mp4" type="video/mp4" />
+                </video>
               ) : (
                 <iframe
-                  className="w-full h-full"
-                  src="https://www.youtube.com/embed/rTOB6sX-zA8?autoplay=1"
+                  className="w-full h-full absolute inset-0 object-cover"
+                  src="https://www.youtube.com/embed/rTOB6sX-zA8?autoplay=1&mute=1&playsinline=1&controls=0&rel=0&modestbranding=1"
                   title="BananaCut Demo Video"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
-                  onError={() => setIframeError(true)}
+                  onError={() => setDemoVideoError(true)}
                 />
               )}
             </div>
@@ -568,65 +534,79 @@ export default function LandingPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                 <div className="space-y-4">
                   <h3 className="text-2xl font-bold tracking-tight">
-                    Local Processing
+                    Files Stay With You
                   </h3>
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "바나나컷은 고성능 웹 엔진(WASM/FFmpeg)을 사용하여 핵심 작업을 브라우저 내부에서 처리합니다. 무거운 4K 영상을 외부 서버에 업로드할 필요가 없습니다."
+                      ? "영상과 이미지는 브라우저 안에서 처리됩니다. 원본 파일을 서버에 올리지 않고도 배경 제거와 프레임 정리를 시작할 수 있어요."
                       : lang === "EN"
-                        ? "BananaCut uses a high-performance web engine (WASM/FFmpeg) to process core tasks inside your browser. No need to upload heavy 4K videos to external servers."
-                        : "BananaCutは高性能ウェブエンジン（WASM/FFmpeg）を使用して、コアタスクをブラウザ内で処理します。重い4K動画を外部サーバーにアップロードする必要はありません。"}
+                        ? "Your videos and images are processed in your browser. Start removing backgrounds and cleaning frames without uploading your source files to our servers."
+                        : "動画や画像はブラウザ内で処理されます。元ファイルをサーバーにアップロードせずに、背景除去とフレーム整理を始められます。"}
                   </p>
                 </div>
                 <div className="space-y-4">
                   <h3 className="text-2xl font-bold tracking-tight">
-                    Advanced Alpha Repair
+                    Clean the Edges
                   </h3>
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "단순한 배경 제거를 넘어, 손상된 알파 채널을 복구하는 Smart Fill 알고리즘을 제공합니다. 프레임 단위의 수작업 로토스코핑 시간을 획기적으로 단축하세요."
+                      ? "배경 제거 후 남는 가장자리 얼룩이나 빈틈을 직접 다듬을 수 있습니다. 여러 프레임을 한 번에 정리해 반복 작업을 줄일 수 있어요."
                       : lang === "EN"
-                        ? "Beyond simple background removal, we provide a Smart Fill algorithm that repairs damaged alpha channels. Drastically reduce your frame-by-frame manual rotoscoping time."
-                        : "単純な背景削除を超えて、損傷したアルファチャネルを復元するSmart Fillアルゴリズムを提供します。フレーム単位の手作業によるロトスコープの時間を劇的に短縮します。"}
+                        ? "Fix rough edges, tiny gaps, and leftover background marks after removal. Clean multiple frames without repainting everything one by one."
+                        : "背景除去後に残るエッジの汚れや小さな隙間を整えられます。1枚ずつやり直さずに、複数フレームをまとめて整理できます。"}
                   </p>
                 </div>
                 <div className="space-y-4">
                   <h3 className="text-2xl font-bold tracking-tight">
-                    Free to Use
+                    Start Right Away
                   </h3>
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "이 모든 전문가급 기능을 바탕으로 시작하세요. 번거로운 회원가입도 필요 없습니다."
+                      ? "가입 없이 바로 시작할 수 있습니다. 샘플 프로젝트로 먼저 체험해보고, 필요할 때 내 파일을 가져오세요."
                       : lang === "EN"
-                        ? "Start using these professional-grade features for free. No cumbersome sign-ups required."
-                        : "これらのプロフェッショナルレベルの機能を利用し始めましょう。面倒な会員登録も必要ありません。"}
+                        ? "No account is required to get started. Try the sample project first, then bring in your own files when you are ready."
+                        : "アカウントなしですぐに始められます。まずはサンプルで試してから、自分のファイルを読み込めます。"}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* 2. Perfect for AI Creators */}
+            {/* 2. For Generated Videos */}
             <div
               className={`p-12 rounded-[2.5rem] ${isDark ? "bg-white/5" : "bg-gray-50"}`}
             >
               <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-6">
-                Perfect for AI Creators
+                For Generated Videos
               </h2>
-              <p
-                className={`text-xl md:text-2xl leading-relaxed max-w-4xl ${isDark ? "text-white/80" : "text-gray-700"}`}
+              <div
+                className={`text-xl md:text-2xl leading-relaxed max-w-4xl space-y-4 flex flex-col ${isDark ? "text-white/80" : "text-gray-700"}`}
               >
-                {lang === "KR"
-                  ? "Seedance, Veo, Midjourney와 같은 최신 생성 모델을 다루는 창작자에게 바나나컷은 '완벽한 에셋 파이프라인'을 제공합니다. 크로마키 작업 후 결과물을 이미지로 받는 것을 넘어, 배경이 투명한 WebM 비디오로 추출하거나 게임 엔진용 스프라이트 시트(Sprite Sheet)로 즉시 병합하세요. 생성된 영상이 프로덕션급 게임/영상 에셋으로 재탄생합니다."
-                  : lang === "EN"
-                    ? "BananaCut offers a 'complete asset pipeline' for creators using the latest generative models like Seedance, Veo, and Midjourney. Go beyond simple image sequences—export your chroma-keyed results as transparent WebM videos or merge them instantly into game-ready sprite sheets. Transform generated videos into production-grade assets."
-                    : "Seedance、Veo、Midjourneyなどの最新の生成モデルを扱うクリエイターに、BananaCutは「完璧なアセットパイプライン」を提供します。クロマキー作業後、背景が透明なWebMビデオとして書き出したり、ゲームエンジン用のスプライトシートに即座に結合したりできます。生成された動画がプロ仕様のゲーム/映像アセットに生まれ変わります。"}
-              </p>
+                {lang === "KR" ? (
+                  <>
+                    <p>AI로 만든 영상은 바로 쓰기 어려울 때가 많습니다.</p>
+                    <p>배경이 남아 있거나, 프레임마다 가장자리가 흔들리거나, 캐릭터 주변에 작은 얼룩이 생기기도 하죠.</p>
+                    <p>BananaCut은 그런 결과물을 프레임으로 나누고, 배경을 지우고, 다시 쓸 수 있는 투명 에셋으로 정리합니다.<br/>GPT Image, Nano Banana, Seedance, Veo로 만든 이미지와 영상도 PNG 시퀀스나 스프라이트 시트로 빠르게 내보낼 수 있습니다.</p>
+                  </>
+                ) : lang === "EN" ? (
+                  <>
+                    <p>Generated videos are not always ready to use.</p>
+                    <p>Backgrounds remain, edges flicker between frames, and small artifacts often appear around the character.</p>
+                    <p>BananaCut helps you split those results into frames, remove the background, and turn them into reusable transparent assets.<br/>Use it with assets from GPT Image, Nano Banana, Seedance, Veo, and similar generation workflows.</p>
+                  </>
+                ) : (
+                  <>
+                    <p>生成された動画は、そのまま使いにくいことがあります。</p>
+                    <p>背景が残ったり、フレームごとにエッジが揺れたり、キャラクターの周りに小さなノイズが出ることがあります。</p>
+                    <p>BananaCutは、そうした素材をフレームに分け、背景を消し、再利用しやすい透過アセットとして整理します。<br/>GPT Image、Nano Banana、Seedance、Veoで作成した画像や動画も、PNGシーケンスやスプライトシートとして書き出せます。</p>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* 3. FAQ */}
@@ -647,16 +627,16 @@ export default function LandingPage() {
                       ? "Q: 정말 무료인가요?"
                       : lang === "EN"
                         ? "Q: Is it free to use?"
-                        : "Q: 無料ですか？"}
+                        : "Q: 本当に無料ですか？"}
                   </h3>
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "A: 네, 바나나컷은 크리에이터 생태계를 위해 만들어진 도구로, 기능들을 무료로 제공합니다."
+                      ? "A: 네. BananaCut은 회원가입 없이 무료로 사용할 수 있습니다. 앱 에셋을 만들다 직접 필요해서 만든 도구이고, 같은 문제를 겪는 분들께 공개했습니다."
                       : lang === "EN"
-                        ? "A: Yes, BananaCut is a tool built for the creator ecosystem, providing features for free."
-                        : "A: はい、BananaCutはクリエイターエコシステムのために作られたツールであり、機能を無料で提供します。"}
+                        ? "A: Yes. BananaCut is free to use without creating an account. I built it for my own app assets and shared it for others with the same workflow problem."
+                        : "A: はい。BananaCutはアカウント登録なしで無料で使えます。自分のアプリ用アセット制作で必要になって作り、同じ悩みを持つ人のために公開しています。"}
                   </p>
                 </div>
                 <div
@@ -673,10 +653,10 @@ export default function LandingPage() {
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "A: 아니요. 원본 이미지/비디오, 추출 프레임, 편집 결과물은 바나나컷 서버로 업로드되거나 저장되지 않습니다."
+                      ? "A: 아니요. 원본 이미지와 비디오, 추출된 프레임, 편집 결과물은 BananaCut 서버에 업로드되거나 저장되지 않습니다."
                       : lang === "EN"
-                        ? "A: No. Original images/videos, extracted frames, and edited results are not uploaded or stored on BananaCut servers."
-                        : "A: いいえ。元の画像/ビデオ、抽出されたフレーム、および編集結果がBananaCutサーバーにアップロードされたり保存されたりすることはありません。"}
+                        ? "A: No. Your original images, videos, extracted frames, and edited results are not uploaded to or stored on BananaCut servers."
+                        : "A: いいえ。元の画像や動画、抽出されたフレーム、編集結果がBananaCutサーバーにアップロードまたは保存されることはありません。"}
                   </p>
                 </div>
                 <div
@@ -693,10 +673,10 @@ export default function LandingPage() {
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "A: 업로드는 MP4, WEBM 비디오 및 PNG, JPG 시퀀스를 지원합니다. 작업 완료 후에는 투명도가 적용된 PNG 시퀀스(ZIP), 투명 WebM 비디오, 병합된 스프라이트 시트 이미지로 내보낼 수 있습니다."
+                      ? "A: MP4, MOV, WEBM 같은 영상 파일과 PNG, JPG 이미지를 사용할 수 있습니다. 작업 후에는 PNG 시퀀스, GIF, WebM 비디오, 스프라이트 시트로 내보낼 수 있습니다."
                       : lang === "EN"
-                        ? "A: We support MP4, WEBM videos, and PNG/JPG sequences for upload. You can export your final work as transparent PNG sequences (ZIP), transparent WebM videos, or merged sprite sheets."
-                        : "A: アップロードはMP4、WEBMビデオ、PNG/JPGシーケンスをサポートします。作業完了後は、透明なPNGシーケンス（ZIP）、透明なWebMビデオ、結合されたスプライトシート画像として書き出すことができます。"}
+                        ? "A: You can use video files such as MP4, MOV, and WEBM, as well as PNG and JPG images. After editing, you can export PNG sequences, GIFs, WebM videos, and sprite sheets."
+                        : "A: MP4、MOV、WEBMなどの動画ファイルと、PNG、JPG画像を使用できます。編集後は、PNGシーケンス、GIF、WebM動画、スプライトシートとして書き出せます。"}
                   </p>
                 </div>
                 <div
@@ -704,19 +684,19 @@ export default function LandingPage() {
                 >
                   <h3 className="text-xl font-bold mb-3">
                     {lang === "KR"
-                      ? "Q: 고해상도 투명 비디오나 스프라이트 시트 생성도 브라우저에서 되나요?"
+                      ? "Q: 고해상도 내보내기도 브라우저에서 되나요?"
                       : lang === "EN"
-                        ? "Q: Can high-resolution transparent videos and sprite sheets be generated in the browser?"
-                        : "Q: 高解像度の透明ビデオやスプライトシートの生成もブラウザで可能ですか？"}
+                        ? "Q: Can high-resolution export be generated in the browser?"
+                        : "Q: 高解像度の書き出しもブラウザで可能ですか？"}
                   </h3>
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "A: 네! 바나나컷에 탑재된 고성능 웹 엔진과 스마트 렌더링 기술을 통해, 무거운 영상 인코딩과 이미지 병합 작업도 별도의 서버 없이 브라우저 내에서 100% 로컬 처리됩니다."
+                      ? "A: 가능합니다. 다만 큰 영상이나 긴 프레임 시퀀스는 기기와 브라우저 성능에 따라 시간이 더 걸릴 수 있습니다. 빠르고 안정적인 결과가 필요하다면 먼저 스프라이트 시트 내보내기를 추천합니다."
                       : lang === "EN"
-                        ? "A: Yes! Powered by BananaCut's high-performance web engine and smart rendering technology, heavy video encoding and image merging are processed 100% locally in your browser, without any external servers."
-                        : "A: はい！BananaCutに搭載された高性能ウェブエンジンとスマートレンダリング技術により、重い動画のエンコードや画像の結合も外部サーバーなしで、ブラウザ内で100%ローカル処理されます。"}
+                        ? "A: Yes, but large videos or long frame sequences may take more time depending on your device and browser. For the fastest and most reliable workflow, we recommend starting with sprite sheet export."
+                        : "A: 可能です。ただし、大きな動画や長いフレームシーケンスは、端末やブラウザの性能によって時間がかかる場合があります。より速く安定した結果が必要な場合は、まずスプライトシート出力をおすすめします。"}
                   </p>
                 </div>
               </div>

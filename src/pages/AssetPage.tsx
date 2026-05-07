@@ -553,27 +553,62 @@ export default function AssetPage() {
             )}
           </p>
           {frames.length > 0 && (
-            <p className="mt-3 text-sm font-medium text-blue-500 flex flex-wrap gap-4 items-center">
-              <span>
-                {lang === "KR"
-                  ? `공유된 ${frames.length} 프레임으로 에셋을 만듭니다.`
-                  : `Creating assets from ${frames.length} shared frames.`}
-              </span>
-              <span
-                className={`px-2 py-0.5 rounded text-xs ${isDark ? "bg-white/10 text-white/70" : "bg-gray-100 text-gray-600"}`}
-              >
-                {lang === "KR" ? "처리됨:" : "Processed:"}{" "}
-                {frames.filter((f) => f.processedUrl && !f.dirty).length} /{" "}
-                {frames.length}
-              </span>
-              {frames.some((f) => !f.processedUrl || f.dirty) && (
-                <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 font-semibold flex items-center gap-1 border border-yellow-500/30">
-                  <AlertTriangle className="w-3 h-3" />
-                  {lang === "KR" ? "미적용 프레임:" : "Unprocessed:"}{" "}
-                  {frames.filter((f) => !f.processedUrl || f.dirty).length}
+            <div className="mt-4 space-y-3">
+              <p className="text-sm font-medium text-blue-600 dark:text-blue-400 flex flex-wrap gap-4 items-center">
+                <span>
+                  {lang === "KR"
+                    ? `공유된 ${frames.length}개 프레임으로 에셋을 만들 수 있습니다.`
+                    : lang === "EN"
+                      ? `Create assets from ${frames.length} shared frames.`
+                      : `共有された${frames.length}個のフレームでアセットを作成できます。`}
                 </span>
+                <span
+                  className={`px-2 py-0.5 rounded text-xs ${isDark ? "bg-white/10 text-white/70" : "bg-gray-100 text-gray-600"}`}
+                >
+                  {lang === "KR" ? "처리 완료: " : "Processed: "}
+                  {frames.filter((f) => f.processedUrl && !f.dirty).length} / {frames.length}
+                </span>
+                {frames.some((f) => !f.processedUrl || f.dirty) && (
+                  <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 font-semibold flex items-center gap-1 border border-yellow-500/20">
+                    <AlertTriangle className="w-3 h-3" />
+                    {lang === "KR" ? "아직 처리되지 않은 프레임 " : "Unprocessed frames: "}
+                    {frames.filter((f) => !f.processedUrl || f.dirty).length}
+                    {lang === "KR" ? "개" : ""}
+                  </span>
+                )}
+              </p>
+              {frames.some((f) => !f.processedUrl || f.dirty) && (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 gap-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+                        {lang === "KR" 
+                          ? "일부 프레임이 아직 처리되지 않았습니다." 
+                          : lang === "EN" 
+                            ? "Some frames are unprocessed." 
+                            : "一部のフレームがまだ処理されていません。"}
+                      </h4>
+                      <p className="text-sm text-orange-700 dark:text-orange-400/80 mt-1">
+                        {lang === "KR" 
+                          ? "최종 에셋 품질을 위해 먼저 프레임 처리를 완료하는 것을 권장합니다." 
+                          : lang === "EN" 
+                            ? "We recommend processing all frames first for the best final asset quality." 
+                            : "最高のアセット品質を得るために、まずフレーム処理を完了することをお勧めします。"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                       document.dispatchEvent(new CustomEvent("navigate", { detail: "remove" }));
+                    }}
+                    className="shrink-0 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm w-full sm:w-auto"
+                  >
+                    {lang === "KR" ? "Remove에서 계속 편집하기" : lang === "EN" ? "Continue editing in Remove" : "Removeで編集を続ける"}
+                  </button>
+                </div>
               )}
-            </p>
+            </div>
           )}
         </header>
 
@@ -634,7 +669,7 @@ export default function AssetPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* 1. Transparent Video Export */}
             <div
-              className={`p-6 rounded-2xl border shadow-sm flex flex-col ${isDark ? "bg-[#1a1a1a] border-white/10" : "bg-white border-gray-200"}`}
+              className={`p-6 rounded-2xl border flex flex-col order-2 opacity-90 ${isDark ? "bg-[#1a1a1a] border-white/10" : "bg-white border-gray-200"}`}
             >
               <div className="flex items-center gap-3 mb-4">
                 <div
@@ -653,29 +688,24 @@ export default function AssetPage() {
                         : "透明ビデオエクスポート"}
                   </h2>
                   <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className={`text-sm ${isDark ? "text-white/60" : "text-gray-500"}`}
-                    >
-                      WebM (VP9 + Alpha)
-                    </span>
-                    <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-red-500/10 text-red-500 border border-red-500/20">
-                      Requires FFmpeg fallback engine
+                    <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-gray-500/10 text-gray-500 dark:text-gray-400 border border-gray-500/20">
+                      {lang === "KR" ? "고급" : "Advanced"}
                     </span>
                   </div>
                 </div>
               </div>
 
               <div
-                className={`flex-1 mb-6 text-sm leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
+                className={`flex-1 mb-[52px] text-sm leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
               >
                 {lang === "KR"
-                  ? "현재 프레임들을 결합하여 배경이 투명한 동영상 파일(.webm)을 생성합니다. 웹사이트나 영상 편집기에서 바로 사용할 수 있습니다."
+                  ? "현재 프레임들을 하나의 투명 배경 WebM 비디오로 결합합니다."
                   : lang === "EN"
-                    ? "Combines current frames to create a video file (.webm) with a transparent background. Ready to use in websites or video editors."
-                    : "現在のフレームを結合して、背景が透明な動画ファイル(.webm)を作成します。ウェブサイトや動画編集ソフトですぐに使用できます。"}
+                    ? "Combines current frames into a single transparent background WebM video."
+                    : "現在のフレームを結合して、背景が透明な動画ファイル(.webm)を作成します。"}
                 
-                <p className={`mt-2 text-xs opacity-70 ${isDark ? "text-blue-300" : "text-blue-700"}`}>
-                  {lang === "KR" ? "Smart Crop은 현재 Sprite Sheet export에만 적용됩니다." : "Smart Crop currently applies to Sprite Sheet export only."}
+                <p className={`mt-2 text-xs opacity-60 ${isDark ? "text-white/40" : "text-gray-500"}`}>
+                  {lang === "KR" ? "일부 환경에서는 생성에 시간이 더 걸릴 수 있습니다." : "May take longer to generate in some environments."}
                 </p>
               </div>
 
@@ -735,8 +765,11 @@ export default function AssetPage() {
 
             {/* 2. Sprite Sheet Generator */}
             <div
-              className={`p-6 rounded-2xl border shadow-sm flex flex-col ${isDark ? "bg-[#1a1a1a] border-white/10" : "bg-white border-gray-200"}`}
+              className={`p-6 rounded-2xl border-2 flex flex-col relative overflow-hidden shadow-sm order-1 ${isDark ? "bg-[#1e231e] border-green-500/30" : "bg-green-50/30 border-green-400"}`}
             >
+              <div className="absolute top-0 right-0 px-4 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 font-bold text-xs uppercase tracking-wider rounded-bl-xl border-b border-l border-green-500/20">
+                {lang === "KR" ? "추천" : "Recommended"}
+              </div>
               <div className="flex items-center gap-3 mb-4">
                 <div
                   className={`p-3 rounded-xl ${isDark ? "bg-green-500/20" : "bg-green-100"}`}
@@ -750,20 +783,23 @@ export default function AssetPage() {
                     {lang === "KR"
                       ? "스프라이트 시트 생성"
                       : lang === "EN"
-                        ? "Sprite Sheet Generator (Recommended)"
+                        ? "Create Sprite Sheet"
                         : "スプライトシート生成"}
                   </h2>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className={`text-sm ${isDark ? "text-white/60" : "text-gray-500"}`}
-                    >
-                      PNG Atlas
-                    </span>
-                    <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
-                      Fast browser export
-                    </span>
-                  </div>
                 </div>
+              </div>
+
+              <div
+                className={`mb-6 text-sm leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
+              >
+                {lang === "KR"
+                  ? "게임/앱 에셋으로 가장 빠르고 안정적으로 내보낼 수 있습니다."
+                  : lang === "EN"
+                    ? "Fastest and most stable export for game/app assets."
+                    : "ゲーム/アプリアセットとして最も早く安定してエクスポートできます。"}
+                <p className={`mt-2 text-xs opacity-70 ${isDark ? "text-green-300" : "text-green-700"}`}>
+                  {lang === "KR" ? "스마트 크롭은 스프라이트 시트에서 사용할 수 있습니다." : "Smart crop can be used for sprite sheets."}
+                </p>
               </div>
 
               <div className="space-y-4 mb-6">
@@ -905,7 +941,9 @@ export default function AssetPage() {
                       <div>
                         <p className="font-medium text-sm">Original Canvas</p>
                         <p className="text-xs opacity-60">
-                          Export frames at their original resolution
+                          {lang === "KR"
+                            ? "원본 프레임 크기로 내보냅니다."
+                            : "Export frames at their original resolution"}
                         </p>
                       </div>
                     </label>
@@ -928,8 +966,9 @@ export default function AssetPage() {
                           Recommended Stable Crop
                         </p>
                         <p className="text-xs opacity-60">
-                          Use the smart crop box to safely remove empty space
-                          without jitter
+                          {lang === "KR"
+                            ? "빈 여백을 줄이면서 흔들림 없이 안전하게 크롭합니다."
+                            : "Use the smart crop box to safely remove empty space without jitter"}
                         </p>
                       </div>
                     </label>
@@ -948,7 +987,9 @@ export default function AssetPage() {
                           Custom Canvas Size
                         </p>
                         <p className="text-xs opacity-60 mb-2">
-                          Resize and position inside a custom canvas
+                          {lang === "KR"
+                            ? "사용자 지정 캔버스 크기 안에 배치합니다."
+                            : "Resize and position inside a custom canvas"}
                         </p>
 
                         {exportSizeMode === "customCanvas" && (
@@ -1321,12 +1362,12 @@ export default function AssetPage() {
         <div className="space-y-4">
           <p className="text-sm">
             {lang === "KR"
-              ? "작업 중 기술적인 오류가 발생했습니다. FFmpeg 엔진 로드 문제일 수 있습니다."
-              : "A technical error occurred during the operation. This might be an issue with loading the FFmpeg engine."}
+              ? "작업 중 오류가 발생했습니다. 브라우저에서 처리 중 문제가 발생했을 수 있습니다."
+              : "A technical error occurred during the operation. There might be an issue with browser processing."}
           </p>
 
           <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-xl bg-gray-100 dark:bg-black/50 p-4 text-xs font-mono text-red-600 dark:text-red-400 border border-gray-200 dark:border-red-500/10">
-            {ffmpegError && `[FFmpeg Error]\n${ffmpegError}`}
+            {ffmpegError && `[Processing Error]\n${ffmpegError}`}
             {!ffmpegError && "No technical error available."}
           </pre>
 
@@ -1334,7 +1375,7 @@ export default function AssetPage() {
             <button
               onClick={() => {
                 const errText = ffmpegError
-                  ? `[FFmpeg Error]\n${ffmpegError}`
+                  ? `[Processing Error]\n${ffmpegError}`
                   : "No error details";
                 navigator.clipboard.writeText(errText);
                 alert("Copied to clipboard");
