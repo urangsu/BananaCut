@@ -20,18 +20,18 @@ export default function PrivacyPage() {
         {lang === 'KR' && (
           <div className="space-y-8">
             <section>
-              <h2 className="font-bold text-xl mb-4">1. 미디어 파일 처리</h2>
-              <p className="opacity-80">원본 이미지/비디오, 추출 프레임, 편집 결과물은 BananaCut 서버로 업로드되거나 저장되지 않습니다.</p>
+              <h2 className="font-bold text-xl mb-4">1. 데이터 처리</h2>
+              <p className="opacity-80">BananaCut은 이미지 및 비디오 처리를 사용자의 브라우저 내에서 수행합니다.<br/>원본 미디어 파일과 편집 데이터는 BananaCut 서버로 업로드되거나 저장되지 않습니다.</p>
             </section>
             
             <section>
               <h2 className="font-bold text-xl mb-4">2. 쿠키 및 광고</h2>
-              <p className="opacity-80">본 서비스는 Google AdSense를 통한 광고 송출 및 서비스 분석을 위해 쿠키를 사용합니다. 쿠키는 사용자의 브라우저에 저장되는 작은 텍스트 파일로, 맞춤형 광고 제공을 위해 사용될 수 있습니다.</p>
+              <p className="opacity-80">BananaCut은 서비스 운영, 분석, 광고 송출을 위해 쿠키 또는 유사 기술을 사용할 수 있습니다.<br/>광고는 Google AdSense 등 제3자 광고 네트워크를 통해 제공될 수 있습니다.</p>
             </section>
             
             <section>
               <h2 className="font-bold text-xl mb-4">3. 제3자 서비스</h2>
-              <p className="opacity-80">후원(Ko-fi), 설문(Tally) 등 외부 서비스 이용 시 해당 플랫폼의 개인정보 정책이 적용됩니다.</p>
+              <p className="opacity-80">후원, 설문, 외부 링크 등 제3자 서비스를 이용하는 경우 해당 서비스의 개인정보 처리방침이 적용됩니다.</p>
             </section>
           </div>
         )}
@@ -39,18 +39,18 @@ export default function PrivacyPage() {
         {lang === 'EN' && (
           <div className="space-y-8">
             <section>
-              <h2 className="font-bold text-xl mb-4">1. Media File Processing</h2>
-              <p className="opacity-80">Original images/videos, extracted frames, and edited results are not uploaded or stored on BananaCut servers.</p>
+              <h2 className="font-bold text-xl mb-4">1. Data Processing</h2>
+              <p className="opacity-80">BananaCut processes images and videos directly in your browser.<br/>Your original media files and editing data are not uploaded to or stored on BananaCut servers.</p>
             </section>
             
             <section>
-              <h2 className="font-bold text-xl mb-4">2. Cookies & Ads</h2>
-              <p className="opacity-80">We use cookies for Google AdSense to serve ads and analyze service usage. Cookies are small text files stored in your browser to provide personalized advertising experiences.</p>
+              <h2 className="font-bold text-xl mb-4">2. Cookies and Ads</h2>
+              <p className="opacity-80">BananaCut may use cookies or similar technologies for service operation, analytics, and advertising.<br/>Ads may be served through third-party advertising networks such as Google AdSense.</p>
             </section>
             
             <section>
               <h2 className="font-bold text-xl mb-4">3. Third-party Services</h2>
-              <p className="opacity-80">Usage of external platforms like Ko-fi (Support) or Tally (Feedback) is subject to their respective privacy policies.</p>
+              <p className="opacity-80">When you use third-party services such as donations, surveys, or external links, their own privacy policies apply.</p>
             </section>
           </div>
         )}
@@ -58,18 +58,18 @@ export default function PrivacyPage() {
         {lang === 'JP' && (
           <div className="space-y-8">
             <section>
-              <h2 className="font-bold text-xl mb-4">1. メディアファイル処理</h2>
-              <p className="opacity-80">元の画像/ビデオ、抽出されたフレーム、および編集結果がBananaCutサーバーにアップロードされたり保存されたりすることはありません。</p>
+              <h2 className="font-bold text-xl mb-4">1. データ処理</h2>
+              <p className="opacity-80">BananaCutは、ユーザーのブラウザ内で直接画像と動画を処理します。<br/>元のメディアファイルや編集データがBananaCutサーバーにアップロードまたは保存されることはありません。</p>
             </section>
             
             <section>
               <h2 className="font-bold text-xl mb-4">2. クッキーと広告</h2>
-              <p className="opacity-80">Google AdSenseを通じた広告配信およびサービス分析のためにクッキーを使用します。クッキーはカスタマイズされた広告提供のために使用される場合があります。</p>
+              <p className="opacity-80">BananaCutは、サービスの運営、分析、および広告配信のためにクッキーまたは類似の技術を使用する場合があります。<br/>広告は、Google AdSenseなどの第三者広告ネットワークを通じて提供される場合があります。</p>
             </section>
             
             <section>
               <h2 className="font-bold text-xl mb-4">3. 第三者サービス</h2>
-              <p className="opacity-80">寄付(Ko-fi)やアンケート(Tally)などの外部サービスを利用する場合、各プラットフォームのポリシーが適用されます。</p>
+              <p className="opacity-80">寄付、アンケート、外部リンクなどの第三者サービスを利用する場合、それぞれのプラットフォームのプライバシーポリシーが適用されます。</p>
             </section>
           </div>
         )}

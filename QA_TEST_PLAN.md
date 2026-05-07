@@ -48,3 +48,18 @@
    - Action: Click "Try Sample Project" again.
    - Expected/Result: Previous sample frames are removed (revokeObjectURL called), new random frames generated. No memory leak.
 
+## 3. Launch Readiness Tests
+
+1. **Landing Page CTA Navigation**
+   - Action: Click "Start Cutting" on Landing Page.
+   - Expected: Navigates to `/remove` Page.
+   - Action: Click "Try Sample Project" on Landing Page.
+   - Expected: Navigates to `/remove` Page and immediately loads sample frames.
+
+2. **Prohibited Phrases Verification**
+   - Action: Inspect Landing Page and Guide Page texts across KR, EN, and JP modes.
+   - Expected: No occurrences of "100% free", "ad-free", "no ads", "unlimited", etc.
+
+3. **Privacy & Policy Checks**
+   - Action: View Privacy Policy.
+   - Expected: Clearly states Google AdSense compatibility without explicitly guaranteeing "No Ads".

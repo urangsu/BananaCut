@@ -1,18 +1,37 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Play, Square, Download, Settings, Loader2, Sliders, ChevronDown, Brush, Eraser, MousePointer2, X, Flag, Pipette } from 'lucide-react';
-import JSZip from 'jszip';
-import { useTheme } from '../ThemeContext';
-import { useStudio, BrushStroke, StudioFrame } from '../StudioContext';
-import { trackEvent } from '../lib/analytics';
-import { revokeUrlsSafely } from '../utils/urlUtils';
-import { getFrameDisplayUrl } from '../utils/frameUtils';
-import { DownloadModal } from '../components/DownloadModal';
-import { useBatchJob } from '../hooks/useBatchJob';
-import { useMediaImport } from '../hooks/useMediaImport';
-import { useLanguage } from '../LanguageContext';
-import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
-import { PerfLogger } from '../utils/performanceLogger';
-import { generateSampleFrames, revokeSampleFrames } from '../utils/sampleProject';
+import React, { useState, useRef, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  Upload,
+  Play,
+  Square,
+  Download,
+  Settings,
+  Loader2,
+  Sliders,
+  ChevronDown,
+  Brush,
+  Eraser,
+  MousePointer2,
+  X,
+  Flag,
+  Pipette,
+} from "lucide-react";
+import JSZip from "jszip";
+import { useTheme } from "../ThemeContext";
+import { useStudio, BrushStroke, StudioFrame } from "../StudioContext";
+import { trackEvent } from "../lib/analytics";
+import { revokeUrlsSafely } from "../utils/urlUtils";
+import { getFrameDisplayUrl } from "../utils/frameUtils";
+import { DownloadModal } from "../components/DownloadModal";
+import { useBatchJob } from "../hooks/useBatchJob";
+import { useMediaImport } from "../hooks/useMediaImport";
+import { useLanguage } from "../LanguageContext";
+import { generateStrokeMask, applyChromaKeyAdvanced } from "../utils/chromaKey";
+import { PerfLogger } from "../utils/performanceLogger";
+import {
+  generateSampleFrames,
+  revokeSampleFrames,
+} from "../utils/sampleProject";
 
 /*
   Feature Design: Artifact Cleanup (Future Enhancement)
@@ -35,47 +54,172 @@ import { generateSampleFrames, revokeSampleFrames } from '../utils/sampleProject
 */
 
 const GET_MIDDLE_NAME_OPTIONS = (lang: string) => [
-  { id: "idle_sitting", desc: lang === 'KR' ? "자연스러운 호흡" : lang === 'EN' ? "Natural Breathing" : "自然な呼吸" },
-  { id: "typing", desc: lang === 'KR' ? "빠른 타이핑" : lang === 'EN' ? "Fast Typing" : "速いタイピング" },
-  { id: "back_to_idle", desc: lang === 'KR' ? "자연스러운 복귀" : lang === 'EN' ? "Natural Return" : "自然な復帰" },
-  { id: "speaking", desc: lang === 'KR' ? "부드러운 입 움직임" : lang === 'EN' ? "Smooth Mouth Movement" : "スムーズな口の動き" },
-  { id: "agree", desc: lang === 'KR' ? "자신감 있는 끄덕임" : lang === 'EN' ? "Confident Nod" : "自信のある頷き" },
-  { id: "confused", desc: lang === 'KR' ? "부드러운 고개 기울임" : lang === 'EN' ? "Smooth Head Tilt" : "スムーズな首の傾き" },
-  { id: "lifted_dangling", desc: lang === 'KR' ? "가볍게 떠있는 상태" : lang === 'EN' ? "Lightly Floating" : "軽く浮いている状態" },
-  { id: "lowering_landing", desc: lang === 'KR' ? "천천히 내려앉기" : lang === 'EN' ? "Slowly Landing" : "ゆっくり着지" },
-  { id: "back_to_work", desc: lang === 'KR' ? "자세 정리" : lang === 'EN' ? "Adjusting Posture" : "姿勢を整える" },
-  { id: "greeting", desc: lang === 'KR' ? "정중한 인사" : lang === 'EN' ? "Polite Greeting" : "丁寧な挨拶" },
-  { id: "joy", desc: lang === 'KR' ? "밝은 표정" : lang === 'EN' ? "Bright Expression" : "明るい表情" },
-  { id: "sad", desc: lang === 'KR' ? "슬픈 표정" : lang === 'EN' ? "Sad Expression" : "悲しい表情" },
-  { id: "resting", desc: lang === 'KR' ? "조용히 앉아있기" : lang === 'EN' ? "Quietly Sitting" : "静かに座っている" },
-  { id: "clock_in", desc: lang === 'KR' ? "노트북 열고 준비" : lang === 'EN' ? "Opening Laptop & Prep" : "ノートパソコンを開いて準備" }
+  {
+    id: "idle_sitting",
+    desc:
+      lang === "KR"
+        ? "자연스러운 호흡"
+        : lang === "EN"
+          ? "Natural Breathing"
+          : "自然な呼吸",
+  },
+  {
+    id: "typing",
+    desc:
+      lang === "KR"
+        ? "빠른 타이핑"
+        : lang === "EN"
+          ? "Fast Typing"
+          : "速いタイピング",
+  },
+  {
+    id: "back_to_idle",
+    desc:
+      lang === "KR"
+        ? "자연스러운 복귀"
+        : lang === "EN"
+          ? "Natural Return"
+          : "自然な復帰",
+  },
+  {
+    id: "speaking",
+    desc:
+      lang === "KR"
+        ? "부드러운 입 움직임"
+        : lang === "EN"
+          ? "Smooth Mouth Movement"
+          : "スムーズな口の動き",
+  },
+  {
+    id: "agree",
+    desc:
+      lang === "KR"
+        ? "자신감 있는 끄덕임"
+        : lang === "EN"
+          ? "Confident Nod"
+          : "自信のある頷き",
+  },
+  {
+    id: "confused",
+    desc:
+      lang === "KR"
+        ? "부드러운 고개 기울임"
+        : lang === "EN"
+          ? "Smooth Head Tilt"
+          : "スムーズな首の傾き",
+  },
+  {
+    id: "lifted_dangling",
+    desc:
+      lang === "KR"
+        ? "가볍게 떠있는 상태"
+        : lang === "EN"
+          ? "Lightly Floating"
+          : "軽く浮いている状態",
+  },
+  {
+    id: "lowering_landing",
+    desc:
+      lang === "KR"
+        ? "천천히 내려앉기"
+        : lang === "EN"
+          ? "Slowly Landing"
+          : "ゆっくり着지",
+  },
+  {
+    id: "back_to_work",
+    desc:
+      lang === "KR"
+        ? "자세 정리"
+        : lang === "EN"
+          ? "Adjusting Posture"
+          : "姿勢を整える",
+  },
+  {
+    id: "greeting",
+    desc:
+      lang === "KR"
+        ? "정중한 인사"
+        : lang === "EN"
+          ? "Polite Greeting"
+          : "丁寧な挨拶",
+  },
+  {
+    id: "joy",
+    desc:
+      lang === "KR"
+        ? "밝은 표정"
+        : lang === "EN"
+          ? "Bright Expression"
+          : "明るい表情",
+  },
+  {
+    id: "sad",
+    desc:
+      lang === "KR"
+        ? "슬픈 표정"
+        : lang === "EN"
+          ? "Sad Expression"
+          : "悲しい表情",
+  },
+  {
+    id: "resting",
+    desc:
+      lang === "KR"
+        ? "조용히 앉아있기"
+        : lang === "EN"
+          ? "Quietly Sitting"
+          : "静かに座っている",
+  },
+  {
+    id: "clock_in",
+    desc:
+      lang === "KR"
+        ? "노트북 열고 준비"
+        : lang === "EN"
+          ? "Opening Laptop & Prep"
+          : "ノートパソコンを開いて準備",
+  },
 ];
-
-
 
 export default function RemovePage() {
   const { isDark } = useTheme();
   const { lang } = useLanguage();
   const MIDDLE_NAME_OPTIONS = GET_MIDDLE_NAME_OPTIONS(lang);
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const { 
-    frames, setFrames, 
-    videoFile, setVideoFile, 
-    charName, setCharName, 
-    segments, setSegments, 
-    fps, setFps,
-    exclusionStrokes, setExclusionStrokes,
-    presets, setPresets,
-    flaggedIndices, setFlaggedIndices
+  const {
+    frames,
+    setFrames,
+    videoFile,
+    setVideoFile,
+    charName,
+    setCharName,
+    segments,
+    setSegments,
+    fps,
+    setFps,
+    exclusionStrokes,
+    setExclusionStrokes,
+    presets,
+    setPresets,
+    flaggedIndices,
+    setFlaggedIndices,
   } = useStudio();
-  
-  const { isProcessing: isBatchProcessing, progress: batchProgress, startJob, cancelJob } = useBatchJob();
+
+  const {
+    isProcessing: isBatchProcessing,
+    progress: batchProgress,
+    startJob,
+    cancelJob,
+  } = useBatchJob();
   const [isProcessingLocal, setIsProcessingLocal] = useState(false);
   const [failedItems, setFailedItems] = useState<number[]>([]);
 
   const [currentFrame, setCurrentFrame] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [imgDims, setImgDims] = useState<{ w: number, h: number } | null>(null);
+  const [imgDims, setImgDims] = useState<{ w: number; h: number } | null>(null);
 
   const {
     uploadState,
@@ -89,7 +233,7 @@ export default function RemovePage() {
     extractionElapsedText,
     isExtracting,
     processFile,
-    cancelExtraction
+    cancelExtraction,
   } = useMediaImport({
     frames,
     setFrames,
@@ -100,90 +244,133 @@ export default function RemovePage() {
     setCurrentFrame,
     setIsPlaying,
     setVideoFile,
-    setIsProcessingLocal
+    setIsProcessingLocal,
   });
 
   const isProcessing = isExtracting || isBatchProcessing || isProcessingLocal;
   const setIsProcessing = setIsProcessingLocal;
-  
+
   const [isDragging, setIsDragging] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
+  const [downloadLang, setDownloadLang] = useState<"KR" | "EN" | "JP">("EN");
 
   const handleLoadSampleProject = async () => {
-    trackEvent('Try_Sample_Project');
-    setUploadState('image-loading');
+    trackEvent("Try_Sample_Project");
+    setUploadState("image-loading");
     try {
       if (frames.length > 0) {
         revokeSampleFrames(frames);
       }
-      
+
       const sampleFrames = await generateSampleFrames(16);
       setFrames(sampleFrames);
       setCurrentFrame(0);
       setImgDims({ w: 400, h: 400 });
       setVideoFile(null);
-      setUploadState('ready');
+      setUploadState("ready");
       setIsPlaying(true);
       if (!charName) {
-        setCharName('banana_sample');
+        setCharName("banana_sample");
       }
       if (segments.length === 0) {
-         setSegments([{ name: 'idle_sitting', start: 0, end: sampleFrames.length / fps }]);
+        setSegments([
+          { name: "idle_sitting", start: 0, end: sampleFrames.length / fps },
+        ]);
       }
-      trackEvent('Sample_Project_Loaded');
+      trackEvent("Sample_Project_Loaded");
     } catch (e) {
       console.error(e);
-      setUploadState('error');
-      trackEvent('Sample_Project_Failed');
-      alert(lang === 'KR' ? '샘플 프로젝트 로드에 실패했습니다.' : 'Failed to load sample project.');
+      setUploadState("error");
+      trackEvent("Sample_Project_Failed");
+      alert(
+        lang === "KR"
+          ? "샘플 프로젝트 로드에 실패했습니다."
+          : "Failed to load sample project.",
+      );
     }
   };
 
-  const processFramesForDownload = async (targetIndices: number[]): Promise<{ frames: StudioFrame[] | null; failedCount: number; failedIndices: number[] }> => {
-    if (targetIndices.length === 0) return { frames: frames, failedCount: 0, failedIndices: [] };
+  useEffect(() => {
+    if (location.state?.loadSample) {
+      handleLoadSampleProject();
+      navigate("/remove", { replace: true, state: {} });
+    }
+  }, [location.state?.loadSample, navigate]);
+
+  const processFramesForDownload = async (
+    targetIndices: number[],
+  ): Promise<{
+    frames: StudioFrame[] | null;
+    failedCount: number;
+    failedIndices: number[];
+  }> => {
+    if (targetIndices.length === 0)
+      return { frames: frames, failedCount: 0, failedIndices: [] };
     setFailedItems([]);
     const newFrames = [...frames];
     let failedIndices: number[] = [];
-    
+
     await startJob<number, void>({
       items: targetIndices,
       delayMs: 0,
       processItem: async (idx, resultIndex) => {
-         const frame = newFrames[idx];
-         
-         const img = new Image();
-         img.src = frame.rawUrl;
-         await new Promise((resolve, reject) => { 
-           img.onload = resolve; 
-           img.onerror = reject; 
-         });
-         
-         const canvas = document.createElement('canvas');
-         canvas.width = img.width;
-         canvas.height = img.height;
-         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-         if (!ctx) throw new Error("No context");
-         
-         ctx.drawImage(img, 0, 0);
-         const imgData = ctx.getImageData(0,0, canvas.width, canvas.height);
-         const mask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, idx);
-         
-         PerfLogger.start('processFramesForDownload_applyChromaKey');
-         applyChromaKeyAdvanced(imgData.data, canvas.width, canvas.height, {
-           keyingMode, previewMode: 'result', tolerance, softness, enclosedTolerance,
-           chromaKeyColor, pickedColor, despill, erode, dilate, feather, alphaContrast
-         }, mask);
-         PerfLogger.end('processFramesForDownload_applyChromaKey');
-         
-         ctx.putImageData(imgData, 0, 0);
-         
-         const blob = await new Promise<Blob|null>(resolve => canvas.toBlob(resolve, 'image/png'));
-         if (blob) {
-           const newUrl = URL.createObjectURL(blob);
-           if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
-           newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
-         }
+        const frame = newFrames[idx];
+
+        const img = new Image();
+        img.src = frame.rawUrl;
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) throw new Error("No context");
+
+        ctx.drawImage(img, 0, 0);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const mask = generateStrokeMask(
+          canvas.width,
+          canvas.height,
+          exclusionStrokes,
+          idx,
+        );
+
+        PerfLogger.start("processFramesForDownload_applyChromaKey");
+        applyChromaKeyAdvanced(
+          imgData.data,
+          canvas.width,
+          canvas.height,
+          {
+            keyingMode,
+            previewMode: "result",
+            tolerance,
+            softness,
+            enclosedTolerance,
+            chromaKeyColor,
+            pickedColor,
+            despill,
+            erode,
+            dilate,
+            feather,
+            alphaContrast,
+          },
+          mask,
+        );
+        PerfLogger.end("processFramesForDownload_applyChromaKey");
+
+        ctx.putImageData(imgData, 0, 0);
+
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/png"),
+        );
+        if (blob) {
+          const newUrl = URL.createObjectURL(blob);
+          if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
+          newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
+        }
       },
       onSuccess: () => {
         setFrames(newFrames);
@@ -192,50 +379,81 @@ export default function RemovePage() {
         setFrames(newFrames);
         setFailedItems(failed);
         failedIndices = failed;
-      }
+      },
     });
 
-    if (failedIndices.length > 0) return { frames: null, failedCount: failedIndices.length, failedIndices };
+    if (failedIndices.length > 0)
+      return { frames: null, failedCount: failedIndices.length, failedIndices };
     return { frames: newFrames, failedCount: 0, failedIndices: [] };
   };
-  const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set([0]));
-  
-  const [bgMode, setBgMode] = useState<'transparent' | 'black' | 'app'>('app');
+  const [selectedFrames, setSelectedFrames] = useState<Set<number>>(
+    new Set([0]),
+  );
+
+  const [bgMode, setBgMode] = useState<"transparent" | "black" | "app">("app");
   const [drawTick, setDrawTick] = useState(0);
   const applyToSelectedRef = useRef(false);
-  
+
   // Chroma Key Settings
-  const [chromaKeyColor, setChromaKeyColor] = useState<'White' | 'Green' | 'Picker'>(() => (localStorage.getItem('ck_chromaKeyColor') as any) || 'White');
-  const [pickedColor, setPickedColor] = useState<{r: number, g: number, b: number}>(() => {
+  const [chromaKeyColor, setChromaKeyColor] = useState<
+    "White" | "Green" | "Picker"
+  >(() => (localStorage.getItem("ck_chromaKeyColor") as any) || "White");
+  const [pickedColor, setPickedColor] = useState<{
+    r: number;
+    g: number;
+    b: number;
+  }>(() => {
     try {
-      return JSON.parse(localStorage.getItem('ck_pickedColor') || '');
+      return JSON.parse(localStorage.getItem("ck_pickedColor") || "");
     } catch {
-      return {r: 255, g: 255, b: 255};
+      return { r: 255, g: 255, b: 255 };
     }
   });
   const [isPickingColor, setIsPickingColor] = useState(false);
-  const [tolerance, setTolerance] = useState(() => Number(localStorage.getItem('ck_tolerance')) || 30);
-  const [softness, setSoftness] = useState(() => Number(localStorage.getItem('ck_softness')) || 20);
-  const [enclosedTolerance, setEnclosedTolerance] = useState(() => Number(localStorage.getItem('ck_enclosedTolerance')) || 10);
-  
+  const [tolerance, setTolerance] = useState(
+    () => Number(localStorage.getItem("ck_tolerance")) || 30,
+  );
+  const [softness, setSoftness] = useState(
+    () => Number(localStorage.getItem("ck_softness")) || 20,
+  );
+  const [enclosedTolerance, setEnclosedTolerance] = useState(
+    () => Number(localStorage.getItem("ck_enclosedTolerance")) || 10,
+  );
+
   // Advanced Keying Settings
   const [showAdvancedKeying, setShowAdvancedKeying] = useState(false);
-  const [keyingMode, setKeyingMode] = useState<'rgb' | 'hsv' | 'luma' | 'greenAdvanced'>(() => (localStorage.getItem('ck_keyingMode') as any) || 'greenAdvanced');
-  const [previewMode, setPreviewMode] = useState<'result' | 'original' | 'alpha' | 'checkerboard' | 'black' | 'white'>(() => (localStorage.getItem('ck_previewMode') as any) || 'result');
-  const [despill, setDespill] = useState(() => Number(localStorage.getItem('ck_despill')) || 0);
-  const [erode, setErode] = useState(() => Number(localStorage.getItem('ck_erode')) || 0);
-  const [dilate, setDilate] = useState(() => Number(localStorage.getItem('ck_dilate')) || 0);
-  const [feather, setFeather] = useState(() => Number(localStorage.getItem('ck_feather')) || 0);
-  const [alphaContrast, setAlphaContrast] = useState(() => Number(localStorage.getItem('ck_alphaContrast')) || 0);
-  
+  const [keyingMode, setKeyingMode] = useState<
+    "rgb" | "hsv" | "luma" | "greenAdvanced"
+  >(() => (localStorage.getItem("ck_keyingMode") as any) || "greenAdvanced");
+  const [previewMode, setPreviewMode] = useState<
+    "result" | "original" | "alpha" | "checkerboard" | "black" | "white"
+  >(() => (localStorage.getItem("ck_previewMode") as any) || "result");
+  const [despill, setDespill] = useState(
+    () => Number(localStorage.getItem("ck_despill")) || 0,
+  );
+  const [erode, setErode] = useState(
+    () => Number(localStorage.getItem("ck_erode")) || 0,
+  );
+  const [dilate, setDilate] = useState(
+    () => Number(localStorage.getItem("ck_dilate")) || 0,
+  );
+  const [feather, setFeather] = useState(
+    () => Number(localStorage.getItem("ck_feather")) || 0,
+  );
+  const [alphaContrast, setAlphaContrast] = useState(
+    () => Number(localStorage.getItem("ck_alphaContrast")) || 0,
+  );
+
   // UI State
   const [selectedPreset, setSelectedPreset] = useState<string>("");
-  const [showMiddleNameDropdown, setShowMiddleNameDropdown] = useState<number | null>(null);
+  const [showMiddleNameDropdown, setShowMiddleNameDropdown] = useState<
+    number | null
+  >(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Brush Tool for Chroma Key Exclusion
   const [isBrushActive, setIsBrushActive] = useState(false);
-  const [activeTool, setActiveTool] = useState<'brush' | 'eraser'>('brush');
+  const [activeTool, setActiveTool] = useState<"brush" | "eraser">("brush");
   const [brushSize, setBrushSize] = useState(30);
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
@@ -245,62 +463,85 @@ export default function RemovePage() {
 
   const markSelectedFramesDirty = () => {
     if (isExtracting) return;
-    setFrames(prev => prev.map((f, i) => {
-      if (selectedFrames.has(i) && f.processedUrl && !f.dirty) {
-        return { ...f, dirty: true };
-      }
-      return f;
-    }));
+    setFrames((prev) =>
+      prev.map((f, i) => {
+        if (selectedFrames.has(i) && f.processedUrl && !f.dirty) {
+          return { ...f, dirty: true };
+        }
+        return f;
+      }),
+    );
   };
 
   useEffect(() => {
     if (isExtracting) return;
-    localStorage.setItem('ck_tolerance', tolerance.toString());
-    localStorage.setItem('ck_softness', softness.toString());
-    localStorage.setItem('ck_enclosedTolerance', enclosedTolerance.toString());
-    localStorage.setItem('ck_charName', charName);
-    localStorage.setItem('ck_keyingMode', keyingMode);
-    localStorage.setItem('ck_previewMode', previewMode);
-    localStorage.setItem('ck_despill', despill.toString());
-    localStorage.setItem('ck_erode', erode.toString());
-    localStorage.setItem('ck_dilate', dilate.toString());
-    localStorage.setItem('ck_feather', feather.toString());
-    localStorage.setItem('ck_alphaContrast', alphaContrast.toString());
-    localStorage.setItem('ck_chromaKeyColor', chromaKeyColor);
-    localStorage.setItem('ck_pickedColor', JSON.stringify(pickedColor));
-    
+    localStorage.setItem("ck_tolerance", tolerance.toString());
+    localStorage.setItem("ck_softness", softness.toString());
+    localStorage.setItem("ck_enclosedTolerance", enclosedTolerance.toString());
+    localStorage.setItem("ck_charName", charName);
+    localStorage.setItem("ck_keyingMode", keyingMode);
+    localStorage.setItem("ck_previewMode", previewMode);
+    localStorage.setItem("ck_despill", despill.toString());
+    localStorage.setItem("ck_erode", erode.toString());
+    localStorage.setItem("ck_dilate", dilate.toString());
+    localStorage.setItem("ck_feather", feather.toString());
+    localStorage.setItem("ck_alphaContrast", alphaContrast.toString());
+    localStorage.setItem("ck_chromaKeyColor", chromaKeyColor);
+    localStorage.setItem("ck_pickedColor", JSON.stringify(pickedColor));
+
     if (isInitialMount.current) {
-        isInitialMount.current = false;
+      isInitialMount.current = false;
     } else {
-        markSelectedFramesDirty();
+      markSelectedFramesDirty();
     }
-  }, [tolerance, softness, enclosedTolerance, charName, chromaKeyColor, pickedColor, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast]);
+  }, [
+    tolerance,
+    softness,
+    enclosedTolerance,
+    charName,
+    chromaKeyColor,
+    pickedColor,
+    keyingMode,
+    previewMode,
+    despill,
+    erode,
+    dilate,
+    feather,
+    alphaContrast,
+  ]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setShowMiddleNameDropdown(null);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-  
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '[') {
-        setBrushSize(prev => Math.max(1, prev - 5));
-      } else if (e.key === ']') {
-        setBrushSize(prev => Math.min(200, prev + 5));
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const toggleSelection = (idx: number, ctrlKey: boolean, shiftKey: boolean) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "[") {
+        setBrushSize((prev) => Math.max(1, prev - 5));
+      } else if (e.key === "]") {
+        setBrushSize((prev) => Math.min(200, prev + 5));
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const toggleSelection = (
+    idx: number,
+    ctrlKey: boolean,
+    shiftKey: boolean,
+  ) => {
     if (isExtracting) return;
-    setSelectedFrames(prev => {
+    setSelectedFrames((prev) => {
       const next = new Set(prev);
       if (shiftKey && currentFrame !== null) {
         const start = Math.min(currentFrame, idx);
@@ -327,7 +568,7 @@ export default function RemovePage() {
 
   useEffect(() => {
     if (!isPlaying || frames.length === 0) return;
-    
+
     const animate = (time: number) => {
       if (time - lastDrawTime.current > 1000 / fps) {
         setCurrentFrame((prev) => (prev + 1) % frames.length);
@@ -335,91 +576,173 @@ export default function RemovePage() {
       }
       requestRef.current = requestAnimationFrame(animate);
     };
-    
+
     requestRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(requestRef.current!);
   }, [isPlaying, frames, fps]);
 
-  const applyChromaKey = (data: Uint8ClampedArray, width: number, height: number, tol: number, soft: number, enclosedTol: number, colorMode: 'White' | 'Green' | 'Picker', pickedColor: {r: number, g: number, b: number}, exclusionMask?: Uint8Array) => {
-    applyChromaKeyAdvanced(data, width, height, {
-      keyingMode, previewMode, tolerance: tol, softness: soft, enclosedTolerance: enclosedTol,
-      chromaKeyColor: colorMode, pickedColor, despill, erode, dilate, feather, alphaContrast
-    }, exclusionMask);
+  const applyChromaKey = (
+    data: Uint8ClampedArray,
+    width: number,
+    height: number,
+    tol: number,
+    soft: number,
+    enclosedTol: number,
+    colorMode: "White" | "Green" | "Picker",
+    pickedColor: { r: number; g: number; b: number },
+    exclusionMask?: Uint8Array,
+  ) => {
+    applyChromaKeyAdvanced(
+      data,
+      width,
+      height,
+      {
+        keyingMode,
+        previewMode,
+        tolerance: tol,
+        softness: soft,
+        enclosedTolerance: enclosedTol,
+        chromaKeyColor: colorMode,
+        pickedColor,
+        despill,
+        erode,
+        dilate,
+        feather,
+        alphaContrast,
+      },
+      exclusionMask,
+    );
   };
 
   useEffect(() => {
     if (frames.length === 0 || !canvasRef.current) return;
-    
+
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
-    
+
     const targetFrame = frames[currentFrame];
     if (!targetFrame) return;
 
     const img = new Image();
     img.onload = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      if (bgMode === 'black') {
-        ctx.fillStyle = '#000000';
+
+      if (bgMode === "black") {
+        ctx.fillStyle = "#000000";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-      } else if (bgMode === 'app') {
-        ctx.fillStyle = isDark ? '#121212' : '#ffffff';
+      } else if (bgMode === "app") {
+        ctx.fillStyle = isDark ? "#121212" : "#ffffff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       } else {
         const gridSize = 20;
         for (let x = 0; x < canvas.width; x += gridSize) {
           for (let y = 0; y < canvas.height; y += gridSize) {
-            ctx.fillStyle = (x / gridSize + y / gridSize) % 2 === 0 ? '#e5e7eb' : '#ffffff';
+            ctx.fillStyle =
+              (x / gridSize + y / gridSize) % 2 === 0 ? "#e5e7eb" : "#ffffff";
             ctx.fillRect(x, y, gridSize, gridSize);
           }
         }
       }
-      
-      const ratio = Math.min(canvas.width / img.width, canvas.height / img.height);
+
+      const ratio = Math.min(
+        canvas.width / img.width,
+        canvas.height / img.height,
+      );
       const newW = Math.floor(img.width * ratio);
       const newH = Math.floor(img.height * ratio);
       const offsetX = (canvas.width - newW) / 2;
       const offsetY = (canvas.height - newH) / 2;
-      
+
       const useProcessed = targetFrame.processedUrl && !targetFrame.dirty;
-      
-      const tempCanvas = document.createElement('canvas');
+
+      const tempCanvas = document.createElement("canvas");
       tempCanvas.width = img.width;
       tempCanvas.height = img.height;
-      const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+      const tempCtx = tempCanvas.getContext("2d", { willReadFrequently: true });
       if (!tempCtx) return;
-      
+
       tempCtx.drawImage(img, 0, 0);
-      
+
       if (!isExtracting && !useProcessed) {
         const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
-        
-        let mask = generateStrokeMask(img.width, img.height, exclusionStrokes, currentFrame);
-        if (activeStrokeRef.current && activeStrokeRef.current.targetFrameIndexes.includes(currentFrame)) {
-           // mix active stroke
-           const tempStrokes = [...exclusionStrokes, activeStrokeRef.current];
-           mask = generateStrokeMask(img.width, img.height, tempStrokes, currentFrame);
+
+        let mask = generateStrokeMask(
+          img.width,
+          img.height,
+          exclusionStrokes,
+          currentFrame,
+        );
+        if (
+          activeStrokeRef.current &&
+          activeStrokeRef.current.targetFrameIndexes.includes(currentFrame)
+        ) {
+          // mix active stroke
+          const tempStrokes = [...exclusionStrokes, activeStrokeRef.current];
+          mask = generateStrokeMask(
+            img.width,
+            img.height,
+            tempStrokes,
+            currentFrame,
+          );
         }
 
-        applyChromaKey(imageData.data, img.width, img.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, mask);
+        applyChromaKey(
+          imageData.data,
+          img.width,
+          img.height,
+          tolerance,
+          softness,
+          enclosedTolerance,
+          chromaKeyColor,
+          pickedColor,
+          mask,
+        );
         tempCtx.putImageData(imageData, 0, 0);
       }
-      
+
       ctx.drawImage(tempCanvas, offsetX, offsetY, newW, newH);
 
       // Draw Brush Cursor if active
       if (isBrushActive && !isPlaying) {
         ctx.beginPath();
-        ctx.arc(offsetX + (lastPos.x * ratio), offsetY + (lastPos.y * ratio), (brushSize / 2), 0, Math.PI * 2);
-        ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
+        ctx.arc(
+          offsetX + lastPos.x * ratio,
+          offsetY + lastPos.y * ratio,
+          brushSize / 2,
+          0,
+          Math.PI * 2,
+        );
+        ctx.strokeStyle = isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)";
         ctx.lineWidth = 1;
         ctx.stroke();
       }
     };
     img.src = getFrameDisplayUrl(targetFrame);
-  }, [currentFrame, frames, bgMode, tolerance, softness, enclosedTolerance, isDark, chromaKeyColor, exclusionStrokes, isBrushActive, isPlaying, lastPos, brushSize, drawTick, keyingMode, previewMode, despill, erode, dilate, feather, alphaContrast, isExtracting]);
+  }, [
+    currentFrame,
+    frames,
+    bgMode,
+    tolerance,
+    softness,
+    enclosedTolerance,
+    isDark,
+    chromaKeyColor,
+    exclusionStrokes,
+    isBrushActive,
+    isPlaying,
+    lastPos,
+    brushSize,
+    drawTick,
+    keyingMode,
+    previewMode,
+    despill,
+    erode,
+    dilate,
+    feather,
+    alphaContrast,
+    isExtracting,
+  ]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPlaying || frames.length === 0 || isExtracting) return;
@@ -430,29 +753,32 @@ export default function RemovePage() {
       const rect = canvas.getBoundingClientRect();
       const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
       const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-      
+
       const img = new Image();
       img.onload = () => {
-        const ratio = Math.min(canvas.width / img.width, canvas.height / img.height);
+        const ratio = Math.min(
+          canvas.width / img.width,
+          canvas.height / img.height,
+        );
         const newW = Math.floor(img.width * ratio);
         const newH = Math.floor(img.height * ratio);
         const offsetX = (canvas.width - newW) / 2;
         const offsetY = (canvas.height - newH) / 2;
-        
+
         const ox = Math.floor((cx - offsetX) / ratio);
         const oy = Math.floor((cy - offsetY) / ratio);
-        
+
         if (ox >= 0 && ox < img.width && oy >= 0 && oy < img.height) {
-          const tempCanvas = document.createElement('canvas');
+          const tempCanvas = document.createElement("canvas");
           tempCanvas.width = img.width;
           tempCanvas.height = img.height;
-          const tempCtx = tempCanvas.getContext('2d');
+          const tempCtx = tempCanvas.getContext("2d");
           if (tempCtx) {
             tempCtx.drawImage(img, 0, 0);
             const pixel = tempCtx.getImageData(ox, oy, 1, 1).data;
             setPickedColor({ r: pixel[0], g: pixel[1], b: pixel[2] });
             setIsPickingColor(false);
-            setChromaKeyColor('Picker');
+            setChromaKeyColor("Picker");
           }
         }
       };
@@ -461,33 +787,33 @@ export default function RemovePage() {
     }
 
     if (!isBrushActive) return;
-    
+
     if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
       applyToSelectedRef.current = true;
     } else {
       applyToSelectedRef.current = false;
     }
-    
+
     setIsDrawing(true);
-    
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
     const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-    
+
     const updateStart = (w: number, h: number) => {
       const ratio = Math.min(canvas.width / w, canvas.height / h);
       const newW = Math.floor(w * ratio);
       const newH = Math.floor(h * ratio);
       const offsetX = (canvas.width - newW) / 2;
       const offsetY = (canvas.height - newH) / 2;
-      
+
       const ox = (cx - offsetX) / ratio;
       const oy = (cy - offsetY) / ratio;
       lastPosRef.current = { x: ox, y: oy };
       setLastPos({ x: ox, y: oy });
-      
+
       let targetIndices: number[] = [];
       if (applyToSelectedRef.current) {
         targetIndices = Array.from(selectedFrames);
@@ -501,9 +827,9 @@ export default function RemovePage() {
         tool: activeTool,
         points: [{ x: ox, y: oy }],
         brushSize: brushSize / ratio, // actual brush size scaled to image
-        createdAt: Date.now()
+        createdAt: Date.now(),
       };
-      setDrawTick(t => t + 1);
+      setDrawTick((t) => t + 1);
     };
 
     if (imgDims) {
@@ -521,38 +847,41 @@ export default function RemovePage() {
   const lastDrawRef = useRef(0);
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current || frames.length === 0 || isExtracting) return;
-    
+
     const now = Date.now();
     if (isDrawing && now - lastDrawRef.current < 16) return; // Throttle to ~60fps
     lastDrawRef.current = now;
-    
+
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
     const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-    
+
     const updatePos = (w: number, h: number) => {
       const ratio = Math.min(canvas.width / w, canvas.height / h);
       const newW = Math.floor(w * ratio);
       const newH = Math.floor(h * ratio);
       const offsetX = (canvas.width - newW) / 2;
       const offsetY = (canvas.height - newH) / 2;
-      
+
       const ox = (cx - offsetX) / ratio;
       const oy = (cy - offsetY) / ratio;
-      
+
       const lx = lastPosRef.current.x;
       const ly = lastPosRef.current.y;
-      
+
       setLastPos({ x: ox, y: oy });
       lastPosRef.current = { x: ox, y: oy };
-      
+
       if (isDrawing && activeStrokeRef.current) {
         // Only append if it moved far enough to avoid huge arrays
-        const lastP = activeStrokeRef.current.points[activeStrokeRef.current.points.length - 1];
+        const lastP =
+          activeStrokeRef.current.points[
+            activeStrokeRef.current.points.length - 1
+          ];
         if (Math.hypot(lastP.x - ox, lastP.y - oy) > 2) {
           activeStrokeRef.current.points.push({ x: ox, y: oy });
-          setDrawTick(t => t + 1);
+          setDrawTick((t) => t + 1);
         }
       }
     };
@@ -573,7 +902,7 @@ export default function RemovePage() {
     if (isExtracting) return;
     if (isDrawing) {
       if (activeStrokeRef.current) {
-        setExclusionStrokes(prev => [...prev, activeStrokeRef.current!]);
+        setExclusionStrokes((prev) => [...prev, activeStrokeRef.current!]);
         activeStrokeRef.current = null;
       }
       markSelectedFramesDirty();
@@ -597,7 +926,7 @@ export default function RemovePage() {
     const file = input.files?.[0];
     if (!file) return;
     await processFile(file);
-    input.value = '';
+    input.value = "";
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -613,9 +942,9 @@ export default function RemovePage() {
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     if (isExtracting) return;
-    
+
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
     await processFile(file);
@@ -623,38 +952,37 @@ export default function RemovePage() {
 
   const handleFpsChange = async (newFps: number) => {
     setFps(newFps);
-    if (videoFile && !videoFile.type.startsWith('image/')) {
+    if (videoFile && !videoFile.type.startsWith("image/")) {
       await processFile(videoFile, newFps);
     }
   };
 
   const toggleFlag = (index: number) => {
-    trackEvent('Toggle_Flag');
-    setFlaggedIndices(prev => {
+    trackEvent("Toggle_Flag");
+    setFlaggedIndices((prev) => {
       if (prev.includes(index)) {
-        return prev.filter(i => i !== index);
+        return prev.filter((i) => i !== index);
       } else {
         return [...prev, index].sort((a, b) => a - b);
       }
     });
   };
 
-
-  const handleDownload = async (type: 'withRaw' | 'resultOnly' | 'gif') => {
+  const handleDownload = async (type: "withRaw" | "resultOnly" | "gif") => {
     if (frames.length === 0) return;
-    
-    trackEvent('Download_Asset');
+
+    trackEvent("Download_Asset");
     setIsProcessing(true);
     setShowDownloadModal(false);
     try {
-      if (type === 'gif') {
-        const GIF = (await import('gif.js')).default;
+      if (type === "gif") {
+        const GIF = (await import("gif.js")).default;
         const gif = new GIF({
           workers: 2,
           quality: 10,
           width: imgDims?.w || 512,
           height: imgDims?.h || 512,
-          transparent: 'rgba(0,0,0,0)'
+          transparent: "rgba(0,0,0,0)",
         });
 
         for (let i = 0; i < frames.length; i++) {
@@ -664,29 +992,48 @@ export default function RemovePage() {
           await new Promise((resolve) => {
             img.onload = resolve;
           });
-          
-          const canvas = document.createElement('canvas'); // Chroma-keyer
+
+          const canvas = document.createElement("canvas"); // Chroma-keyer
           canvas.width = img.width;
           canvas.height = img.height;
-          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
           if (!ctx) continue;
-          
+
           ctx.drawImage(img, 0, 0);
-          
+
           if (!frame.processedUrl || frame.dirty) {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const currentMask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, i);
-            applyChromaKey(imageData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
+            const imageData = ctx.getImageData(
+              0,
+              0,
+              canvas.width,
+              canvas.height,
+            );
+            const currentMask = generateStrokeMask(
+              canvas.width,
+              canvas.height,
+              exclusionStrokes,
+              i,
+            );
+            applyChromaKey(
+              imageData.data,
+              canvas.width,
+              canvas.height,
+              tolerance,
+              softness,
+              enclosedTolerance,
+              chromaKeyColor,
+              pickedColor,
+              currentMask,
+            );
             ctx.putImageData(imageData, 0, 0);
           }
-          
-          
+
           gif.addFrame(canvas, { delay: 1000 / fps });
         }
 
-        gif.on('finished', (blob: Blob) => {
+        gif.on("finished", (blob: Blob) => {
           const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
+          const a = document.createElement("a");
           a.href = url;
           a.download = `${charName}_animated.gif`;
           document.body.appendChild(a);
@@ -701,11 +1048,14 @@ export default function RemovePage() {
       }
 
       const zip = new JSZip();
-      
+
       for (const seg of segments) {
         const startIdx = Math.floor(seg.start * fps);
-        const endIdx = frames.length === 1 ? 1 : Math.min(Math.floor(seg.end * fps), frames.length);
-        
+        const endIdx =
+          frames.length === 1
+            ? 1
+            : Math.min(Math.floor(seg.end * fps), frames.length);
+
         for (let i = startIdx; i < endIdx; i++) {
           const frame = frames[i];
           const img = new Image();
@@ -713,67 +1063,105 @@ export default function RemovePage() {
           await new Promise((resolve) => {
             img.onload = resolve;
           });
-          
-          const canvas = document.createElement('canvas');
+
+          const canvas = document.createElement("canvas");
           canvas.width = img.width;
           canvas.height = img.height;
-          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
           if (!ctx) continue;
-          
+
           ctx.drawImage(img, 0, 0);
-          
+
           if (!frame.processedUrl || frame.dirty) {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const currentMask = generateStrokeMask(canvas.width, canvas.height, exclusionStrokes, i);
-            applyChromaKey(imageData.data, canvas.width, canvas.height, tolerance, softness, enclosedTolerance, chromaKeyColor, pickedColor, currentMask);
+            const imageData = ctx.getImageData(
+              0,
+              0,
+              canvas.width,
+              canvas.height,
+            );
+            const currentMask = generateStrokeMask(
+              canvas.width,
+              canvas.height,
+              exclusionStrokes,
+              i,
+            );
+            applyChromaKey(
+              imageData.data,
+              canvas.width,
+              canvas.height,
+              tolerance,
+              softness,
+              enclosedTolerance,
+              chromaKeyColor,
+              pickedColor,
+              currentMask,
+            );
             ctx.putImageData(imageData, 0, 0);
           }
-          
-          
-          const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+
+          const blob = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob(resolve, "image/png"),
+          );
           if (blob) {
-            const frameNum = String(i - startIdx + 1).padStart(3, '0');
-            const resultDir = type === 'withRaw' ? 'result/' : '';
-            zip.file(`${resultDir}${charName}_${seg.name}_${frameNum}.png`, blob);
+            const frameNum = String(i - startIdx + 1).padStart(3, "0");
+            const resultDir = type === "withRaw" ? "result/" : "";
+            zip.file(
+              `${resultDir}${charName}_${seg.name}_${frameNum}.png`,
+              blob,
+            );
           }
         }
       }
-      
-      zip.file('export_metadata.json', JSON.stringify({
-          cropApplied: false
-      }, null, 2));
-      
-      if (type === 'withRaw') {
+
+      zip.file(
+        "export_metadata.json",
+        JSON.stringify(
+          {
+            cropApplied: false,
+          },
+          null,
+          2,
+        ),
+      );
+
+      if (type === "withRaw") {
         for (let i = 0; i < frames.length; i++) {
-          const response = await fetch(frames[i].processedUrl ?? frames[i].rawUrl);
+          const response = await fetch(
+            frames[i].processedUrl ?? frames[i].rawUrl,
+          );
           const blob = await response.blob();
-          const frameNum = String(i + 1).padStart(3, '0');
+          const frameNum = String(i + 1).padStart(3, "0");
           zip.file(`raw/${charName}_raw_${frameNum}.png`, blob);
         }
       }
-      
-      const content = await zip.generateAsync({ type: 'blob' });
+
+      const content = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(content);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `${charName}_assets.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
     } catch (error) {
       console.error("Processing failed:", error);
-      alert(lang === 'KR' ? "프레임 처리 실패." : lang === 'EN' ? "Failed to process frames." : "フレームの処理に失敗しました。");
+      alert(
+        lang === "KR"
+          ? "프레임 처리 실패."
+          : lang === "EN"
+            ? "Failed to process frames."
+            : "フレームの処理に失敗しました。",
+      );
     } finally {
-      if (type !== 'gif') {
+      if (type !== "gif") {
         setIsProcessing(false);
       }
     }
   };
 
   const applyPreset = (presetId: string) => {
-    const preset = presets.find(p => p.id === presetId);
+    const preset = presets.find((p) => p.id === presetId);
     if (preset) {
       setSegments(JSON.parse(JSON.stringify(preset.segments)));
       setSelectedPreset(presetId);
@@ -781,23 +1169,25 @@ export default function RemovePage() {
   };
 
   const saveCurrentAsPreset = () => {
-    const name = prompt("Enter a name for this preset (프리셋 이름을 입력하세요):");
+    const name = prompt(
+      "Enter a name for this preset (프리셋 이름을 입력하세요):",
+    );
     if (!name) return;
-    
-    trackEvent('Save_Preset');
+
+    trackEvent("Save_Preset");
     const newPreset = {
       id: `preset-${Date.now()}`,
       name,
-      segments: JSON.parse(JSON.stringify(segments))
+      segments: JSON.parse(JSON.stringify(segments)),
     };
-    
+
     setPresets([...presets, newPreset]);
     setSelectedPreset(newPreset.id);
   };
 
   const deletePreset = (e: React.MouseEvent, presetId: string) => {
     e.stopPropagation();
-    setPresets(presets.filter(p => p.id !== presetId));
+    setPresets(presets.filter((p) => p.id !== presetId));
     if (selectedPreset === presetId) {
       setSelectedPreset("");
     }
@@ -805,1011 +1195,1693 @@ export default function RemovePage() {
 
   const addSegment = () => {
     const lastEnd = segments.length > 0 ? segments[segments.length - 1].end : 0;
-    setSegments([...segments, { name: "idle_sitting", start: lastEnd, end: lastEnd + 2 }]);
+    setSegments([
+      ...segments,
+      { name: "idle_sitting", start: lastEnd, end: lastEnd + 2 },
+    ]);
   };
 
   const removeSegment = (index: number) => {
     setSegments(segments.filter((_, i) => i !== index));
   };
 
-  const updateSegment = (index: number, field: 'name' | 'start' | 'end' | 'useFrames', value: string | number | boolean) => {
+  const updateSegment = (
+    index: number,
+    field: "name" | "start" | "end" | "useFrames",
+    value: string | number | boolean,
+  ) => {
     const newSegments = [...segments];
     newSegments[index] = { ...newSegments[index], [field]: value };
     setSegments(newSegments);
   };
 
   // Theme Classes
-  const panelClass = `border rounded-2xl p-6 backdrop-blur-xl transition-colors ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`;
-  const inputClass = `w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none transition-all ${isDark ? 'bg-black/40 border-white/10 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 text-white' : 'bg-gray-50 border-gray-200 focus:border-black focus:ring-1 focus:ring-black text-gray-900'}`;
-  const labelClass = `block text-sm mb-1.5 ${isDark ? 'text-white/60' : 'text-gray-600 font-medium'}`;
-  const descClass = `text-xs mt-1 ${isDark ? 'text-white/40' : 'text-gray-500'}`;
-  const badgeClass = `text-xs font-mono px-2 py-0.5 rounded ${isDark ? 'text-blue-400 bg-blue-400/10' : 'text-white bg-black'}`;
-  const accentIconClass = `w-5 h-5 ${isDark ? 'text-blue-400' : 'text-black'}`;
+  const panelClass = `border rounded-2xl p-6 backdrop-blur-xl transition-colors ${isDark ? "bg-white/5 border-white/10" : "bg-white border-gray-200 shadow-sm"}`;
+  const inputClass = `w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none transition-all ${isDark ? "bg-black/40 border-white/10 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 text-white" : "bg-gray-50 border-gray-200 focus:border-black focus:ring-1 focus:ring-black text-gray-900"}`;
+  const labelClass = `block text-sm mb-1.5 ${isDark ? "text-white/60" : "text-gray-600 font-medium"}`;
+  const descClass = `text-xs mt-1 ${isDark ? "text-white/40" : "text-gray-500"}`;
+  const badgeClass = `text-xs font-mono px-2 py-0.5 rounded ${isDark ? "text-blue-400 bg-blue-400/10" : "text-white bg-black"}`;
+  const accentIconClass = `w-5 h-5 ${isDark ? "text-blue-400" : "text-black"}`;
   const dropzoneClass = `relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl transition-all ${
-    isDragging 
-      ? (isDark ? 'border-blue-500 bg-blue-500/10' : 'border-black bg-gray-100') 
-      : (isDark ? 'border-white/20 hover:bg-white/5 hover:border-white/40' : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400')
+    isDragging
+      ? isDark
+        ? "border-blue-500 bg-blue-500/10"
+        : "border-black bg-gray-100"
+      : isDark
+        ? "border-white/20 hover:bg-white/5 hover:border-white/40"
+        : "border-gray-300 hover:bg-gray-50 hover:border-gray-400"
   }`;
-  const segmentBgClass = `border rounded-xl p-3 space-y-3 relative group transition-colors ${isDark ? 'bg-black/20 border-white/5' : 'bg-gray-50 border-gray-200'}`;
-  const segmentInputClass = `flex-1 min-w-0 w-full border rounded-lg px-2 py-2 text-xs focus:outline-none transition-all ${isDark ? 'bg-black/40 border-white/10 focus:border-blue-500/50 text-white' : 'bg-white border-gray-200 focus:border-black text-gray-900'}`;
-  const segmentLabelClass = `block text-[10px] mb-1 uppercase tracking-tighter ${isDark ? 'text-white/40' : 'text-gray-500 font-bold'}`;
+  const segmentBgClass = `border rounded-xl p-3 space-y-3 relative group transition-colors ${isDark ? "bg-black/20 border-white/5" : "bg-gray-50 border-gray-200"}`;
+  const segmentInputClass = `flex-1 min-w-0 w-full border rounded-lg px-2 py-2 text-xs focus:outline-none transition-all ${isDark ? "bg-black/40 border-white/10 focus:border-blue-500/50 text-white" : "bg-white border-gray-200 focus:border-black text-gray-900"}`;
+  const segmentLabelClass = `block text-[10px] mb-1 uppercase tracking-tighter ${isDark ? "text-white/40" : "text-gray-500 font-bold"}`;
   const primaryBtnClass = `w-full font-medium py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:shadow-none ${
-    isDark 
-      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-white/10 disabled:to-white/10 disabled:text-white/40 text-white shadow-lg shadow-blue-500/20' 
-      : 'bg-black hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 text-white shadow-lg shadow-black/10'
+    isDark
+      ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-white/10 disabled:to-white/10 disabled:text-white/40 text-white shadow-lg shadow-blue-500/20"
+      : "bg-black hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 text-white shadow-lg shadow-black/10"
   }`;
-  const previewBgClass = `relative border-2 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center transition-colors ${isDark ? 'bg-black/40 border-white/5' : 'bg-gray-100 border-gray-200'}`;
+  const previewBgClass = `relative border-2 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center transition-colors ${isDark ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"}`;
 
   return (
     <>
-      <div className={`max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen lg:overflow-x-hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
-      <header className={`hidden lg:block mb-8 border-b pb-6 shrink-0 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-        <h1 className="text-3xl font-semibold tracking-tight">REMOVE <span className={`text-xl font-normal ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{lang === 'KR' ? '(투명화)' : lang === 'EN' ? '(Chroma Key)' : '(クロマキー)'}</span></h1>
-        <p className={`mt-2 text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{lang === 'KR' ? 'In-Browser White Background Removal' : lang === 'EN' ? 'In-Browser White Background Removal' : 'ブラウザ内での白背景削除'}</p>
-      </header>
+      <div
+        className={`max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen lg:overflow-x-hidden ${isDark ? "text-white" : "text-gray-900"}`}
+      >
+        <header
+          className={`hidden lg:block mb-8 border-b pb-6 shrink-0 ${isDark ? "border-white/10" : "border-gray-200"}`}
+        >
+          <h1 className="text-3xl font-semibold tracking-tight">
+            REMOVE{" "}
+            <span
+              className={`text-xl font-normal ${isDark ? "text-white/40" : "text-gray-400"}`}
+            >
+              {lang === "KR"
+                ? "(투명화)"
+                : lang === "EN"
+                  ? "(Chroma Key)"
+                  : "(クロマキー)"}
+            </span>
+          </h1>
+          <p
+            className={`mt-2 text-sm ${isDark ? "text-white/50" : "text-gray-500"}`}
+          >
+            {lang === "KR"
+              ? "In-Browser White Background Removal"
+              : lang === "EN"
+                ? "In-Browser White Background Removal"
+                : "ブラウザ内での白背景削除"}
+          </p>
+        </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 lg:gap-12 lg:min-h-0 relative">
-        
-        {/* Mobile Phase 1: Upload Only */}
-        {frames.length === 0 && (
-          <div className="w-full flex flex-col items-center justify-center flex-1 lg:hidden">
-            <div className={`w-full max-w-md ${panelClass}`}>
-              <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <div className="flex-1 flex flex-col lg:flex-row gap-6 lg:gap-12 lg:min-h-0 relative">
+          {/* Mobile Phase 1: Upload Only */}
+          {frames.length === 0 && (
+            <div className="w-full flex flex-col items-center justify-center flex-1 lg:hidden">
+              <div className={`w-full max-w-md ${panelClass}`}>
+                <h2
+                  className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-gray-900"}`}
+                >
+                  <Upload className={accentIconClass} />
+                  Upload File{" "}
+                  <span className="text-sm font-normal opacity-60">
+                    (파일 업로드)
+                  </span>
+                </h2>
+
+                <div
+                  className={dropzoneClass}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <input
+                    type="file"
+                    accept="video/mp4,video/quicktime,image/png"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="file-upload-mobile"
+                    disabled={
+                      uploadState === "video-extracting" ||
+                      uploadState === "video-engine-loading" ||
+                      uploadState === "image-loading"
+                    }
+                  />
+                  <label
+                    htmlFor="file-upload-mobile"
+                    className={`cursor-pointer flex flex-col items-center gap-2 ${uploadState === "video-extracting" || uploadState === "video-engine-loading" || uploadState === "image-loading" ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    {uploadState === "video-extracting" ||
+                    uploadState === "video-engine-loading" ||
+                    uploadState === "image-loading" ? (
+                      <Loader2
+                        className={`w-8 h-8 animate-spin ${isDark ? "text-blue-400" : "text-gray-600"}`}
+                      />
+                    ) : uploadState === "error" ? (
+                      <Upload
+                        className={`w-8 h-8 ${isDark ? "text-red-400" : "text-red-500"}`}
+                        strokeWidth={1.5}
+                      />
+                    ) : (
+                      <Upload
+                        className={`w-8 h-8 ${isDark ? "text-white/60" : "text-gray-400"}`}
+                        strokeWidth={1.5}
+                      />
+                    )}
+                    <span className="font-medium text-center">
+                      {uploadState === "image-loading"
+                        ? lang === "KR"
+                          ? "이미지 불러오는 중..."
+                          : "Loading image..."
+                        : uploadState === "video-engine-loading"
+                          ? lang === "KR"
+                            ? "비디오 엔진 로딩 중..."
+                            : "Loading video engine..."
+                          : uploadState === "video-extracting"
+                            ? lang === "KR"
+                              ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과`
+                              : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`
+                            : uploadState === "error"
+                              ? lang === "KR"
+                                ? "브라우저 추출 실패. PNG를 사용하세요."
+                                : "Browser extraction failed. Try PNG sequence instead."
+                              : uploadState === "ready"
+                                ? `${frames.length} frames ready`
+                                : lang === "KR"
+                                  ? "파일 선택"
+                                  : "Select File"}
+                    </span>
+                    <span className="text-xs opacity-60">MP4, MOV, PNG</span>
+                  </label>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleLoadSampleProject}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                  >
+                    {lang === "KR"
+                      ? "샘플 프로젝트로 체험하기"
+                      : lang === "EN"
+                        ? "Try Sample Project"
+                        : "サンプルプロジェクトを試す"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Left Panel: Controls (Desktop & Mobile Phase 2) */}
+          <div
+            className={`order-2 w-full lg:w-[420px] shrink-0 lg:overflow-y-auto lg:pr-2 custom-scrollbar lg:order-1 ${frames.length === 0 ? "hidden lg:flex lg:flex-col lg:space-y-8" : "contents lg:flex lg:flex-col lg:space-y-8"}`}
+          >
+            <div className={`order-1 ${panelClass}`}>
+              <h2
+                className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-gray-900"}`}
+              >
                 <Upload className={accentIconClass} />
-                Upload File <span className="text-sm font-normal opacity-60">(파일 업로드)</span>
+                <div className="flex flex-col">
+                  <span>1. Upload File</span>
+                  <span className="text-sm font-normal opacity-60">
+                    {lang === "KR"
+                      ? "(파일 업로드)"
+                      : lang === "EN"
+                        ? "(File Upload)"
+                        : "(ファイルアップロード)"}
+                  </span>
+                </div>
               </h2>
-              
-              <div 
-                className={dropzoneClass}
+
+              <p
+                className={`mb-4 text-sm ${isDark ? "text-white/60" : "text-gray-600"}`}
+              >
+                {lang === "KR"
+                  ? "MP4/MOV를 올리면 프레임으로 나누고, 배경 제거 후 에셋으로 내보낼 수 있습니다."
+                  : lang === "EN"
+                    ? "Upload an MP4/MOV to split it into frames, remove the background, and export production-ready assets."
+                    : "MP4/MOVをアップロードすると、フレーム分割・背景除去・アセット出力ができます。"}
+              </p>
+
+              <div
+                className={`${dropzoneClass} ${isExtracting ? "opacity-50 pointer-events-none" : ""}`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >
-                <input 
-                  type="file" 
-                  accept="video/mp4,video/quicktime,image/png" 
-                  onChange={handleFileUpload}
-                  className="hidden" 
-                  id="file-upload-mobile"
-                  disabled={uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading'}
-                />
-                <label htmlFor="file-upload-mobile" className={`cursor-pointer flex flex-col items-center gap-2 ${(uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading') ? 'opacity-50 pointer-events-none' : ''}`}>
-                  {(uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading') ? (
-                    <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-gray-600'}`} />
-                  ) : uploadState === 'error' ? (
-                    <Upload className={`w-8 h-8 ${isDark ? 'text-red-400' : 'text-red-500'}`} strokeWidth={1.5} />
-                  ) : (
-                    <Upload className={`w-8 h-8 ${isDark ? 'text-white/60' : 'text-gray-400'}`} strokeWidth={1.5} />
-                  )}
-                  <span className="font-medium text-center">
-                    {uploadState === 'image-loading' ? (lang === 'KR' ? '이미지 불러오는 중...' : 'Loading image...') :
-                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...') :
-                     uploadState === 'video-extracting' ? (lang === 'KR' ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과` : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`) :
-                     uploadState === 'error' ? (lang === 'KR' ? '브라우저 추출 실패. PNG를 사용하세요.' : 'Browser extraction failed. Try PNG sequence instead.') :
-                     uploadState === 'ready' ? `${frames.length} frames ready` :
-                     (lang === 'KR' ? '파일 선택' : 'Select File')}
-                  </span>
-                  <span className="text-xs opacity-60">MP4, MOV, PNG</span>
+                <label className="absolute inset-0 w-full h-full cursor-pointer">
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="video/mp4,video/quicktime,image/png"
+                    onChange={handleFileUpload}
+                    disabled={
+                      uploadState === "video-extracting" ||
+                      uploadState === "video-engine-loading" ||
+                      uploadState === "image-loading"
+                    }
+                  />
                 </label>
-              </div>
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 flex justify-center">
-                <button
-                  type="button"
-                  onClick={handleLoadSampleProject}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                >
-                  {lang === 'KR' ? '샘플 프로젝트로 체험하기' : lang === 'EN' ? 'Try Sample Project' : 'サンプルプロジェクトを試す'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+                <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none px-4 text-center">
+                  {uploadState === "video-extracting" ||
+                  uploadState === "video-engine-loading" ||
+                  uploadState === "image-loading" ? (
+                    <Loader2
+                      className={`w-8 h-8 mb-3 animate-spin ${isDark ? "text-blue-400" : "text-gray-600"}`}
+                    />
+                  ) : uploadState === "error" ? (
+                    <Upload
+                      className={`w-8 h-8 mb-3 transition-colors ${isDark ? "text-red-400" : "text-red-500"}`}
+                      strokeWidth={1.5}
+                    />
+                  ) : (
+                    <Upload
+                      className={`w-8 h-8 mb-3 transition-colors ${isDragging ? accentIconClass : isDark ? "text-white/40" : "text-gray-400"}`}
+                      strokeWidth={1.5}
+                    />
+                  )}
 
-        {/* Left Panel: Controls (Desktop & Mobile Phase 2) */}
-        <div className={`order-2 w-full lg:w-[420px] shrink-0 lg:overflow-y-auto lg:pr-2 custom-scrollbar lg:order-1 ${frames.length === 0 ? 'hidden lg:flex lg:flex-col lg:space-y-8' : 'contents lg:flex lg:flex-col lg:space-y-8'}`}>
-          <div className={`order-1 ${panelClass}`}>
-            <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              <Upload className={accentIconClass} />
-              <div className="flex flex-col">
-                <span>1. Upload File</span>
-                <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(파일 업로드)' : lang === 'EN' ? '(File Upload)' : '(ファイルアップロード)'}</span>
+                  <p
+                    className={`mb-2 text-sm font-semibold ${isDark ? "text-white/70" : "text-gray-600"}`}
+                  >
+                    {uploadState === "image-loading"
+                      ? lang === "KR"
+                        ? "이미지 불러오는 중..."
+                        : "Loading image..."
+                      : uploadState === "video-engine-loading"
+                        ? lang === "KR"
+                          ? "비디오 엔진 로딩 중..."
+                          : "Loading video engine..."
+                        : uploadState === "video-extracting"
+                          ? lang === "KR"
+                            ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과`
+                            : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`
+                          : uploadState === "error"
+                            ? lang === "KR"
+                              ? "브라우저 추출 실패. PNG를 사용하세요."
+                              : "Browser extraction failed. Try PNG sequence instead."
+                            : uploadState === "ready"
+                              ? `${frames.length} frames ready`
+                              : lang === "KR"
+                                ? "파일 업로드 (클릭 또는 드래그)"
+                                : "Click to upload or drag and drop"}
+                  </p>
+                  <p
+                    className={`text-xs ${isDark ? "text-white/40" : "text-gray-400"}`}
+                  >
+                    {uploadState === "error"
+                      ? lang === "KR"
+                        ? "비디오 대신 이미지를 업로드해보세요."
+                        : "Try a PNG sequence instead."
+                      : "MP4, MOV or PNG"}
+                  </p>
+                </div>
               </div>
-            </h2>
-            
-            <p className={`mb-4 text-sm ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
-              {lang === 'KR' ? 'MP4/MOV를 올리면 프레임으로 나누고, 배경 제거 후 에셋으로 내보낼 수 있습니다.' : lang === 'EN' ? 'Upload an MP4/MOV to split it into frames, remove the background, and export production-ready assets.' : 'MP4/MOVをアップロードすると、フレーム分割・背景除去・アセット出力ができます。'}
-            </p>
-            
-            <div 
-              className={`${dropzoneClass} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <label className="absolute inset-0 w-full h-full cursor-pointer">
-                <input type="file" className="hidden" accept="video/mp4,video/quicktime,image/png" onChange={handleFileUpload} disabled={uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading'} />
-              </label>
-              <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none px-4 text-center">
-                {(uploadState === 'video-extracting' || uploadState === 'video-engine-loading' || uploadState === 'image-loading') ? (
-                  <Loader2 className={`w-8 h-8 mb-3 animate-spin ${isDark ? 'text-blue-400' : 'text-gray-600'}`} />
-                ) : uploadState === 'error' ? (
-                  <Upload className={`w-8 h-8 mb-3 transition-colors ${isDark ? 'text-red-400' : 'text-red-500'}`} strokeWidth={1.5} />
-                ) : (
-                  <Upload className={`w-8 h-8 mb-3 transition-colors ${isDragging ? accentIconClass : (isDark ? 'text-white/40' : 'text-gray-400')}`} strokeWidth={1.5} />
-                )}
-                
-                <p className={`mb-2 text-sm font-semibold ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                    {uploadState === 'image-loading' ? (lang === 'KR' ? '이미지 불러오는 중...' : 'Loading image...') :
-                     uploadState === 'video-engine-loading' ? (lang === 'KR' ? '비디오 엔진 로딩 중...' : 'Loading video engine...') :
-                     uploadState === 'video-extracting' ? (lang === 'KR' ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과` : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`) :
-                     uploadState === 'error' ? (lang === 'KR' ? '브라우저 추출 실패. PNG를 사용하세요.' : 'Browser extraction failed. Try PNG sequence instead.') :
-                     uploadState === 'ready' ? `${frames.length} frames ready` :
-                     (lang === 'KR' ? '파일 업로드 (클릭 또는 드래그)' : 'Click to upload or drag and drop')}
-                </p>
-                <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-                  {uploadState === 'error' ? (lang === 'KR' ? '비디오 대신 이미지를 업로드해보세요.' : 'Try a PNG sequence instead.') : 'MP4, MOV or PNG'}
-                </p>
-              </div>
-            </div>
 
-            {frames.length === 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 flex justify-center">
-                <button
-                  type="button"
-                  onClick={handleLoadSampleProject}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                >
-                  {lang === 'KR' ? '샘플 프로젝트로 체험하기' : lang === 'EN' ? 'Try Sample Project' : 'サンプルプロジェクトを試す'}
-                </button>
-              </div>
-            )}
-
-            {uploadState === 'video-extracting' && (
-              <div className="mt-4 flex flex-col items-center gap-3">
-                {extractionStalled && (
-                   <div className="text-xs text-orange-500 bg-orange-500/10 border border-orange-500/20 px-3 py-2 rounded-lg font-medium text-center">
-                     {lang === 'KR' 
-                       ? '추출이 지연되고 있습니다. 취소하거나 FPS를 낮춰 다시 시도할 수 있습니다.' 
-                       : 'Extraction seems stalled. You can cancel or retry with lower FPS.'}
-                   </div>
-                )}
-                <div className="flex flex-wrap flex-row justify-center gap-2">
+              {frames.length === 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 flex justify-center">
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      cancelExtraction();
-                    }}
-                    className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
+                    onClick={handleLoadSampleProject}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                   >
-                    {lang === 'KR' ? '추출 취소' : 'Cancel extraction'}
+                    {lang === "KR"
+                      ? "샘플 프로젝트로 체험하기"
+                      : lang === "EN"
+                        ? "Try Sample Project"
+                        : "サンプルプロジェクトを試す"}
                   </button>
+                </div>
+              )}
+
+              {uploadState === "video-extracting" && (
+                <div className="mt-4 flex flex-col items-center gap-3">
                   {extractionStalled && (
+                    <div className="text-xs text-orange-500 bg-orange-500/10 border border-orange-500/20 px-3 py-2 rounded-lg font-medium text-center">
+                      {lang === "KR"
+                        ? "추출이 지연되고 있습니다. 취소하거나 FPS를 낮춰 다시 시도할 수 있습니다."
+                        : "Extraction seems stalled. You can cancel or retry with lower FPS."}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap flex-row justify-center gap-2">
                     <button
                       type="button"
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         cancelExtraction();
-                        const currentFps = fps;
-                        const newFps = Math.max(4, Math.floor(currentFps / 2));
-                        setFps(newFps);
-                        if (videoFile) {
-                          await processFile(videoFile, newFps);
-                        }
-                      }}
-                      className="rounded-lg bg-orange-50 hover:bg-orange-100 border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 transition-colors dark:bg-orange-500/10 dark:hover:bg-orange-500/20 dark:border-orange-500/20 dark:text-orange-400"
-                    >
-                      {lang === 'KR' ? `목표 FPS 낮추기 (${fps} -> ${Math.max(4, Math.floor(fps / 2))})` : `Lower FPS (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {uploadState === 'error' && (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                {nativeExtractError && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setNativeExtractError(null);
-                        setSkippedFramesWarning(false);
-                        if (videoFile) await processFile(videoFile);
                       }}
                       className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
                     >
-                      {lang === 'KR' ? '재시도 (브라우저)' : 'Retry (Browser Decoder)'}
+                      {lang === "KR" ? "추출 취소" : "Cancel extraction"}
                     </button>
-                    <button
-                      type="button"
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setNativeExtractError(null);
-                        setSkippedFramesWarning(false);
-                        const currentFps = fps;
-                        const newFps = Math.max(4, Math.floor(currentFps / 2));
-                        setFps(newFps);
-                        if (videoFile) {
-                          await processFile(videoFile, newFps);
-                        }
-                      }}
-                      className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
-                    >
-                      {lang === 'KR' ? `목표 FPS 낮추기 (${fps} -> ${Math.max(4, Math.floor(fps / 2))})` : `Lower FPS (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-            
-          </div>
-          
-          {isExtracting && (
-            <div className="order-2 w-full mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-3 backdrop-blur-sm shadow-sm transition-all">
-               <Loader2 className={`w-5 h-5 animate-spin shrink-0 mt-0.5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-               <div>
-                  <p className={`text-sm font-semibold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                    {lang === 'KR' ? '프레임 추출 중입니다. 추출이 끝날 때까지 편집 기능이 잠시 잠깁니다.' : 'Extracting frames... editing is temporarily locked.'}
-                  </p>
-               </div>
-            </div>
-          )}
-
-          <div className={`order-3 ${panelClass} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className={`text-lg font-medium flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                <Sliders className={accentIconClass} />
-                2. ChromaKey <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(투명화)' : lang === 'EN' ? '(Chroma Key)' : '(クロマキー)'}</span>
-              </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    if (isBrushActive && activeTool === 'brush') {
-                      setIsBrushActive(false);
-                    } else {
-                      setIsBrushActive(true);
-                      setActiveTool('brush');
-                    }
-                  }}
-                  title="Exclusion Brush (제외 브러쉬)"
-                  className={`p-2 rounded-lg transition-all border ${
-                    isBrushActive && activeTool === 'brush'
-                      ? (isDark ? 'bg-blue-500 border-blue-400 text-white shadow-[0_0_10px_rgba(59,130,246,0.4)]' : 'bg-black border-black text-white')
-                      : (isDark ? 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50')
-                  }`}
-                >
-                  <Brush className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => {
-                    if (isBrushActive && activeTool === 'eraser') {
-                      setIsBrushActive(false);
-                    } else {
-                      setIsBrushActive(true);
-                      setActiveTool('eraser');
-                    }
-                  }}
-                  title="Exclusion Eraser (제외 지우개)"
-                  className={`p-2 rounded-lg transition-all border ${
-                    isBrushActive && activeTool === 'eraser'
-                      ? (isDark ? 'bg-red-500 border-red-400 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]' : 'bg-red-600 border-red-700 text-white shadow-[0_0_10px_rgba(220,38,38,0.2)]')
-                      : (isDark ? 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50')
-                  }`}
-                >
-                  <Eraser className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="space-y-6">
-              {isBrushActive && (
-                <div className={`p-4 rounded-xl border mb-4 animate-in fade-in slide-in-from-top-2 duration-200 ${isDark ? 'bg-blue-500/5 border-blue-500/20' : 'bg-gray-50 border-gray-200'}`}>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className={labelClass}>
-                      {activeTool === 'brush' ? (lang === 'KR' ? 'Brush Size' : lang === 'EN' ? 'Brush Size' : 'ブラシサイズ') : (lang === 'KR' ? 'Eraser Size' : lang === 'EN' ? 'Eraser Size' : '消しゴムサイズ')} 
-                    </label>
-                    <span className={badgeClass}>{brushSize}px</span>
+                    {extractionStalled && (
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          cancelExtraction();
+                          const currentFps = fps;
+                          const newFps = Math.max(
+                            4,
+                            Math.floor(currentFps / 2),
+                          );
+                          setFps(newFps);
+                          if (videoFile) {
+                            await processFile(videoFile, newFps);
+                          }
+                        }}
+                        className="rounded-lg bg-orange-50 hover:bg-orange-100 border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 transition-colors dark:bg-orange-500/10 dark:hover:bg-orange-500/20 dark:border-orange-500/20 dark:text-orange-400"
+                      >
+                        {lang === "KR"
+                          ? `목표 FPS 낮추기 (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`
+                          : `Lower FPS (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`}
+                      </button>
+                    )}
                   </div>
-                  <input 
-                    type="range" 
-                    min="5" 
-                    max="100" 
-                    value={brushSize}
-                    onChange={(e) => setBrushSize(Number(e.target.value))}
-                    className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
-                  />
-                  <p className="text-[10px] mt-2 opacity-60 leading-tight">
-                    {lang === 'KR' ? 'Paint on the preview to exclude areas from chroma key.' : lang === 'EN' ? 'Paint on the preview to exclude areas from chroma key.' : 'プレビューを塗って、クロマキーから除外する領域を指定します。'}<br/>
-                    <span className="opacity-60">{lang === 'KR' ? '(미리보기 위를 칠하면 해당 영역은 투명화되지 않고 복구됩니다.)' : lang === 'EN' ? '(Painting on the preview will recover those areas from being transparent.)' : '(プレビュー上を塗ると、その領域は透明化されずに復元されます。)'}</span>
-                  </p>
-                  <button 
-                    onClick={() => {
-                      const targetIndices = selectedFrames.has(currentFrame) ? Array.from(selectedFrames) : [currentFrame];
-                      setExclusionStrokes(prev => prev.map(s => ({
-                        ...s,
-                        targetFrameIndexes: s.targetFrameIndexes.filter(idx => !targetIndices.includes(idx))
-                      })).filter(s => s.targetFrameIndexes.length > 0));
-                    }}
-                    className={`mt-3 w-full py-1.5 text-[10px] font-bold uppercase tracking-wider rounded border transition-colors ${
-                      isDark ? 'border-white/10 hover:bg-white/5 text-white/60' : 'border-gray-200 hover:bg-gray-50 text-gray-500'
-                    }`}
-                  >
-                    {lang === 'KR' ? 'Reset Frame Mask (현재 프레임 초기화)' : lang === 'EN' ? 'Reset Frame Mask' : '現在のフレームのマスクをリセット'}
-                  </button>
                 </div>
               )}
-              <div>
-                <label className={labelClass}>{lang === 'KR' ? 'Target Color' : lang === 'EN' ? 'Target Color' : 'ターゲットカラー'}</label>
-                <div className="flex gap-2 mt-2">
-                  {['White', 'Green'].map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => {
-                        setChromaKeyColor(color as any);
-                        setIsPickingColor(false);
-                      }}
-                      className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-colors border ${
-                        chromaKeyColor === color 
-                          ? (isDark ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.3)]' : 'bg-blue-50 border-blue-200 text-blue-700')
-                          : (isDark ? 'bg-[#2A2A2A] border-[#3A3A3A] text-gray-400 hover:bg-[#333333]' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50')
-                      }`}
-                    >
-                      {color === 'White' ? (lang === 'KR' ? 'White' : lang === 'EN' ? 'White' : 'ホワイト') : (lang === 'KR' ? 'Green' : lang === 'EN' ? 'Green' : 'グリーン')}
-                    </button>
-                  ))}
+
+              {uploadState === "error" && (
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  {nativeExtractError && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setNativeExtractError(null);
+                          setSkippedFramesWarning(false);
+                          if (videoFile) await processFile(videoFile);
+                        }}
+                        className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
+                      >
+                        {lang === "KR"
+                          ? "재시도 (브라우저)"
+                          : "Retry (Browser Decoder)"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setNativeExtractError(null);
+                          setSkippedFramesWarning(false);
+                          const currentFps = fps;
+                          const newFps = Math.max(
+                            4,
+                            Math.floor(currentFps / 2),
+                          );
+                          setFps(newFps);
+                          if (videoFile) {
+                            await processFile(videoFile, newFps);
+                          }
+                        }}
+                        className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
+                      >
+                        {lang === "KR"
+                          ? `목표 FPS 낮추기 (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`
+                          : `Lower FPS (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {isExtracting && (
+              <div className="order-2 w-full mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-3 backdrop-blur-sm shadow-sm transition-all">
+                <Loader2
+                  className={`w-5 h-5 animate-spin shrink-0 mt-0.5 ${isDark ? "text-blue-400" : "text-blue-600"}`}
+                />
+                <div>
+                  <p
+                    className={`text-sm font-semibold ${isDark ? "text-blue-400" : "text-blue-600"}`}
+                  >
+                    {lang === "KR"
+                      ? "프레임 추출 중입니다. 추출이 끝날 때까지 편집 기능이 잠시 잠깁니다."
+                      : "Extracting frames... editing is temporarily locked."}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div
+              className={`order-3 ${panelClass} ${isExtracting ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2
+                  className={`text-lg font-medium flex items-center gap-2 ${isDark ? "text-white" : "text-gray-900"}`}
+                >
+                  <Sliders className={accentIconClass} />
+                  2. ChromaKey{" "}
+                  <span className="text-sm font-normal opacity-60">
+                    {lang === "KR"
+                      ? "(투명화)"
+                      : lang === "EN"
+                        ? "(Chroma Key)"
+                        : "(クロマキー)"}
+                  </span>
+                </h2>
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setIsPickingColor(!isPickingColor)}
-                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-colors border flex items-center justify-center gap-2 ${
-                      isPickingColor || chromaKeyColor === 'Picker'
-                        ? (isDark ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.15)]' : 'bg-yellow-100 border-yellow-300 text-yellow-800')
-                        : (isDark ? 'bg-[#2A2A2A] border-[#3A3A3A] text-gray-400 hover:bg-[#333333]' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50')
+                    onClick={() => {
+                      if (isBrushActive && activeTool === "brush") {
+                        setIsBrushActive(false);
+                      } else {
+                        setIsBrushActive(true);
+                        setActiveTool("brush");
+                      }
+                    }}
+                    title="Exclusion Brush (제외 브러쉬)"
+                    className={`p-2 rounded-lg transition-all border ${
+                      isBrushActive && activeTool === "brush"
+                        ? isDark
+                          ? "bg-blue-500 border-blue-400 text-white shadow-[0_0_10px_rgba(59,130,246,0.4)]"
+                          : "bg-black border-black text-white"
+                        : isDark
+                          ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                     }`}
                   >
-                    <Pipette className={`w-4 h-4 ${isPickingColor ? 'animate-pulse' : ''}`} />
-                    {lang === 'KR' ? 'Picker' : lang === 'EN' ? 'Picker' : 'スポイト'}
+                    <Brush className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (isBrushActive && activeTool === "eraser") {
+                        setIsBrushActive(false);
+                      } else {
+                        setIsBrushActive(true);
+                        setActiveTool("eraser");
+                      }
+                    }}
+                    title="Exclusion Eraser (제외 지우개)"
+                    className={`p-2 rounded-lg transition-all border ${
+                      isBrushActive && activeTool === "eraser"
+                        ? isDark
+                          ? "bg-red-500 border-red-400 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]"
+                          : "bg-red-600 border-red-700 text-white shadow-[0_0_10px_rgba(220,38,38,0.2)]"
+                        : isDark
+                          ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    <Eraser className="w-4 h-4" />
                   </button>
                 </div>
-                {chromaKeyColor === 'Picker' && !isPickingColor && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <div 
-                      className="w-6 h-6 rounded border border-gray-300 shadow-sm"
-                      style={{ backgroundColor: `rgb(${pickedColor.r}, ${pickedColor.g}, ${pickedColor.b})` }}
+              </div>
+
+              <div className="space-y-6">
+                {isBrushActive && (
+                  <div
+                    className={`p-4 rounded-xl border mb-4 animate-in fade-in slide-in-from-top-2 duration-200 ${isDark ? "bg-blue-500/5 border-blue-500/20" : "bg-gray-50 border-gray-200"}`}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <label className={labelClass}>
+                        {activeTool === "brush"
+                          ? lang === "KR"
+                            ? "Brush Size"
+                            : lang === "EN"
+                              ? "Brush Size"
+                              : "ブラシサイズ"
+                          : lang === "KR"
+                            ? "Eraser Size"
+                            : lang === "EN"
+                              ? "Eraser Size"
+                              : "消しゴムサイズ"}
+                      </label>
+                      <span className={badgeClass}>{brushSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="5"
+                      max="100"
+                      value={brushSize}
+                      onChange={(e) => setBrushSize(Number(e.target.value))}
+                      className={`w-full ${isDark ? "accent-blue-500" : "accent-black"}`}
                     />
-                    <span className={`text-xs font-mono ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      RGB({pickedColor.r}, {pickedColor.g}, {pickedColor.b})
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className={labelClass}>{lang === 'KR' ? 'Tolerance (허용 오차)' : lang === 'EN' ? 'Tolerance' : '許容誤差'}</label>
-                  <span className={badgeClass}>{tolerance}</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  step="1"
-                  value={tolerance}
-                  onChange={(e) => setTolerance(Number(e.target.value))}
-                  className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
-                />
-                <p className={descClass}>
-                  {chromaKeyColor === 'Green' 
-                    ? <><span className="block">{lang === 'KR' ? 'Remove more green-tinted pixels.' : lang === 'EN' ? 'Remove more green-tinted pixels.' : 'より多くの緑がかったピクセルを削除します。'}</span><span className="block">{lang === 'KR' ? '(더 많은 초록색 픽셀이 제거됩니다.)' : lang === 'EN' ? '(More green pixels will be removed.)' : '(より多くの緑のピクセルが削除されます。)'}</span></>
-                    : <><span className="block">{lang === 'KR' ? 'Remove more off-white pixels.' : lang === 'EN' ? 'Remove more off-white pixels.' : 'より多くのオフホワイトのピクセルを削除します。'}</span><span className="block">{lang === 'KR' ? '(더 많은 밝은 픽셀이 제거됩니다.)' : lang === 'EN' ? '(More bright pixels will be removed.)' : '(より多くの明るいピクセルが削除されます。)'}</span></>}
-                </p>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className={labelClass}>{lang === 'KR' ? 'Softness (가장자리 페더링)' : lang === 'EN' ? 'Softness' : '柔らかさ'}</label>
-                  <span className={badgeClass}>{softness}</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  step="1"
-                  value={softness}
-                  onChange={(e) => setSoftness(Number(e.target.value))}
-                  className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
-                />
-                <p className={descClass}>
-                  <span className="block">{lang === 'KR' ? 'Smooth out the edges.' : lang === 'EN' ? 'Smooth out the edges.' : 'エッジを滑らかにします。'}</span>
-                  <span className="block">{lang === 'KR' ? '(가장자리가 부드러워집니다.)' : lang === 'EN' ? '(Edges will become softer.)' : '(エッジが柔らかくなります。)'}</span>
-                </p>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className={labelClass}>{lang === 'KR' ? 'Enclosed Color (내부 빈틈)' : lang === 'EN' ? 'Enclosed Color' : '囲まれた色'}</label>
-                  <span className={badgeClass}>{enclosedTolerance}</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  step="1"
-                  value={enclosedTolerance}
-                  onChange={(e) => setEnclosedTolerance(Number(e.target.value))}
-                  className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
-                />
-                <p className={descClass}>
-                  <span className="block">{lang === 'KR' ? 'Removes isolated colors between objects.' : lang === 'EN' ? 'Removes isolated colors between objects.' : 'オブジェクト間の孤立した色を削除します。'}</span>
-                  <span className="block">{lang === 'KR' ? '(객체 사이의 고립된 색상을 제거합니다.)' : lang === 'EN' ? '(Removes isolated colors between objects.)' : '(オブジェクト間の孤立した色を削除します。)'}</span>
-                </p>
-              </div>
-
-              {/* Advanced Keying Toggle */}
-              <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
-                <button
-                  onClick={() => setShowAdvancedKeying(!showAdvancedKeying)}
-                  className="flex items-center justify-between w-full p-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5 rounded transition"
-                >
-                   <span>{lang === 'KR' ? '고급 키잉 설정 (Advanced Keying)' : 'Advanced Keying Settings'}</span>
-                   <ChevronDown className={`w-4 h-4 transition-transform ${showAdvancedKeying ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {showAdvancedKeying && (
-                  <div className="mt-4 space-y-4 px-2">
-                     <div>
-                       <label className={labelClass}>{lang === 'KR' ? '미리보기 (Preview)' : 'Preview Mode'}</label>
-                       <select 
-                         value={previewMode} 
-                         onChange={(e: any) => setPreviewMode(e.target.value)} 
-                         className={`w-full mt-1 text-sm p-1.5 rounded border ${isDark ? 'bg-black border-white/10 text-white' : 'bg-white border-gray-200'}`}
-                       >
-                         <option value="result">Result (결과물)</option>
-                         <option value="original">Original (원본)</option>
-                         <option value="alpha">Alpha Mask (알파 마스크)</option>
-                         <option value="checkerboard">Checkerboard (투명 배경)</option>
-                         <option value="black">Black Background</option>
-                         <option value="white">White Background</option>
-                       </select>
-                     </div>
-
-                     <div>
-                       <label className={labelClass}>{lang === 'KR' ? '키잉 알고리즘' : 'Algorithm'}</label>
-                       <select 
-                         value={keyingMode} 
-                         onChange={(e: any) => setKeyingMode(e.target.value)} 
-                         className={`w-full mt-1 text-sm p-1.5 rounded border ${isDark ? 'bg-black border-white/10 text-white' : 'bg-white border-gray-200'}`}
-                       >
-                         <option value="greenAdvanced">Advanced Green</option>
-                         <option value="rgb">RGB Exact</option>
-                         <option value="hsv">HSV Range</option>
-                         <option value="luma">Luma Base</option>
-                       </select>
-                     </div>
-
-                     <div>
-                       <div className="flex justify-between mb-1">
-                         <label className={labelClass}>{lang === 'KR' ? '스필 제거 (Despill)' : 'Despill'}</label>
-                         <span className={badgeClass}>{despill}</span>
-                       </div>
-                       <input type="range" min="0" max="100" value={despill} onChange={(e) => setDespill(Number(e.target.value))} className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`} />
-                     </div>
-
-                     <div>
-                       <div className="flex justify-between mb-1">
-                         <label className={labelClass}>{lang === 'KR' ? '수축 (Erode)' : 'Erode'}</label>
-                         <span className={badgeClass}>{erode}</span>
-                       </div>
-                       <input type="range" min="0" max="10" step="1" value={erode} onChange={(e) => setErode(Number(e.target.value))} className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`} />
-                     </div>
-
-                     <div>
-                       <div className="flex justify-between mb-1">
-                         <label className={labelClass}>{lang === 'KR' ? '확장 (Dilate)' : 'Dilate'}</label>
-                         <span className={badgeClass}>{dilate}</span>
-                       </div>
-                       <input type="range" min="0" max="10" step="1" value={dilate} onChange={(e) => setDilate(Number(e.target.value))} className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`} />
-                     </div>
-
-                     <div>
-                       <div className="flex justify-between mb-1">
-                         <label className={labelClass}>{lang === 'KR' ? '블러 페더 (Feather)' : 'Feather'}</label>
-                         <span className={badgeClass}>{feather}</span>
-                       </div>
-                       <input type="range" min="0" max="20" step="1" value={feather} onChange={(e) => setFeather(Number(e.target.value))} className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`} />
-                     </div>
-
-                     <div>
-                       <div className="flex justify-between mb-1">
-                         <label className={labelClass}>{lang === 'KR' ? '알파 대비 (Alpha Contrast)' : 'Alpha Contrast'}</label>
-                         <span className={badgeClass}>{alphaContrast}</span>
-                       </div>
-                       <input type="range" min="-100" max="100" step="1" value={alphaContrast} onChange={(e) => setAlphaContrast(Number(e.target.value))} className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`} />
-                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Batch Processing Controls */}
-              <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
-                <label className={labelClass}>{lang === 'KR' ? '적용 (Apply Process)' : lang === 'EN' ? 'Apply Process' : '適用する'}</label>
-                <div className="flex flex-col gap-2 mt-2">
-                  <button 
-                    onClick={() => processFramesForDownload(Array.from(selectedFrames))}
-                    disabled={selectedFrames.size === 0 || isProcessing}
-                    className={`w-full py-2 font-bold rounded-lg transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2 ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
-                  >
-                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    {lang === 'KR' ? `선택 항목 적용 (${selectedFrames.size})` : lang === 'EN' ? `Process Selected (${selectedFrames.size})` : `選択を適用 (${selectedFrames.size})`}
-                  </button>
-                  <button 
-                    onClick={() => processFramesForDownload(Array.from({ length: frames.length }, (_, i) => i))}
-                    disabled={frames.length === 0 || isProcessing}
-                    className={`w-full py-2 font-bold rounded-lg transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2 ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-200 hover:bg-gray-300 text-black'}`}
-                  >
-                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    {lang === 'KR' ? `전체 적용 (${frames.length})` : lang === 'EN' ? `Process All (${frames.length})` : `すべて適用 (${frames.length})`}
-                  </button>
-                  
-                  {batchProgress >= 0 && (
-                    <div className="mt-2 text-sm border hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20 p-3 rounded flex flex-col gap-2">
-                       <div className="flex justify-between items-center w-full">
-                         <div className="flex flex-col">
-                           <span className="font-bold">{lang === 'KR' ? '진행률' : 'Progress'} ({batchProgress}%)</span>
-                         </div>
-                         <button 
-                           onClick={cancelJob}
-                           className="text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 px-2 py-1 rounded text-xs px-3 font-semibold transition"
-                         >
-                           {lang === 'KR' ? '취소' : 'Cancel'}
-                         </button>
-                       </div>
-                       <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
-                         <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style={{ width: `${batchProgress}%` }}></div>
-                       </div>
-                    </div>
-                  )}
-
-                  {failedItems.length > 0 && (
-                    <div className="mt-2 p-2 rounded bg-red-100 dark:bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs text-left">
-                       <span className="font-bold block mb-1">
-                         {lang === 'KR' ? `${failedItems.length}개의 항목 처리 실패:` : `${failedItems.length} items failed:`}
-                       </span>
-                       <div className="max-h-24 overflow-y-auto w-full custom-scrollbar">
-                         {failedItems.map((failIdx, i) => (
-                           <div key={i}>Frame {failIdx}</div>
-                         ))}
-                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className={labelClass}>{lang === 'KR' ? 'Extraction FPS (추출 프레임)' : lang === 'EN' ? 'Extraction FPS' : '抽出FPS'}</label>
-                  <span className={badgeClass}>{fps} FPS</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="12" 
-                  max="48" 
-                  step="1"
-                  value={fps}
-                  onChange={(e) => handleFpsChange(Number(e.target.value))}
-                  disabled={isExtracting || (videoFile?.type.startsWith('image/') ?? false)}
-                  className={`w-full ${isDark ? 'accent-blue-500' : 'accent-black'}`}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className={`order-4 ${panelClass} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
-            <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              <Settings className={accentIconClass} />
-              4. Asset Settings <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(에셋 설정)' : lang === 'EN' ? '(Asset Settings)' : '(アセット設定)'}</span>
-            </h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className={labelClass}>{lang === 'KR' ? 'First Name (파일명)' : lang === 'EN' ? 'First Name' : 'ファイル名'}</label>
-                <input 
-                  type="text" 
-                  value={charName}
-                  onChange={(e) => setCharName(e.target.value)}
-                  className={inputClass}
-                  placeholder="e.g. sloth"
-                />
-              </div>
-
-              <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
-                <div className="flex justify-between items-center mb-3">
-                  <label className={`text-sm font-medium ${isDark ? 'text-white/80' : 'text-gray-900'}`}>{lang === 'KR' ? 'Video Presets (비디오 프리셋)' : lang === 'EN' ? 'Video Presets' : 'ビデオプリセット'}</label>
-                  <button 
-                    onClick={saveCurrentAsPreset}
-                    className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded transition-colors ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                  >
-                    {lang === 'KR' ? 'Save Current' : lang === 'EN' ? 'Save Current' : '現在を保存'}
-                  </button>
-                </div>
-                <div className="space-y-1">
-                  {presets.map(preset => (
-                    <div 
-                      key={preset.id}
-                      onClick={() => applyPreset(preset.id)}
-                      className={`group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all ${
-                        selectedPreset === preset.id
-                          ? (isDark ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100')
-                          : (isDark ? 'hover:bg-white/5 text-white/70' : 'hover:bg-gray-100 text-gray-700')
+                    <p className="text-[10px] mt-2 opacity-60 leading-tight">
+                      {lang === "KR"
+                        ? "Paint on the preview to exclude areas from chroma key."
+                        : lang === "EN"
+                          ? "Paint on the preview to exclude areas from chroma key."
+                          : "プレビューを塗って、クロマキーから除外する領域を指定します。"}
+                      <br />
+                      <span className="opacity-60">
+                        {lang === "KR"
+                          ? "(미리보기 위를 칠하면 해당 영역은 투명화되지 않고 복구됩니다.)"
+                          : lang === "EN"
+                            ? "(Painting on the preview will recover those areas from being transparent.)"
+                            : "(プレビュー上を塗ると、その領域は透明化されずに復元されます。)"}
+                      </span>
+                    </p>
+                    <button
+                      onClick={() => {
+                        const targetIndices = selectedFrames.has(currentFrame)
+                          ? Array.from(selectedFrames)
+                          : [currentFrame];
+                        setExclusionStrokes((prev) =>
+                          prev
+                            .map((s) => ({
+                              ...s,
+                              targetFrameIndexes: s.targetFrameIndexes.filter(
+                                (idx) => !targetIndices.includes(idx),
+                              ),
+                            }))
+                            .filter((s) => s.targetFrameIndexes.length > 0),
+                        );
+                      }}
+                      className={`mt-3 w-full py-1.5 text-[10px] font-bold uppercase tracking-wider rounded border transition-colors ${
+                        isDark
+                          ? "border-white/10 hover:bg-white/5 text-white/60"
+                          : "border-gray-200 hover:bg-gray-50 text-gray-500"
                       }`}
                     >
-                      <span className="text-sm truncate pr-2">{preset.name}</span>
-                      <button 
-                        onClick={(e) => deletePreset(e, preset.id)}
-                        className={`opacity-0 group-hover:opacity-100 p-1 rounded-md transition-all ${
-                          isDark ? 'hover:bg-white/10 text-white/40 hover:text-red-400' : 'hover:bg-gray-200 text-gray-400 hover:text-red-500'
+                      {lang === "KR"
+                        ? "Reset Frame Mask (현재 프레임 초기화)"
+                        : lang === "EN"
+                          ? "Reset Frame Mask"
+                          : "現在のフレームのマスクをリセット"}
+                    </button>
+                  </div>
+                )}
+                <div>
+                  <label className={labelClass}>
+                    {lang === "KR"
+                      ? "Target Color"
+                      : lang === "EN"
+                        ? "Target Color"
+                        : "ターゲットカラー"}
+                  </label>
+                  <div className="flex gap-2 mt-2">
+                    {["White", "Green"].map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          setChromaKeyColor(color as any);
+                          setIsPickingColor(false);
+                        }}
+                        className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-colors border ${
+                          chromaKeyColor === color
+                            ? isDark
+                              ? "bg-blue-600 border-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+                              : "bg-blue-50 border-blue-200 text-blue-700"
+                            : isDark
+                              ? "bg-[#2A2A2A] border-[#3A3A3A] text-gray-400 hover:bg-[#333333]"
+                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                         }`}
                       >
-                        <X className="w-3.5 h-3.5" />
+                        {color === "White"
+                          ? lang === "KR"
+                            ? "White"
+                            : lang === "EN"
+                              ? "White"
+                              : "ホワイト"
+                          : lang === "KR"
+                            ? "Green"
+                            : lang === "EN"
+                              ? "Green"
+                              : "グリーン"}
                       </button>
-                    </div>
-                  ))}
-                  {presets.length === 0 && (
-                    <div className={`text-xs text-center py-4 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
-                      {lang === 'KR' ? 'No presets saved.' : lang === 'EN' ? 'No presets saved.' : '保存されたプリセットはありません。'}
+                    ))}
+                    <button
+                      onClick={() => setIsPickingColor(!isPickingColor)}
+                      className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-colors border flex items-center justify-center gap-2 ${
+                        isPickingColor || chromaKeyColor === "Picker"
+                          ? isDark
+                            ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.15)]"
+                            : "bg-yellow-100 border-yellow-300 text-yellow-800"
+                          : isDark
+                            ? "bg-[#2A2A2A] border-[#3A3A3A] text-gray-400 hover:bg-[#333333]"
+                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <Pipette
+                        className={`w-4 h-4 ${isPickingColor ? "animate-pulse" : ""}`}
+                      />
+                      {lang === "KR"
+                        ? "Picker"
+                        : lang === "EN"
+                          ? "Picker"
+                          : "スポイト"}
+                    </button>
+                  </div>
+                  {chromaKeyColor === "Picker" && !isPickingColor && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <div
+                        className="w-6 h-6 rounded border border-gray-300 shadow-sm"
+                        style={{
+                          backgroundColor: `rgb(${pickedColor.r}, ${pickedColor.g}, ${pickedColor.b})`,
+                        }}
+                      />
+                      <span
+                        className={`text-xs font-mono ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                      >
+                        RGB({pickedColor.r}, {pickedColor.g}, {pickedColor.b})
+                      </span>
                     </div>
                   )}
                 </div>
-              </div>
 
-              <div className={`pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
-                <div className="flex justify-between items-center mb-3">
-                  <label className={`text-sm font-medium ${isDark ? 'text-white/80' : 'text-gray-900'}`}>{lang === 'KR' ? 'Motion Segments (모션 구간)' : lang === 'EN' ? 'Motion Segments' : 'モーション区間'}</label>
-                  <button 
-                    onClick={addSegment}
-                    className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded transition-colors ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                  >
-                    {lang === 'KR' ? '+ Add Segment (+ 구간 추가)' : lang === 'EN' ? '+ Add Segment' : '+ 区間を追加'}
-                  </button>
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className={labelClass}>
+                      {lang === "KR"
+                        ? "Tolerance (허용 오차)"
+                        : lang === "EN"
+                          ? "Tolerance"
+                          : "許容誤差"}
+                    </label>
+                    <span className={badgeClass}>{tolerance}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={tolerance}
+                    onChange={(e) => setTolerance(Number(e.target.value))}
+                    className={`w-full ${isDark ? "accent-blue-500" : "accent-black"}`}
+                  />
+                  <p className={descClass}>
+                    {chromaKeyColor === "Green" ? (
+                      <>
+                        <span className="block">
+                          {lang === "KR"
+                            ? "Remove more green-tinted pixels."
+                            : lang === "EN"
+                              ? "Remove more green-tinted pixels."
+                              : "より多くの緑がかったピクセルを削除します。"}
+                        </span>
+                        <span className="block">
+                          {lang === "KR"
+                            ? "(더 많은 초록색 픽셀이 제거됩니다.)"
+                            : lang === "EN"
+                              ? "(More green pixels will be removed.)"
+                              : "(より多くの緑のピクセルが削除されます。)"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="block">
+                          {lang === "KR"
+                            ? "Remove more off-white pixels."
+                            : lang === "EN"
+                              ? "Remove more off-white pixels."
+                              : "より多くのオフホワイトのピクセルを削除します。"}
+                        </span>
+                        <span className="block">
+                          {lang === "KR"
+                            ? "(더 많은 밝은 픽셀이 제거됩니다.)"
+                            : lang === "EN"
+                              ? "(More bright pixels will be removed.)"
+                              : "(より多くの明るいピクセルが削除されます。)"}
+                        </span>
+                      </>
+                    )}
+                  </p>
                 </div>
 
-                <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                  {segments.map((seg, idx) => (
-                    <div key={idx} className={segmentBgClass}>
-                      <button 
-                        onClick={() => removeSegment(idx)}
-                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        ×
-                      </button>
-                      
-                      <div className="relative" ref={idx === showMiddleNameDropdown ? dropdownRef : null}>
-                        <div className="flex gap-2">
-                          <input 
-                            type="text" 
-                            value={seg.name}
-                            onChange={(e) => updateSegment(idx, 'name', e.target.value)}
-                            className={segmentInputClass}
-                            placeholder={lang === 'KR' ? "Motion name..." : lang === 'EN' ? "Motion name..." : "モーション名..."}
-                          />
-                          <button 
-                            type="button"
-                            onClick={() => setShowMiddleNameDropdown(showMiddleNameDropdown === idx ? null : idx)}
-                            className={`px-2 rounded-lg border transition-all ${
-                              showMiddleNameDropdown === idx 
-                                ? (isDark ? 'bg-blue-500/20 border-blue-500/50' : 'bg-gray-200 border-gray-400') 
-                                : (isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50')
-                            }`}
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className={labelClass}>
+                      {lang === "KR"
+                        ? "Softness (가장자리 페더링)"
+                        : lang === "EN"
+                          ? "Softness"
+                          : "柔らかさ"}
+                    </label>
+                    <span className={badgeClass}>{softness}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={softness}
+                    onChange={(e) => setSoftness(Number(e.target.value))}
+                    className={`w-full ${isDark ? "accent-blue-500" : "accent-black"}`}
+                  />
+                  <p className={descClass}>
+                    <span className="block">
+                      {lang === "KR"
+                        ? "Smooth out the edges."
+                        : lang === "EN"
+                          ? "Smooth out the edges."
+                          : "エッジを滑らかにします。"}
+                    </span>
+                    <span className="block">
+                      {lang === "KR"
+                        ? "(가장자리가 부드러워집니다.)"
+                        : lang === "EN"
+                          ? "(Edges will become softer.)"
+                          : "(エッジが柔らかくなります。)"}
+                    </span>
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className={labelClass}>
+                      {lang === "KR"
+                        ? "Enclosed Color (내부 빈틈)"
+                        : lang === "EN"
+                          ? "Enclosed Color"
+                          : "囲まれた色"}
+                    </label>
+                    <span className={badgeClass}>{enclosedTolerance}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={enclosedTolerance}
+                    onChange={(e) =>
+                      setEnclosedTolerance(Number(e.target.value))
+                    }
+                    className={`w-full ${isDark ? "accent-blue-500" : "accent-black"}`}
+                  />
+                  <p className={descClass}>
+                    <span className="block">
+                      {lang === "KR"
+                        ? "Removes isolated colors between objects."
+                        : lang === "EN"
+                          ? "Removes isolated colors between objects."
+                          : "オブジェクト間の孤立した色を削除します。"}
+                    </span>
+                    <span className="block">
+                      {lang === "KR"
+                        ? "(객체 사이의 고립된 색상을 제거합니다.)"
+                        : lang === "EN"
+                          ? "(Removes isolated colors between objects.)"
+                          : "(オブジェクト間の孤立した色を削除します。)"}
+                    </span>
+                  </p>
+                </div>
+
+                {/* Advanced Keying Toggle */}
+                <div
+                  className={`pt-4 border-t ${isDark ? "border-white/5" : "border-gray-200"}`}
+                >
+                  <button
+                    onClick={() => setShowAdvancedKeying(!showAdvancedKeying)}
+                    className="flex items-center justify-between w-full p-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5 rounded transition"
+                  >
+                    <span>
+                      {lang === "KR"
+                        ? "고급 키잉 설정 (Advanced Keying)"
+                        : "Advanced Keying Settings"}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${showAdvancedKeying ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {showAdvancedKeying && (
+                    <div className="mt-4 space-y-4 px-2">
+                      <div>
+                        <label className={labelClass}>
+                          {lang === "KR"
+                            ? "미리보기 (Preview)"
+                            : "Preview Mode"}
+                        </label>
+                        <select
+                          value={previewMode}
+                          onChange={(e: any) => setPreviewMode(e.target.value)}
+                          className={`w-full mt-1 text-sm p-1.5 rounded border ${isDark ? "bg-black border-white/10 text-white" : "bg-white border-gray-200"}`}
+                        >
+                          <option value="result">Result (결과물)</option>
+                          <option value="original">Original (원본)</option>
+                          <option value="alpha">
+                            Alpha Mask (알파 마스크)
+                          </option>
+                          <option value="checkerboard">
+                            Checkerboard (투명 배경)
+                          </option>
+                          <option value="black">Black Background</option>
+                          <option value="white">White Background</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>
+                          {lang === "KR" ? "키잉 알고리즘" : "Algorithm"}
+                        </label>
+                        <select
+                          value={keyingMode}
+                          onChange={(e: any) => setKeyingMode(e.target.value)}
+                          className={`w-full mt-1 text-sm p-1.5 rounded border ${isDark ? "bg-black border-white/10 text-white" : "bg-white border-gray-200"}`}
+                        >
+                          <option value="greenAdvanced">Advanced Green</option>
+                          <option value="rgb">RGB Exact</option>
+                          <option value="hsv">HSV Range</option>
+                          <option value="luma">Luma Base</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between mb-1">
+                          <label className={labelClass}>
+                            {lang === "KR" ? "스필 제거 (Despill)" : "Despill"}
+                          </label>
+                          <span className={badgeClass}>{despill}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={despill}
+                          onChange={(e) => setDespill(Number(e.target.value))}
+                          className={`w-full ${isDark ? "accent-blue-500" : "accent-black"}`}
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between mb-1">
+                          <label className={labelClass}>
+                            {lang === "KR" ? "수축 (Erode)" : "Erode"}
+                          </label>
+                          <span className={badgeClass}>{erode}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="10"
+                          step="1"
+                          value={erode}
+                          onChange={(e) => setErode(Number(e.target.value))}
+                          className={`w-full ${isDark ? "accent-blue-500" : "accent-black"}`}
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between mb-1">
+                          <label className={labelClass}>
+                            {lang === "KR" ? "확장 (Dilate)" : "Dilate"}
+                          </label>
+                          <span className={badgeClass}>{dilate}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="10"
+                          step="1"
+                          value={dilate}
+                          onChange={(e) => setDilate(Number(e.target.value))}
+                          className={`w-full ${isDark ? "accent-blue-500" : "accent-black"}`}
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between mb-1">
+                          <label className={labelClass}>
+                            {lang === "KR" ? "블러 페더 (Feather)" : "Feather"}
+                          </label>
+                          <span className={badgeClass}>{feather}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="20"
+                          step="1"
+                          value={feather}
+                          onChange={(e) => setFeather(Number(e.target.value))}
+                          className={`w-full ${isDark ? "accent-blue-500" : "accent-black"}`}
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between mb-1">
+                          <label className={labelClass}>
+                            {lang === "KR"
+                              ? "알파 대비 (Alpha Contrast)"
+                              : "Alpha Contrast"}
+                          </label>
+                          <span className={badgeClass}>{alphaContrast}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="-100"
+                          max="100"
+                          step="1"
+                          value={alphaContrast}
+                          onChange={(e) =>
+                            setAlphaContrast(Number(e.target.value))
+                          }
+                          className={`w-full ${isDark ? "accent-blue-500" : "accent-black"}`}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Batch Processing Controls */}
+                <div
+                  className={`pt-4 border-t ${isDark ? "border-white/5" : "border-gray-200"}`}
+                >
+                  <label className={labelClass}>
+                    {lang === "KR"
+                      ? "적용 (Apply Process)"
+                      : lang === "EN"
+                        ? "Apply Process"
+                        : "適用する"}
+                  </label>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <button
+                      onClick={() =>
+                        processFramesForDownload(Array.from(selectedFrames))
+                      }
+                      disabled={selectedFrames.size === 0 || isProcessing}
+                      className={`w-full py-2 font-bold rounded-lg transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2 ${isDark ? "bg-white text-black hover:bg-gray-200" : "bg-gray-900 text-white hover:bg-gray-800"}`}
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : null}
+                      {lang === "KR"
+                        ? `선택 항목 적용 (${selectedFrames.size})`
+                        : lang === "EN"
+                          ? `Process Selected (${selectedFrames.size})`
+                          : `選択を適用 (${selectedFrames.size})`}
+                    </button>
+                    <button
+                      onClick={() =>
+                        processFramesForDownload(
+                          Array.from({ length: frames.length }, (_, i) => i),
+                        )
+                      }
+                      disabled={frames.length === 0 || isProcessing}
+                      className={`w-full py-2 font-bold rounded-lg transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2 ${isDark ? "bg-white/10 hover:bg-white/20 text-white" : "bg-gray-200 hover:bg-gray-300 text-black"}`}
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : null}
+                      {lang === "KR"
+                        ? `전체 적용 (${frames.length})`
+                        : lang === "EN"
+                          ? `Process All (${frames.length})`
+                          : `すべて適用 (${frames.length})`}
+                    </button>
+
+                    {batchProgress >= 0 && (
+                      <div className="mt-2 text-sm border hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20 p-3 rounded flex flex-col gap-2">
+                        <div className="flex justify-between items-center w-full">
+                          <div className="flex flex-col">
+                            <span className="font-bold">
+                              {lang === "KR" ? "진행률" : "Progress"} (
+                              {batchProgress}%)
+                            </span>
+                          </div>
+                          <button
+                            onClick={cancelJob}
+                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 px-2 py-1 rounded text-xs px-3 font-semibold transition"
                           >
-                            <ChevronDown className={`w-3 h-3 transition-transform ${isDark ? 'text-white/70' : 'text-gray-600'} ${showMiddleNameDropdown === idx ? 'rotate-180' : ''}`} />
+                            {lang === "KR" ? "취소" : "Cancel"}
                           </button>
                         </div>
-                        
-                        {showMiddleNameDropdown === idx && (
-                          <ul className={`absolute z-50 w-full mt-1 max-h-48 overflow-y-auto border rounded-lg shadow-2xl py-1 custom-scrollbar ${isDark ? 'bg-[#1e1e1e] border-white/10' : 'bg-white border-gray-200'}`}>
-                            {MIDDLE_NAME_OPTIONS.map(opt => (
-                              <li 
-                                key={opt.id}
-                                onClick={() => {
-                                  updateSegment(idx, 'name', opt.id);
-                                  setShowMiddleNameDropdown(null);
-                                }}
-                                className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-1 transition-colors border-b last:border-0 ${isDark ? 'hover:bg-white/10 border-white/5' : 'hover:bg-gray-50 border-gray-100'}`}
-                              >
-                                <span className={`font-mono text-[10px] ${isDark ? 'text-blue-300' : 'text-gray-800'}`}>{opt.id}</span>
-                                <span className={`text-[9px] uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>{opt.desc}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
+                        <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                            style={{ width: `${batchProgress}%` }}
+                          ></div>
+                        </div>
                       </div>
+                    )}
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <label className="min-w-0">
-                          <span className="block text-[10px] font-bold text-gray-500 mb-1">START (S)</span>
-                          <input 
-                            type="number" 
-                            step="0.1"
-                            value={seg.start}
-                            onChange={(e) => updateSegment(idx, 'start', parseFloat(e.target.value) || 0)}
-                            className={`${segmentInputClass} min-w-0 w-full max-w-[80px] px-1.5`}
-                          />
-                        </label>
-                        <label className="min-w-0">
-                          <span className="block text-[10px] font-bold text-gray-500 mb-1">END (S)</span>
-                          <input 
-                            type="number" 
-                            step="0.1"
-                            value={seg.end}
-                            onChange={(e) => updateSegment(idx, 'end', parseFloat(e.target.value) || 0)}
-                            className={`${segmentInputClass} min-w-0 w-full max-w-[80px] px-1.5`}
-                          />
-                        </label>
+                    {failedItems.length > 0 && (
+                      <div className="mt-2 p-2 rounded bg-red-100 dark:bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs text-left">
+                        <span className="font-bold block mb-1">
+                          {lang === "KR"
+                            ? `${failedItems.length}개의 항목 처리 실패:`
+                            : `${failedItems.length} items failed:`}
+                        </span>
+                        <div className="max-h-24 overflow-y-auto w-full custom-scrollbar">
+                          {failedItems.map((failIdx, i) => (
+                            <div key={i}>Frame {failIdx}</div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className={`pt-4 border-t ${isDark ? "border-white/5" : "border-gray-200"}`}
+                >
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className={labelClass}>
+                      {lang === "KR"
+                        ? "Extraction FPS (추출 프레임)"
+                        : lang === "EN"
+                          ? "Extraction FPS"
+                          : "抽出FPS"}
+                    </label>
+                    <span className={badgeClass}>{fps} FPS</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="12"
+                    max="48"
+                    step="1"
+                    value={fps}
+                    onChange={(e) => handleFpsChange(Number(e.target.value))}
+                    disabled={
+                      isExtracting ||
+                      (videoFile?.type.startsWith("image/") ?? false)
+                    }
+                    className={`w-full ${isDark ? "accent-blue-500" : "accent-black"}`}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`order-4 ${panelClass} ${isExtracting ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <h2
+                className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-gray-900"}`}
+              >
+                <Settings className={accentIconClass} />
+                4. Asset Settings{" "}
+                <span className="text-sm font-normal opacity-60">
+                  {lang === "KR"
+                    ? "(에셋 설정)"
+                    : lang === "EN"
+                      ? "(Asset Settings)"
+                      : "(アセット設定)"}
+                </span>
+              </h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label className={labelClass}>
+                    {lang === "KR"
+                      ? "First Name (파일명)"
+                      : lang === "EN"
+                        ? "First Name"
+                        : "ファイル名"}
+                  </label>
+                  <input
+                    type="text"
+                    value={charName}
+                    onChange={(e) => setCharName(e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. sloth"
+                  />
+                </div>
+
+                <div
+                  className={`pt-4 border-t ${isDark ? "border-white/5" : "border-gray-200"}`}
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <label
+                      className={`text-sm font-medium ${isDark ? "text-white/80" : "text-gray-900"}`}
+                    >
+                      {lang === "KR"
+                        ? "Video Presets (비디오 프리셋)"
+                        : lang === "EN"
+                          ? "Video Presets"
+                          : "ビデオプリセット"}
+                    </label>
+                    <button
+                      onClick={saveCurrentAsPreset}
+                      className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded transition-colors ${isDark ? "bg-white/10 hover:bg-white/20 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-800"}`}
+                    >
+                      {lang === "KR"
+                        ? "Save Current"
+                        : lang === "EN"
+                          ? "Save Current"
+                          : "現在を保存"}
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    {presets.map((preset) => (
+                      <div
+                        key={preset.id}
+                        onClick={() => applyPreset(preset.id)}
+                        className={`group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all ${
+                          selectedPreset === preset.id
+                            ? isDark
+                              ? "bg-blue-500/20 border-blue-500 text-blue-400"
+                              : "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100"
+                            : isDark
+                              ? "hover:bg-white/5 text-white/70"
+                              : "hover:bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        <span className="text-sm truncate pr-2">
+                          {preset.name}
+                        </span>
+                        <button
+                          onClick={(e) => deletePreset(e, preset.id)}
+                          className={`opacity-0 group-hover:opacity-100 p-1 rounded-md transition-all ${
+                            isDark
+                              ? "hover:bg-white/10 text-white/40 hover:text-red-400"
+                              : "hover:bg-gray-200 text-gray-400 hover:text-red-500"
+                          }`}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {presets.length === 0 && (
+                      <div
+                        className={`text-xs text-center py-4 ${isDark ? "text-white/30" : "text-gray-400"}`}
+                      >
+                        {lang === "KR"
+                          ? "No presets saved."
+                          : lang === "EN"
+                            ? "No presets saved."
+                            : "保存されたプリセットはありません。"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className={`pt-4 border-t ${isDark ? "border-white/5" : "border-gray-200"}`}
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <label
+                      className={`text-sm font-medium ${isDark ? "text-white/80" : "text-gray-900"}`}
+                    >
+                      {lang === "KR"
+                        ? "Motion Segments (모션 구간)"
+                        : lang === "EN"
+                          ? "Motion Segments"
+                          : "モーション区間"}
+                    </label>
+                    <button
+                      onClick={addSegment}
+                      className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded transition-colors ${isDark ? "bg-white/10 hover:bg-white/20 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-800"}`}
+                    >
+                      {lang === "KR"
+                        ? "+ Add Segment (+ 구간 추가)"
+                        : lang === "EN"
+                          ? "+ Add Segment"
+                          : "+ 区間を追加"}
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                    {segments.map((seg, idx) => (
+                      <div key={idx} className={segmentBgClass}>
+                        <button
+                          onClick={() => removeSegment(idx)}
+                          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </button>
+
+                        <div
+                          className="relative"
+                          ref={
+                            idx === showMiddleNameDropdown ? dropdownRef : null
+                          }
+                        >
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={seg.name}
+                              onChange={(e) =>
+                                updateSegment(idx, "name", e.target.value)
+                              }
+                              className={segmentInputClass}
+                              placeholder={
+                                lang === "KR"
+                                  ? "Motion name..."
+                                  : lang === "EN"
+                                    ? "Motion name..."
+                                    : "モーション名..."
+                              }
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowMiddleNameDropdown(
+                                  showMiddleNameDropdown === idx ? null : idx,
+                                )
+                              }
+                              className={`px-2 rounded-lg border transition-all ${
+                                showMiddleNameDropdown === idx
+                                  ? isDark
+                                    ? "bg-blue-500/20 border-blue-500/50"
+                                    : "bg-gray-200 border-gray-400"
+                                  : isDark
+                                    ? "bg-white/5 border-white/10 hover:bg-white/10"
+                                    : "bg-white border-gray-200 hover:bg-gray-50"
+                              }`}
+                            >
+                              <ChevronDown
+                                className={`w-3 h-3 transition-transform ${isDark ? "text-white/70" : "text-gray-600"} ${showMiddleNameDropdown === idx ? "rotate-180" : ""}`}
+                              />
+                            </button>
+                          </div>
+
+                          {showMiddleNameDropdown === idx && (
+                            <ul
+                              className={`absolute z-50 w-full mt-1 max-h-48 overflow-y-auto border rounded-lg shadow-2xl py-1 custom-scrollbar ${isDark ? "bg-[#1e1e1e] border-white/10" : "bg-white border-gray-200"}`}
+                            >
+                              {MIDDLE_NAME_OPTIONS.map((opt) => (
+                                <li
+                                  key={opt.id}
+                                  onClick={() => {
+                                    updateSegment(idx, "name", opt.id);
+                                    setShowMiddleNameDropdown(null);
+                                  }}
+                                  className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-1 transition-colors border-b last:border-0 ${isDark ? "hover:bg-white/10 border-white/5" : "hover:bg-gray-50 border-gray-100"}`}
+                                >
+                                  <span
+                                    className={`font-mono text-[10px] ${isDark ? "text-blue-300" : "text-gray-800"}`}
+                                  >
+                                    {opt.id}
+                                  </span>
+                                  <span
+                                    className={`text-[9px] uppercase tracking-wider ${isDark ? "text-white/40" : "text-gray-500"}`}
+                                  >
+                                    {opt.desc}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="min-w-0">
+                            <span className="block text-[10px] font-bold text-gray-500 mb-1">
+                              START (S)
+                            </span>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={seg.start}
+                              onChange={(e) =>
+                                updateSegment(
+                                  idx,
+                                  "start",
+                                  parseFloat(e.target.value) || 0,
+                                )
+                              }
+                              className={`${segmentInputClass} min-w-0 w-full max-w-[80px] px-1.5`}
+                            />
+                          </label>
+                          <label className="min-w-0">
+                            <span className="block text-[10px] font-bold text-gray-500 mb-1">
+                              END (S)
+                            </span>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={seg.end}
+                              onChange={(e) =>
+                                updateSegment(
+                                  idx,
+                                  "end",
+                                  parseFloat(e.target.value) || 0,
+                                )
+                              }
+                              className={`${segmentInputClass} min-w-0 w-full max-w-[80px] px-1.5`}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={async () => {
+                const dirtyIndices: number[] = [];
+                frames.forEach((f, i) => {
+                  if (!f.processedUrl || f.dirty) dirtyIndices.push(i);
+                });
+
+                if (dirtyIndices.length > 0) {
+                  const confirmed = confirm(
+                    lang === "KR"
+                      ? `${dirtyIndices.length}개의 프레임이 적용되지 않았습니다. 자동으로 적용하고 다운로드할까요?`
+                      : lang === "EN"
+                        ? `${dirtyIndices.length} frames are not processed. Do you want to process them automatically and download?`
+                        : `${dirtyIndices.length} フレームが適用されていません。自動的に適用してダウンロードしますか？`,
+                  );
+
+                  if (confirmed) {
+                    await processFramesForDownload(dirtyIndices);
+                    setShowDownloadModal(true);
+                  } else {
+                    alert(
+                      lang === "KR"
+                        ? "처리되지 않은 프레임이 있습니다. 화면 위의 '적용' 버튼을 눌러 모든 프레임을 처리해야 내보낼 수 있습니다."
+                        : lang === "EN"
+                          ? "Unprocessed frames detected. You must apply settings to ALL frames to export."
+                          : "未処理のフレームがあります。 すべてのフレームを適用するまでエクスポートできません。",
+                    );
+                  }
+                  return;
+                }
+                setShowDownloadModal(true);
+              }}
+              disabled={frames.length === 0 || isProcessing}
+              className={`order-5 border-2 ${primaryBtnClass}`}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {lang === "KR"
+                    ? "Processing & Zipping..."
+                    : lang === "EN"
+                      ? "Processing & Zipping..."
+                      : "処理中＆圧縮中..."}
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5" />
+                  {lang === "KR"
+                    ? "Process & Download (처리/다운로드)"
+                    : lang === "EN"
+                      ? "Process & Download"
+                      : "処理してダウンロード"}
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Right Panel: Preview (Sticky on Mobile Phase 2) */}
+          <div
+            className={`order-1 w-full lg:flex-1 flex flex-col items-center min-w-0 lg:overflow-y-auto custom-scrollbar lg:pr-2 lg:order-2 ${frames.length > 0 ? "pb-2 lg:pb-0 pt-2 lg:pt-0 lg:relative lg:z-auto border-b lg:border-none" : "hidden lg:flex"} ${isDark ? "bg-[#121212] border-white/10 lg:bg-transparent" : "bg-white border-gray-200 lg:bg-transparent"} ${isExtracting ? "opacity-50 pointer-events-none" : ""}`}
+          >
+            <div
+              className={`sticky top-[56px] lg:top-0 z-40 w-full ${isDark ? "bg-[#121212]" : "bg-white"} flex flex-col items-center`}
+            >
+              <div className="w-full flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 lg:gap-0 mb-3 lg:mb-4 px-2 shrink-0 pt-2 lg:pt-0">
+                <div className="flex items-center justify-between lg:justify-start gap-2 lg:gap-4 w-full lg:w-auto">
+                  <h2
+                    className={`text-base lg:text-lg font-medium ${isDark ? "text-white" : "text-gray-900"}`}
+                  >
+                    {lang === "KR"
+                      ? "Preview (미리보기)"
+                      : lang === "EN"
+                        ? "Preview"
+                        : "プレビュー"}
+                  </h2>
+                  <span
+                    className={`text-[10px] lg:text-xs font-mono px-2 py-1 rounded-md ${isDark ? "bg-white/10 text-white/70" : "bg-gray-200 text-gray-700"}`}
+                  >
+                    {frames.length > 0
+                      ? `${currentFrame + 1} / ${frames.length}`
+                      : lang === "KR"
+                        ? "0 frames"
+                        : lang === "EN"
+                          ? "0 frames"
+                          : "0 フレーム"}
+                  </span>
+                </div>
+
+                <div
+                  className={`flex flex-wrap items-center gap-2 p-1.5 lg:p-1 rounded-xl lg:rounded-lg border w-full lg:w-auto ${isDark ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200"}`}
+                >
+                  {(["transparent", "black", "app"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setBgMode(mode)}
+                      className={`flex-1 lg:flex-none px-3 lg:px-3 py-2.5 lg:py-1.5 text-xs font-medium rounded-lg lg:rounded-md capitalize transition-all ${
+                        bgMode === mode
+                          ? isDark
+                            ? "bg-white/20 text-white shadow-sm"
+                            : "bg-white text-black shadow-sm"
+                          : isDark
+                            ? "text-white/50 hover:text-white/80 hover:bg-white/5"
+                            : "text-gray-500 hover:text-gray-900 hover:bg-gray-200"
+                      }`}
+                    >
+                      {mode === "app"
+                        ? "App UI"
+                        : mode === "transparent"
+                          ? lang === "KR"
+                            ? "Transparent"
+                            : lang === "EN"
+                              ? "Transparent"
+                              : "透明"
+                          : lang === "KR"
+                            ? "Black"
+                            : lang === "EN"
+                              ? "Black"
+                              : "ブラック"}
+                    </button>
                   ))}
                 </div>
               </div>
-            </div>
-          </div>
 
-          <button 
-            onClick={async () => {
-              const dirtyIndices: number[] = [];
-              frames.forEach((f, i) => {
-                if (!f.processedUrl || f.dirty) dirtyIndices.push(i);
-              });
-              
-              if (dirtyIndices.length > 0) {
-                const confirmed = confirm(lang === 'KR' 
-                  ? `${dirtyIndices.length}개의 프레임이 적용되지 않았습니다. 자동으로 적용하고 다운로드할까요?` 
-                  : lang === 'EN' 
-                  ? `${dirtyIndices.length} frames are not processed. Do you want to process them automatically and download?` 
-                  : `${dirtyIndices.length} フレームが適用されていません。自動的に適用してダウンロードしますか？`);
-                
-                if (confirmed) {
-                  await processFramesForDownload(dirtyIndices);
-                  setShowDownloadModal(true);
-                } else {
-                  alert(lang === 'KR' 
-                    ? "처리되지 않은 프레임이 있습니다. 화면 위의 '적용' 버튼을 눌러 모든 프레임을 처리해야 내보낼 수 있습니다." 
-                    : lang === 'EN'
-                    ? "Unprocessed frames detected. You must apply settings to ALL frames to export."
-                    : "未処理のフレームがあります。 すべてのフレームを適用するまでエクスポートできません。");
-                }
-                return;
-              }
-              setShowDownloadModal(true);
-            }}
-            disabled={frames.length === 0 || isProcessing}
-            className={`order-5 border-2 ${primaryBtnClass}`}
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                {lang === 'KR' ? 'Processing & Zipping...' : lang === 'EN' ? 'Processing & Zipping...' : '処理中＆圧縮中...'}
-              </>
-            ) : (
-              <>
-                <Download className="w-5 h-5" />
-                {lang === 'KR' ? 'Process & Download (처리/다운로드)' : lang === 'EN' ? 'Process & Download' : '処理してダウンロード'}
-              </>
-            )}
-          </button>
-        </div>
+              <div
+                className={`${previewBgClass} shrink-0 w-full lg:max-w-[500px] h-[34dvh] lg:h-[700px] lg:aspect-[5/7] lg:relative`}
+              >
+                {frames.length === 0 ? (
+                  <div
+                    className={`flex flex-col items-center gap-3 ${isDark ? "text-white/30" : "text-gray-400"}`}
+                  >
+                    <Play className="w-12 h-12 opacity-20" />
+                    <p className="text-sm">
+                      {lang === "KR"
+                        ? "Upload a file to preview (파일을 업로드하여 미리보세요)"
+                        : lang === "EN"
+                          ? "Upload a file to preview"
+                          : "ファイルをアップロードしてプレビュー"}
+                    </p>
+                  </div>
+                ) : (
+                  <canvas
+                    ref={canvasRef}
+                    width={500}
+                    height={700}
+                    className={`w-full h-full object-contain ${isBrushActive || isPickingColor ? "cursor-crosshair" : ""}`}
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerLeave={handlePointerUp}
+                    style={{ touchAction: "none" }}
+                  />
+                )}
 
-        {/* Right Panel: Preview (Sticky on Mobile Phase 2) */}
-        <div className={`order-1 w-full lg:flex-1 flex flex-col items-center min-w-0 lg:overflow-y-auto custom-scrollbar lg:pr-2 lg:order-2 ${frames.length > 0 ? 'pb-2 lg:pb-0 pt-2 lg:pt-0 lg:relative lg:z-auto border-b lg:border-none' : 'hidden lg:flex'} ${isDark ? 'bg-[#121212] border-white/10 lg:bg-transparent' : 'bg-white border-gray-200 lg:bg-transparent'} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
-          <div className={`sticky top-[56px] lg:top-0 z-40 w-full ${isDark ? 'bg-[#121212]' : 'bg-white'} flex flex-col items-center`}>
-            <div className="w-full flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 lg:gap-0 mb-3 lg:mb-4 px-2 shrink-0 pt-2 lg:pt-0">
-              <div className="flex items-center justify-between lg:justify-start gap-2 lg:gap-4 w-full lg:w-auto">
-                <h2 className={`text-base lg:text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === 'KR' ? 'Preview (미리보기)' : lang === 'EN' ? 'Preview' : 'プレビュー'}</h2>
-                <span className={`text-[10px] lg:text-xs font-mono px-2 py-1 rounded-md ${isDark ? 'bg-white/10 text-white/70' : 'bg-gray-200 text-gray-700'}`}>
-                  {frames.length > 0 ? `${currentFrame + 1} / ${frames.length}` : (lang === 'KR' ? '0 frames' : lang === 'EN' ? '0 frames' : '0 フレーム')}
-                </span>
-              </div>
-              
-              <div className={`flex flex-wrap items-center gap-2 p-1.5 lg:p-1 rounded-xl lg:rounded-lg border w-full lg:w-auto ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-100 border-gray-200'}`}>
-                {(['transparent', 'black', 'app'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setBgMode(mode)}
-                    className={`flex-1 lg:flex-none px-3 lg:px-3 py-2.5 lg:py-1.5 text-xs font-medium rounded-lg lg:rounded-md capitalize transition-all ${
-                      bgMode === mode 
-                        ? (isDark ? 'bg-white/20 text-white shadow-sm' : 'bg-white text-black shadow-sm') 
-                        : (isDark ? 'text-white/50 hover:text-white/80 hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200')
-                    }`}
-                  >
-                    {mode === 'app' ? 'App UI' : mode === 'transparent' ? (lang === 'KR' ? 'Transparent' : lang === 'EN' ? 'Transparent' : '透明') : (lang === 'KR' ? 'Black' : lang === 'EN' ? 'Black' : 'ブラック')}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            <div className={`${previewBgClass} shrink-0 w-full lg:max-w-[500px] h-[34dvh] lg:h-[700px] lg:aspect-[5/7] lg:relative`}>
-              {frames.length === 0 ? (
-                <div className={`flex flex-col items-center gap-3 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
-                  <Play className="w-12 h-12 opacity-20" />
-                  <p className="text-sm">{lang === 'KR' ? 'Upload a file to preview (파일을 업로드하여 미리보세요)' : lang === 'EN' ? 'Upload a file to preview' : 'ファイルをアップロードしてプレビュー'}</p>
-                </div>
-              ) : (
-                <canvas 
-                  ref={canvasRef} 
-                  width={500} 
-                  height={700} 
-                  className={`w-full h-full object-contain ${isBrushActive || isPickingColor ? 'cursor-crosshair' : ''}`}
-                  onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onPointerLeave={handlePointerUp}
-                  style={{ touchAction: 'none' }}
-                />
-              )}
-              
-              {frames.length > 1 && (
-                <div className="absolute bottom-4 lg:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 lg:gap-3">
-                  <button 
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className={`backdrop-blur-md border p-2 lg:p-3 rounded-full transition-all shadow-xl ${
-                      isDark ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white' : 'bg-black/80 hover:bg-black border-gray-800 text-white'
-                    }`}
-                  >
-                    {isPlaying ? <Square className="w-4 h-4 lg:w-5 lg:h-5 fill-current" /> : <Play className="w-4 h-4 lg:w-5 lg:h-5 fill-current" />}
-                  </button>
-                  <button
-                    onClick={() => toggleFlag(currentFrame)}
-                    className={`backdrop-blur-md border p-2 lg:p-3 rounded-full transition-all shadow-xl ${
-                      flaggedIndices.includes(currentFrame)
-                        ? 'bg-orange-500 border-orange-400 text-white shadow-[0_0_10px_rgba(249,115,22,0.4)]'
-                        : isDark ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white' : 'bg-black/80 hover:bg-black border-gray-800 text-white'
-                    }`}
-                  >
-                    <Flag className={`w-4 h-4 lg:w-5 lg:h-5 ${flaggedIndices.includes(currentFrame) ? 'fill-current' : ''}`} />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Scrubber & Filmstrip (Sticky part) */}
-            {frames.length > 0 && (
-              <div className={`w-full max-w-[500px] mt-2 lg:mt-6 space-y-2 lg:space-y-4 shrink-0 pb-2 lg:pb-8 px-2 ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
-                {skippedFramesWarning && (
-                  <div className="text-xs text-orange-500 bg-orange-500/10 border border-orange-500/20 px-3 py-2 rounded-lg font-medium flex items-center justify-between">
-                    <span>
-                      {lang === 'KR' 
-                        ? '브라우저 디코더 지연으로 일부 프레임을 건너뛰었습니다. FPS를 낮추면 안정성이 좋아질 수 있습니다.' 
-                        : 'Some frames were skipped because the browser decoder was slow. Lower FPS may improve stability.'}
-                    </span>
-                    <button onClick={() => setSkippedFramesWarning(false)} className="opacity-70 hover:opacity-100 pl-2">✕</button>
+                {frames.length > 1 && (
+                  <div className="absolute bottom-4 lg:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 lg:gap-3">
+                    <button
+                      onClick={() => setIsPlaying(!isPlaying)}
+                      className={`backdrop-blur-md border p-2 lg:p-3 rounded-full transition-all shadow-xl ${
+                        isDark
+                          ? "bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                          : "bg-black/80 hover:bg-black border-gray-800 text-white"
+                      }`}
+                    >
+                      {isPlaying ? (
+                        <Square className="w-4 h-4 lg:w-5 lg:h-5 fill-current" />
+                      ) : (
+                        <Play className="w-4 h-4 lg:w-5 lg:h-5 fill-current" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => toggleFlag(currentFrame)}
+                      className={`backdrop-blur-md border p-2 lg:p-3 rounded-full transition-all shadow-xl ${
+                        flaggedIndices.includes(currentFrame)
+                          ? "bg-orange-500 border-orange-400 text-white shadow-[0_0_10px_rgba(249,115,22,0.4)]"
+                          : isDark
+                            ? "bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                            : "bg-black/80 hover:bg-black border-gray-800 text-white"
+                      }`}
+                    >
+                      <Flag
+                        className={`w-4 h-4 lg:w-5 lg:h-5 ${flaggedIndices.includes(currentFrame) ? "fill-current" : ""}`}
+                      />
+                    </button>
                   </div>
                 )}
-                <input 
-                  type="range" 
-                  min="0" 
-                  max={frames.length - 1} 
-                  value={currentFrame}
-                  onChange={(e) => {
-                    setCurrentFrame(Number(e.target.value));
-                    setIsPlaying(false);
-                  }}
-                  className={`w-full ${isDark ? 'accent-purple-500' : 'accent-black'}`}
-                />
-                <div className={`h-16 lg:h-24 border rounded-xl p-2 overflow-x-auto flex gap-2 items-center custom-scrollbar ${isDark ? 'bg-black/40 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-                  {frames.map((frame, idx) => (
-                    <div 
-                      key={idx}
-                      onClick={(e) => {
-                        toggleSelection(idx, e.ctrlKey || e.metaKey, e.shiftKey);
-                        setCurrentFrame(idx);
-                        setIsPlaying(false);
-                      }}
-                      className={`shrink-0 relative h-full aspect-[5/7] rounded-md overflow-hidden border-2 cursor-pointer transition-all ${
-                        selectedFrames.has(idx) 
-                          ? (isDark ? 'border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' : 'border-black shadow-[0_0_10px_rgba(0,0,0,0.2)]')
-                          : (isDark ? 'border-white/10 hover:border-white/30 opacity-60 hover:opacity-100' : 'border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100')
-                      } ${currentFrame === idx ? 'ring-2 ring-inset ring-white/20' : ''}`}
-                    >
-                      <img 
-                        src={getFrameDisplayUrl(frame)} 
-                        alt={`Frame ${idx}`} 
-                        className={`w-full h-full object-contain ${isDark ? 'bg-[#121212]' : 'bg-white'}`} 
-                        onError={(e) => { 
-                          console.warn(`[RemovePage] thumbnail load error for frame ${idx}. Reverting to rawUrl.`, {
-                            originalUrl: frame.processedUrl,
-                            dirty: frame.dirty
-                          });
-                          if (e.currentTarget.src !== frame.rawUrl) e.currentTarget.src = frame.rawUrl; 
-                        }}
-                      />
-                      {selectedFrames.has(idx) && (
-                        <div className="absolute top-1 right-1 w-3 h-3 bg-purple-500 rounded-full border border-white shadow-sm" />
-                      )}
-                      {flaggedIndices.includes(idx) && (
-                        <div className="absolute top-1 left-1">
-                          <Flag className="w-3 h-3 text-orange-500 fill-orange-500 drop-shadow-md" />
-                        </div>
-                      )}
+              </div>
+
+              {/* Scrubber & Filmstrip (Sticky part) */}
+              {frames.length > 0 && (
+                <div
+                  className={`w-full max-w-[500px] mt-2 lg:mt-6 space-y-2 lg:space-y-4 shrink-0 pb-2 lg:pb-8 px-2 ${isExtracting ? "opacity-50 pointer-events-none" : ""}`}
+                >
+                  {skippedFramesWarning && (
+                    <div className="text-xs text-orange-500 bg-orange-500/10 border border-orange-500/20 px-3 py-2 rounded-lg font-medium flex items-center justify-between">
+                      <span>
+                        {lang === "KR"
+                          ? "브라우저 디코더 지연으로 일부 프레임을 건너뛰었습니다. FPS를 낮추면 안정성이 좋아질 수 있습니다."
+                          : "Some frames were skipped because the browser decoder was slow. Lower FPS may improve stability."}
+                      </span>
+                      <button
+                        onClick={() => setSkippedFramesWarning(false)}
+                        className="opacity-70 hover:opacity-100 pl-2"
+                      >
+                        ✕
+                      </button>
                     </div>
-                  ))}
+                  )}
+                  <input
+                    type="range"
+                    min="0"
+                    max={frames.length - 1}
+                    value={currentFrame}
+                    onChange={(e) => {
+                      setCurrentFrame(Number(e.target.value));
+                      setIsPlaying(false);
+                    }}
+                    className={`w-full ${isDark ? "accent-purple-500" : "accent-black"}`}
+                  />
+                  <div
+                    className={`h-16 lg:h-24 border rounded-xl p-2 overflow-x-auto flex gap-2 items-center custom-scrollbar ${isDark ? "bg-black/40 border-white/10" : "bg-gray-50 border-gray-200"}`}
+                  >
+                    {frames.map((frame, idx) => (
+                      <div
+                        key={idx}
+                        onClick={(e) => {
+                          toggleSelection(
+                            idx,
+                            e.ctrlKey || e.metaKey,
+                            e.shiftKey,
+                          );
+                          setCurrentFrame(idx);
+                          setIsPlaying(false);
+                        }}
+                        className={`shrink-0 relative h-full aspect-[5/7] rounded-md overflow-hidden border-2 cursor-pointer transition-all ${
+                          selectedFrames.has(idx)
+                            ? isDark
+                              ? "border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]"
+                              : "border-black shadow-[0_0_10px_rgba(0,0,0,0.2)]"
+                            : isDark
+                              ? "border-white/10 hover:border-white/30 opacity-60 hover:opacity-100"
+                              : "border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100"
+                        } ${currentFrame === idx ? "ring-2 ring-inset ring-white/20" : ""}`}
+                      >
+                        <img
+                          src={getFrameDisplayUrl(frame)}
+                          alt={`Frame ${idx}`}
+                          className={`w-full h-full object-contain ${isDark ? "bg-[#121212]" : "bg-white"}`}
+                          onError={(e) => {
+                            console.warn(
+                              `[RemovePage] thumbnail load error for frame ${idx}. Reverting to rawUrl.`,
+                              {
+                                originalUrl: frame.processedUrl,
+                                dirty: frame.dirty,
+                              },
+                            );
+                            if (e.currentTarget.src !== frame.rawUrl)
+                              e.currentTarget.src = frame.rawUrl;
+                          }}
+                        />
+                        {selectedFrames.has(idx) && (
+                          <div className="absolute top-1 right-1 w-3 h-3 bg-purple-500 rounded-full border border-white shadow-sm" />
+                        )}
+                        {flaggedIndices.includes(idx) && (
+                          <div className="absolute top-1 left-1">
+                            <Flag className="w-3 h-3 text-orange-500 fill-orange-500 drop-shadow-md" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Additional Controls (Not sticky) */}
+            {frames.length > 0 && (
+              <div className="w-full max-w-[500px] mt-2 lg:mt-6 space-y-3 lg:space-y-4 shrink-0 pb-4 lg:pb-8 px-2">
+                <div className="flex justify-between items-center mb-1">
+                  <div className="flex items-center gap-3">
+                    <h3
+                      className={`text-[10px] font-bold uppercase tracking-tighter ${isDark ? "text-white/40" : "text-gray-500"}`}
+                    >
+                      {lang === "KR"
+                        ? "Selection"
+                        : lang === "EN"
+                          ? "Selection"
+                          : "選択"}{" "}
+                      <span className="opacity-60">
+                        ({selectedFrames.size})
+                      </span>
+                    </h3>
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() =>
+                          setSelectedFrames(new Set(frames.map((_, i) => i)))
+                        }
+                        className={`text-[9px] px-1.5 py-0.5 rounded border transition-all ${
+                          isDark
+                            ? "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                            : "bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-600"
+                        }`}
+                      >
+                        {lang === "KR"
+                          ? "All"
+                          : lang === "EN"
+                            ? "All"
+                            : "すべて"}
+                      </button>
+                      <button
+                        onClick={() =>
+                          setSelectedFrames(new Set([currentFrame]))
+                        }
+                        className={`text-[9px] px-1.5 py-0.5 rounded border transition-all ${
+                          isDark
+                            ? "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                            : "bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-600"
+                        }`}
+                      >
+                        {lang === "KR"
+                          ? "Clear"
+                          : lang === "EN"
+                            ? "Clear"
+                            : "クリア"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setExclusionStrokes((prev) => {
+                        return prev
+                          .map((s) => {
+                            if (s.targetFrameIndexes.includes(currentFrame)) {
+                              const newTargets = new Set([
+                                ...s.targetFrameIndexes,
+                                ...selectedFrames,
+                              ]);
+                              return {
+                                ...s,
+                                targetFrameIndexes: Array.from(newTargets),
+                              };
+                            } else {
+                              return {
+                                ...s,
+                                targetFrameIndexes: s.targetFrameIndexes.filter(
+                                  (idx) => !selectedFrames.has(idx),
+                                ),
+                              };
+                            }
+                          })
+                          .filter((s) => s.targetFrameIndexes.length > 0);
+                      });
+                    }}
+                    disabled={selectedFrames.size <= 1}
+                    className={`text-[9px] px-2 py-0.5 rounded border transition-all flex items-center gap-1 ${
+                      selectedFrames.size > 1
+                        ? isDark
+                          ? "bg-purple-500/20 border-purple-500 text-purple-400 hover:bg-purple-500/30"
+                          : "bg-purple-50 border-purple-200 text-purple-600 hover:bg-purple-100"
+                        : isDark
+                          ? "bg-white/5 border-white/5 text-white/20"
+                          : "bg-gray-50 border-gray-100 text-gray-300"
+                    }`}
+                  >
+                    <MousePointer2 className="w-2.5 h-2.5" />
+                    {lang === "KR"
+                      ? "Apply Current to Selected"
+                      : lang === "EN"
+                        ? "Apply Current to Selected"
+                        : "現在を選択したフレームに適用"}
+                  </button>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Additional Controls (Not sticky) */}
-          {frames.length > 0 && (
-            <div className="w-full max-w-[500px] mt-2 lg:mt-6 space-y-3 lg:space-y-4 shrink-0 pb-4 lg:pb-8 px-2">
-              <div className="flex justify-between items-center mb-1">
-                <div className="flex items-center gap-3">
-                  <h3 className={`text-[10px] font-bold uppercase tracking-tighter ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-                    {lang === 'KR' ? 'Selection' : lang === 'EN' ? 'Selection' : '選択'} <span className="opacity-60">({selectedFrames.size})</span>
-                  </h3>
-                  <div className="flex gap-1.5">
-                    <button 
-                      onClick={() => setSelectedFrames(new Set(frames.map((_, i) => i)))}
-                      className={`text-[9px] px-1.5 py-0.5 rounded border transition-all ${
-                        isDark ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white/60' : 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-600'
-                      }`}
-                    >
-                      {lang === 'KR' ? 'All' : lang === 'EN' ? 'All' : 'すべて'}
-                    </button>
-                    <button 
-                      onClick={() => setSelectedFrames(new Set([currentFrame]))}
-                      className={`text-[9px] px-1.5 py-0.5 rounded border transition-all ${
-                        isDark ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white/60' : 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-600'
-                      }`}
-                    >
-                      {lang === 'KR' ? 'Clear' : lang === 'EN' ? 'Clear' : 'クリア'}
-                    </button>
-                  </div>
-                </div>
-                
-                <button 
-                  onClick={() => {
-                    setExclusionStrokes(prev => {
-                      return prev.map(s => {
-                        if (s.targetFrameIndexes.includes(currentFrame)) {
-                          const newTargets = new Set([...s.targetFrameIndexes, ...selectedFrames]);
-                          return { ...s, targetFrameIndexes: Array.from(newTargets) };
-                        } else {
-                          return { ...s, targetFrameIndexes: s.targetFrameIndexes.filter(idx => !selectedFrames.has(idx)) };
-                        }
-                      }).filter(s => s.targetFrameIndexes.length > 0);
-                    });
-                  }}
-                  disabled={selectedFrames.size <= 1}
-                  className={`text-[9px] px-2 py-0.5 rounded border transition-all flex items-center gap-1 ${
-                    selectedFrames.size > 1
-                      ? (isDark ? 'bg-purple-500/20 border-purple-500 text-purple-400 hover:bg-purple-500/30' : 'bg-purple-50 border-purple-200 text-purple-600 hover:bg-purple-100')
-                      : (isDark ? 'bg-white/5 border-white/5 text-white/20' : 'bg-gray-50 border-gray-100 text-gray-300')
-                  }`}
-                >
-                  <MousePointer2 className="w-2.5 h-2.5" />
-                  {lang === 'KR' ? 'Apply Current to Selected' : lang === 'EN' ? 'Apply Current to Selected' : '現在を選択したフレームに適用'}
-                </button>
-              </div>
+          <DownloadModal
+            isOpen={showDownloadModal}
+            onClose={() => setShowDownloadModal(false)}
+            lang={downloadLang}
+            onDownload={handleDownload}
+            isDark={isDark}
+          />
+
+          {new URLSearchParams(window.location.search).get("debug") === "1" && (
+            <div className="fixed bottom-2 left-2 z-[9999] bg-black/80 text-green-400 text-[10px] font-mono px-2 py-1 rounded pointer-events-none">
+              [BananaCut] commit: {import.meta.env.VITE_COMMIT_SHA || "dev"} |
+              time: {new Date().toISOString()}
             </div>
           )}
         </div>
-        
-        <DownloadModal
-          isOpen={showDownloadModal}
-          onClose={() => setShowDownloadModal(false)}
-          lang={downloadLang}
-          onDownload={handleDownload}
-          isDark={isDark}
-        />
-        
-        {new URLSearchParams(window.location.search).get('debug') === '1' && (
-          <div className="fixed bottom-2 left-2 z-[9999] bg-black/80 text-green-400 text-[10px] font-mono px-2 py-1 rounded pointer-events-none">
-            [BananaCut] commit: {import.meta.env.VITE_COMMIT_SHA || 'dev'} | time: {new Date().toISOString()}
-          </div>
-        )}
-      </div>
       </div>
     </>
   );
