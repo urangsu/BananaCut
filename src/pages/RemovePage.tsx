@@ -112,15 +112,13 @@ export default function RemovePage() {
 
   const handleLoadSampleProject = async () => {
     trackEvent('Try_Sample_Project');
-    setUploadState('video-extracting');
+    setUploadState('image-loading');
     try {
       if (frames.length > 0) {
         revokeSampleFrames(frames);
-        const urlsToRevoke = frames.flatMap(f => [f.rawUrl, f.processedUrl].filter(Boolean) as string[]);
-        revokeUrlsSafely(urlsToRevoke, [], []);
       }
       
-      const sampleFrames = await generateSampleFrames(fps, 16);
+      const sampleFrames = await generateSampleFrames(16);
       setFrames(sampleFrames);
       setCurrentFrame(0);
       setImgDims({ w: 400, h: 400 });

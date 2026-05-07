@@ -1,6 +1,6 @@
 import { StudioFrame } from '../StudioContext';
 
-export async function generateSampleFrames(fps: number = 10, totalFrames: number = 16): Promise<StudioFrame[]> {
+export async function generateSampleFrames(totalFrames: number = 16): Promise<StudioFrame[]> {
   const width = 400;
   const height = 400;
   const canvas = document.createElement('canvas');

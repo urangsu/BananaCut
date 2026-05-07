@@ -609,7 +609,7 @@ export default function AssetPage() {
                     if (frames.length > 0) {
                       revokeSampleFrames(frames);
                     }
-                    const sampleFrames = await generateSampleFrames(fps, 16);
+                    const sampleFrames = await generateSampleFrames(16);
                     setFrames(sampleFrames);
                     if (!charName) {
                       setCharName('banana_sample');
