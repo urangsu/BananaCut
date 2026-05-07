@@ -188,6 +188,7 @@ export default function RemovePage() {
   const MIDDLE_NAME_OPTIONS = GET_MIDDLE_NAME_OPTIONS(lang);
   const location = useLocation();
   const navigate = useNavigate();
+  const sampleAutoLoadRef = useRef(false);
 
   const {
     frames,
@@ -256,7 +257,7 @@ export default function RemovePage() {
 
   const handleLoadSampleProject = async () => {
     trackEvent("Try_Sample_Project");
-    setUploadState("image-loading");
+    setIsProcessingLocal(true);
     try {
       if (frames.length > 0) {
         revokeSampleFrames(frames);
@@ -287,13 +288,16 @@ export default function RemovePage() {
           ? "샘플 프로젝트 로드에 실패했습니다."
           : "Failed to load sample project.",
       );
+    } finally {
+      setIsProcessingLocal(false);
     }
   };
 
   useEffect(() => {
-    if (location.state?.loadSample) {
+    if (location.state?.loadSample && !sampleAutoLoadRef.current) {
+      sampleAutoLoadRef.current = true;
       handleLoadSampleProject();
-      navigate("/remove", { replace: true, state: {} });
+      navigate(".", { replace: true, state: {} });
     }
   }, [location.state?.loadSample, navigate]);
 
