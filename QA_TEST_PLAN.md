@@ -1,6 +1,6 @@
-# Smart Crop QA Test Plan
+# BananaCut QA Test Plan
 
-## Test Cases
+## 1. Smart Crop Tests
 
 1. **Dirty frame confirm 취소**
    - Condition: Dirty frames exist.
@@ -25,3 +25,26 @@
    - Action: Try to use Brush or Color Picker.
    - Expected: They should be disabled while "Preview Box" is checked.
    - Result: Brush/Picker should not function.
+
+## 2. Sample Project Tests
+
+1. **Try Sample Project (RemovePage)**
+   - Condition: Initial load (no frames).
+   - Action: Click "Try Sample Project" under the upload box.
+   - Expected/Result: 16 sample frames (animated bouncing character on green screen) are generated and loaded.
+   - Verify: Preview animates, keying works, brush exclusion works.
+   - Verify: Segments are initialized to "idle_sitting".
+   - Verify: Download modes (Result Only, With RAW, GIF) generate complete assets.
+   - Verify: Check tracking events (`Try_Sample_Project`, `Sample_Project_Loaded`).
+
+2. **Try Sample Project (AssetPage)**
+   - Condition: No frames loaded.
+   - Action: Go to Asset tab, click "Try Sample Project".
+   - Expected/Result: Sample frames load, segments and character name populate.
+   - Verify: Can immediately perform "Analyze Margins" and "Export Sprite Sheet".
+
+3. **Revocation Check**
+   - Condition: Sample project already loaded.
+   - Action: Click "Try Sample Project" again.
+   - Expected/Result: Previous sample frames are removed (revokeObjectURL called), new random frames generated. No memory leak.
+

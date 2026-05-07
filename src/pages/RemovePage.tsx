@@ -12,6 +12,7 @@ import { useMediaImport } from '../hooks/useMediaImport';
 import { useLanguage } from '../LanguageContext';
 import { generateStrokeMask, applyChromaKeyAdvanced } from '../utils/chromaKey';
 import { PerfLogger } from '../utils/performanceLogger';
+import { generateSampleFrames, revokeSampleFrames } from '../utils/sampleProject';
 
 /*
   Feature Design: Artifact Cleanup (Future Enhancement)
@@ -108,6 +109,38 @@ export default function RemovePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadLang, setDownloadLang] = useState<'KR' | 'EN' | 'JP'>('EN');
+
+  const handleLoadSampleProject = async () => {
+    trackEvent('Try_Sample_Project');
+    setUploadState('video-extracting');
+    try {
+      if (frames.length > 0) {
+        revokeSampleFrames(frames);
+        const urlsToRevoke = frames.flatMap(f => [f.rawUrl, f.processedUrl].filter(Boolean) as string[]);
+        revokeUrlsSafely(urlsToRevoke, [], []);
+      }
+      
+      const sampleFrames = await generateSampleFrames(fps, 16);
+      setFrames(sampleFrames);
+      setCurrentFrame(0);
+      setImgDims({ w: 400, h: 400 });
+      setVideoFile(null);
+      setUploadState('ready');
+      setIsPlaying(true);
+      if (!charName) {
+        setCharName('banana_sample');
+      }
+      if (segments.length === 0) {
+         setSegments([{ name: 'idle_sitting', start: 0, end: sampleFrames.length / fps }]);
+      }
+      trackEvent('Sample_Project_Loaded');
+    } catch (e) {
+      console.error(e);
+      setUploadState('error');
+      trackEvent('Sample_Project_Failed');
+      alert(lang === 'KR' ? '샘플 프로젝트 로드에 실패했습니다.' : 'Failed to load sample project.');
+    }
+  };
 
   const processFramesForDownload = async (targetIndices: number[]): Promise<{ frames: StudioFrame[] | null; failedCount: number; failedIndices: number[] }> => {
     if (targetIndices.length === 0) return { frames: frames, failedCount: 0, failedIndices: [] };
@@ -861,6 +894,15 @@ export default function RemovePage() {
                   <span className="text-xs opacity-60">MP4, MOV, PNG</span>
                 </label>
               </div>
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleLoadSampleProject}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                >
+                  {lang === 'KR' ? '샘플 프로젝트로 체험하기' : lang === 'EN' ? 'Try Sample Project' : 'サンプルプロジェクトを試す'}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -875,6 +917,10 @@ export default function RemovePage() {
                 <span className="text-sm font-normal opacity-60">{lang === 'KR' ? '(파일 업로드)' : lang === 'EN' ? '(File Upload)' : '(ファイルアップロード)'}</span>
               </div>
             </h2>
+            
+            <p className={`mb-4 text-sm ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+              {lang === 'KR' ? 'MP4/MOV를 올리면 프레임으로 나누고, 배경 제거 후 에셋으로 내보낼 수 있습니다.' : lang === 'EN' ? 'Upload an MP4/MOV to split it into frames, remove the background, and export production-ready assets.' : 'MP4/MOVをアップロードすると、フレーム分割・背景除去・アセット出力ができます。'}
+            </p>
             
             <div 
               className={`${dropzoneClass} ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}
@@ -907,6 +953,18 @@ export default function RemovePage() {
                 </p>
               </div>
             </div>
+
+            {frames.length === 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleLoadSampleProject}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                >
+                  {lang === 'KR' ? '샘플 프로젝트로 체험하기' : lang === 'EN' ? 'Try Sample Project' : 'サンプルプロジェクトを試す'}
+                </button>
+              </div>
+            )}
 
             {uploadState === 'video-extracting' && (
               <div className="mt-4 flex flex-col items-center gap-3">

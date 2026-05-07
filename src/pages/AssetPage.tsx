@@ -18,11 +18,13 @@ import { getFrameDisplayUrl } from "../utils/frameUtils";
 import { analyzeFrameBounds, Box } from "../utils/boundingBox";
 import { Modal } from "../components/Modal";
 import { Copy, Scan, Maximize, Target } from "lucide-react";
+import { generateSampleFrames, revokeSampleFrames } from "../utils/sampleProject";
+import { trackEvent } from "../lib/analytics";
 
 export default function AssetPage() {
   const { lang } = useLanguage();
   const { theme } = useTheme();
-  const { frames, setFrames, fps, exclusionStrokes } = useStudio();
+  const { frames, setFrames, fps, exclusionStrokes, charName, setCharName, segments, setSegments } = useStudio();
   const { ffmpeg, loadState, loadFFmpeg } = useFFmpeg();
   const {
     isProcessing: isBatchProcessing,
@@ -598,6 +600,35 @@ export default function AssetPage() {
             >
               {lang === "KR" ? "Remove 화면으로 이동" : "Start from Remove"}
             </button>
+            <div className="pt-4 mt-2 border-t border-gray-200 dark:border-white/10 w-full flex justify-center">
+              <button
+                type="button"
+                onClick={async () => {
+                  trackEvent('Try_Sample_Project');
+                  try {
+                    if (frames.length > 0) {
+                      revokeSampleFrames(frames);
+                    }
+                    const sampleFrames = await generateSampleFrames(fps, 16);
+                    setFrames(sampleFrames);
+                    if (!charName) {
+                      setCharName('banana_sample');
+                    }
+                    if (segments.length === 0) {
+                      setSegments([{ name: 'idle_sitting', start: 0, end: sampleFrames.length / fps }]);
+                    }
+                    trackEvent('Sample_Project_Loaded');
+                  } catch (e) {
+                    console.error(e);
+                    trackEvent('Sample_Project_Failed');
+                    alert(lang === "KR" ? "샘플 로드 실패" : "Failed to load sample");
+                  }
+                }}
+                className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+              >
+                {lang === 'KR' ? '샘플 프로젝트 체험하기' : lang === 'EN' ? 'Try Sample Project' : 'サンプルプロジェクトを試す'}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
