@@ -163,8 +163,7 @@ export default function LandingPage() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [demoVideoError, setDemoVideoError] = useState(false);
-  const [isVideoFailed, setIsVideoFailed] = useState(false);
+  const [demoError, setDemoError] = useState(false);
 
   return (
     <div
@@ -306,7 +305,7 @@ export default function LandingPage() {
             <div
               className={`aspect-video rounded-3xl flex items-center justify-center border overflow-hidden relative shadow-2xl group ${isDark ? "bg-[#0a0a0a] border-white/10" : "bg-black border-gray-200"}`}
             >
-              {demoVideoError ? (
+              {demoError ? (
                 <div className="flex flex-col items-center justify-center text-white/50 space-y-4">
                   <PlaySquare className="w-12 h-12 opacity-50" />
                   <p>
@@ -330,21 +329,6 @@ export default function LandingPage() {
                         : "YouTubeで見る"}
                   </a>
                 </div>
-              ) : !isVideoFailed ? (
-                <video
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  controls={false}
-                  poster="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  onError={() => setIsVideoFailed(true)}
-                >
-                  <source src="/videos/bananacut-demo.webm" type="video/webm" />
-                  <source src="/videos/bananacut-demo.mp4" type="video/mp4" />
-                </video>
               ) : (
                 <iframe
                   className="w-full h-full absolute inset-0 object-cover"
@@ -352,7 +336,7 @@ export default function LandingPage() {
                   title="BananaCut Demo Video"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
-                  onError={() => setDemoVideoError(true)}
+                  onError={() => setDemoError(true)}
                 />
               )}
             </div>
@@ -458,68 +442,6 @@ export default function LandingPage() {
             </p>
           </section>
 
-          {/* Features (Trust Blocks updated) */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div
-              className={`p-8 rounded-3xl border flex flex-col items-center text-center transition-all hover:scale-[1.02] ${isDark ? "bg-white/5 border-white/10 hover:bg-white/10" : "bg-gray-50 border-gray-200 hover:bg-white hover:shadow-xl"}`}
-            >
-              <div
-                className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 relative ${isDark ? "bg-blue-500/10" : "bg-blue-50"}`}
-              >
-                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500/20 to-transparent blur-md"></div>
-                <Smartphone
-                  className={`w-8 h-8 relative z-10 ${isDark ? "text-blue-400" : "text-blue-600"}`}
-                  strokeWidth={1.5}
-                />
-              </div>
-              <h3 className="text-xl font-bold mb-3">100% Local Processing</h3>
-              <p className={isDark ? "text-white/60" : "text-gray-600"}>
-                {lang === "KR"
-                  ? "모든 작업이 브라우저 내부에서 처리되어 영상을 서버로 전송하지 않습니다."
-                  : "All processing happens securely inside your browser. No server uploads."}
-              </p>
-            </div>
-
-            <div
-              className={`p-8 rounded-3xl border flex flex-col items-center text-center transition-all hover:scale-[1.02] ${isDark ? "bg-white/5 border-white/10 hover:bg-white/10" : "bg-gray-50 border-gray-200 hover:bg-white hover:shadow-xl"}`}
-            >
-              <div
-                className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 relative ${isDark ? "bg-green-500/10" : "bg-green-50"}`}
-              >
-                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-green-500/20 to-transparent blur-md"></div>
-                <Wand2
-                  className={`w-8 h-8 relative z-10 ${isDark ? "text-green-400" : "text-green-600"}`}
-                  strokeWidth={1.5}
-                />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Free to Use</h3>
-              <p className={isDark ? "text-white/60" : "text-gray-600"}>
-                {lang === "KR"
-                  ? "회원가입 없이 즉시 브라우저에서 투명 에셋 생성을 시작하세요."
-                  : "Start creating transparent assets instantly in your browser with no sign-ups required."}
-              </p>
-            </div>
-
-            <div
-              className={`p-8 rounded-3xl border flex flex-col items-center text-center transition-all hover:scale-[1.02] ${isDark ? "bg-white/5 border-white/10 hover:bg-white/10" : "bg-gray-50 border-gray-200 hover:bg-white hover:shadow-xl"}`}
-            >
-              <div
-                className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 relative ${isDark ? "bg-purple-500/10" : "bg-purple-50"}`}
-              >
-                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-purple-500/20 to-transparent blur-md"></div>
-                <Shield
-                  className={`w-8 h-8 relative z-10 ${isDark ? "text-purple-400" : "text-purple-600"}`}
-                  strokeWidth={1.5}
-                />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Data Privacy</h3>
-              <p className={isDark ? "text-white/60" : "text-gray-600"}>
-                {lang === "KR"
-                  ? "영상과 이미지는 브라우저 안에서 로컬로 처리됩니다. BananaCut은 사용자의 미디어 파일을 서버에 업로드하거나 저장하지 않습니다."
-                  : "Your videos and images are processed locally in your browser. BananaCut does not upload or store your media files on our servers."}
-              </p>
-            </div>
-          </section>
           {/* Below the Fold: SEO Optimized Editorial Layout */}
           <section className="max-w-6xl mx-auto pt-24 pb-12 border-t border-gray-200 dark:border-white/10 text-left space-y-32">
             {/* 1. Why BananaCut? (Expanded Editorial Layout) */}

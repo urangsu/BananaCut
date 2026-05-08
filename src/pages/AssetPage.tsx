@@ -684,12 +684,12 @@ export default function AssetPage() {
                     {lang === "KR"
                       ? "투명 비디오 내보내기"
                       : lang === "EN"
-                        ? "Transparent Video Export"
-                        : "透明ビデオエクスポート"}
+                        ? "Transparent Video"
+                        : "透過ビデオ"}
                   </h2>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-gray-500/10 text-gray-500 dark:text-gray-400 border border-gray-500/20">
-                      {lang === "KR" ? "고급" : "Advanced"}
+                      {lang === "KR" ? "고급" : lang === "EN" ? "Advanced" : "高度"}
                     </span>
                   </div>
                 </div>
@@ -701,11 +701,15 @@ export default function AssetPage() {
                 {lang === "KR"
                   ? "현재 프레임들을 하나의 투명 배경 비디오로 결합합니다."
                   : lang === "EN"
-                    ? "Combines current frames into a single transparent background video."
-                    : "現在のフレームを結合して、背景が透明な動画ファイルを作成します。"}
+                    ? "Combine your frames into a transparent video."
+                    : "現在のフレームを透過背景のビデオにまとめます。"}
                 
                 <p className={`mt-2 text-xs opacity-60 ${isDark ? "text-white/40" : "text-gray-500"}`}>
-                  {lang === "KR" ? "일부 환경에서는 생성에 시간이 더 걸릴 수 있습니다." : "May take longer to generate in some environments."}
+                  {lang === "KR" 
+                    ? "일부 환경에서는 생성에 시간이 더 걸릴 수 있습니다." 
+                    : lang === "EN" 
+                      ? "Large exports may take longer depending on your device." 
+                      : "大きな書き出しは端末によって時間がかかる場合があります。"}
                 </p>
               </div>
 
@@ -754,10 +758,10 @@ export default function AssetPage() {
                       <Loader2 className="w-5 h-5 animate-spin" />
                     )}
                     {lang === "KR"
-                      ? "비디오 생성 시작"
+                      ? "투명 비디오 생성"
                       : lang === "EN"
-                        ? "Start Video Generation"
-                        : "ビデオ生成開始"}
+                        ? "Create Transparent Video"
+                        : "透過ビデオを作成"}
                   </button>
                 )}
               </div>
@@ -768,7 +772,7 @@ export default function AssetPage() {
               className={`p-6 rounded-2xl border-2 flex flex-col relative overflow-hidden shadow-sm order-1 ${isDark ? "bg-[#1e231e] border-green-500/30" : "bg-green-50/30 border-green-400"}`}
             >
               <div className="absolute top-0 right-0 px-4 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 font-bold text-xs uppercase tracking-wider rounded-bl-xl border-b border-l border-green-500/20">
-                {lang === "KR" ? "추천" : "Recommended"}
+                {lang === "KR" ? "추천" : lang === "EN" ? "Recommended" : "おすすめ"}
               </div>
               <div className="flex items-center gap-3 mb-4">
                 <div
@@ -783,8 +787,8 @@ export default function AssetPage() {
                     {lang === "KR"
                       ? "스프라이트 시트 생성"
                       : lang === "EN"
-                        ? "Create Sprite Sheet"
-                        : "スプライトシート生成"}
+                        ? "Sprite Sheet"
+                        : "スプライトシート"}
                   </h2>
                 </div>
               </div>
@@ -795,10 +799,14 @@ export default function AssetPage() {
                 {lang === "KR"
                   ? "게임과 앱에서 쓰기 좋은 시트 이미지로 빠르게 내보냅니다."
                   : lang === "EN"
-                    ? "Fastest and most stable export for game/app assets."
-                    : "ゲーム/アプリアセットとして最も早く安定してエクスポートできます。"}
+                    ? "Export your frames as a sheet image that works well for games and apps."
+                    : "ゲームやアプリで使いやすいシート画像として書き出します。"}
                 <p className={`mt-2 text-xs opacity-70 ${isDark ? "text-green-300" : "text-green-700"}`}>
-                  {lang === "KR" ? "스마트 크롭은 스프라이트 시트에서 사용할 수 있습니다." : "Smart crop can be used for sprite sheets."}
+                  {lang === "KR" 
+                    ? "스마트 크롭은 스프라이트 시트 생성에 적용됩니다." 
+                    : lang === "EN" 
+                      ? "Smart Crop is applied to sprite sheet export." 
+                      : "スマートクロップはスプライトシート出力に適用されます。"}
                 </p>
               </div>
 
@@ -1158,10 +1166,10 @@ export default function AssetPage() {
                     className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200`}
                   >
                     {lang === "KR"
-                      ? "시트 생성 시작"
+                      ? "스프라이트 시트 생성"
                       : lang === "EN"
-                        ? "Start Sheet Generation"
-                        : "シート生成開始"}
+                        ? "Create Sprite Sheet"
+                        : "スプライトシートを作成"}
                   </button>
                 )}
               </div>
