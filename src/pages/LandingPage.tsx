@@ -282,10 +282,10 @@ export default function LandingPage() {
                   ? "Clean up videos and frames, then export transparent assets directly in your browser."
                   : "動画やフレームをブラウザで整理し、すぐ使えるアセットとして書き出せます。"}
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex flex-col items-center justify-center gap-4">
               <button
                 onClick={() => navigate("/remove")}
-                className="px-10 py-4 rounded-full text-lg font-bold transition-all bg-black text-white hover:bg-gray-800 hover:scale-105 shadow-xl uppercase tracking-tight"
+                className="w-full sm:w-auto px-10 py-4 rounded-full text-lg font-bold transition-all bg-black text-white hover:bg-gray-800 hover:scale-105 shadow-xl uppercase tracking-tight"
               >
                 Start Cutting
               </button>
@@ -294,7 +294,7 @@ export default function LandingPage() {
                   trackEvent("Click_Sample_From_Landing");
                   navigate("/remove", { state: { loadSample: true } });
                 }}
-                className={`px-10 py-4 rounded-full text-lg font-bold transition-all border-2 ${isDark ? "border-white text-white hover:bg-white hover:text-black" : "border-black text-black hover:bg-black hover:text-white"} hover:scale-105 uppercase tracking-tight`}
+                className={`w-full sm:w-auto px-10 py-4 rounded-full text-lg font-bold transition-all border-2 ${isDark ? "border-white text-white hover:bg-white hover:text-black" : "border-black text-black hover:bg-black hover:text-white"} hover:scale-105 uppercase tracking-tight`}
               >
                 Try Sample Project
               </button>
@@ -364,7 +364,7 @@ export default function LandingPage() {
                   className={`text-base font-medium ${isDark ? "text-white/90" : "text-gray-800"}`}
                 >
                   {lang === "KR"
-                    ? "AI로 만든 캐릭터 영상, 초록 배경 애니메이션, 앱/게임용 프레임 에셋을 빠르게 정리하세요."
+                    ? "제작 영상 배경 애니메이션 앱/게임용 에셋을 빠르게 정리하세요."
                     : lang === "EN"
                       ? "Clean up AI-generated character videos, green-screen animations, and app/game frame assets in one browser workflow."
                       : "AI生成キャラクター動画、グリーンバックアニメーション、アプリ・ゲーム用フレーム素材をブラウザだけで整理できます。"}
@@ -579,13 +579,13 @@ export default function LandingPage() {
 
             {/* 2. For Generated Videos */}
             <div
-              className={`p-12 rounded-[2.5rem] ${isDark ? "bg-white/5" : "bg-gray-50"}`}
+              className={`p-8 md:p-10 rounded-3xl ${isDark ? "bg-white/5" : "bg-gray-50"}`}
             >
-              <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-6">
+              <h2 className="text-2xl md:text-4xl font-extrabold tracking-tight mb-4">
                 For Generated Videos
               </h2>
               <div
-                className={`text-xl md:text-2xl leading-relaxed max-w-4xl space-y-4 flex flex-col ${isDark ? "text-white/80" : "text-gray-700"}`}
+                className={`text-lg md:text-xl leading-relaxed max-w-3xl space-y-3 flex flex-col ${isDark ? "text-white/80" : "text-gray-700"}`}
               >
                 {lang === "KR" ? (
                   <>

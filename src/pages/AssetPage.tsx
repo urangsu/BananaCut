@@ -699,10 +699,10 @@ export default function AssetPage() {
                 className={`flex-1 mb-[52px] text-sm leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
               >
                 {lang === "KR"
-                  ? "현재 프레임들을 하나의 투명 배경 WebM 비디오로 결합합니다."
+                  ? "현재 프레임들을 하나의 투명 배경 비디오로 결합합니다."
                   : lang === "EN"
-                    ? "Combines current frames into a single transparent background WebM video."
-                    : "現在のフレームを結合して、背景が透明な動画ファイル(.webm)を作成します。"}
+                    ? "Combines current frames into a single transparent background video."
+                    : "現在のフレームを結合して、背景が透明な動画ファイルを作成します。"}
                 
                 <p className={`mt-2 text-xs opacity-60 ${isDark ? "text-white/40" : "text-gray-500"}`}>
                   {lang === "KR" ? "일부 환경에서는 생성에 시간이 더 걸릴 수 있습니다." : "May take longer to generate in some environments."}
@@ -793,7 +793,7 @@ export default function AssetPage() {
                 className={`mb-6 text-sm leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
               >
                 {lang === "KR"
-                  ? "게임/앱 에셋으로 가장 빠르고 안정적으로 내보낼 수 있습니다."
+                  ? "게임과 앱에서 쓰기 좋은 시트 이미지로 빠르게 내보냅니다."
                   : lang === "EN"
                     ? "Fastest and most stable export for game/app assets."
                     : "ゲーム/アプリアセットとして最も早く安定してエクスポートできます。"}
