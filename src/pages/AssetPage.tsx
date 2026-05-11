@@ -541,15 +541,11 @@ export default function AssetPage() {
           <h1 className="text-3xl font-bold tracking-tight mb-2">ASSET</h1>
           <p className={`${isDark ? "text-white/60" : "text-gray-500"}`}>
             {lang === "KR" ? (
-              <>
-                추출된 프레임을 전문적인 게임/영상
-                <br />
-                에셋으로 변환하세요.
-              </>
+              "정리된 프레임을 게임, 앱, 영상에 바로 쓸 수 있는 에셋으로 내보내세요."
             ) : lang === "EN" ? (
-              "Convert extracted frames into professional game/video assets."
+              "Export your cleaned frames as assets for games, apps, and videos."
             ) : (
-              "抽出されたフレームをプロフェッショナルなゲーム/映像アセットに変換します。"
+              "整理したフレームをゲーム、アプリ、動画で使えるアセットとして書き出せます。"
             )}
           </p>
           {frames.length > 0 && (

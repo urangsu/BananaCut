@@ -18,6 +18,14 @@ import LandingPage from './pages/LandingPage';
 import GuidePage from './pages/GuidePage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
+import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
+import ExamplesPage from './pages/ExamplesPage';
+import GuidesIndexPage from './pages/GuidesIndexPage';
+import GuideRemoveBackgroundPage from './pages/GuideRemoveBackgroundPage';
+import GuideAiVideoAssetPage from './pages/GuideAiVideoAssetPage';
+import GuideSpriteSheetPage from './pages/GuideSpriteSheetPage';
+import GuideCleanAlphaEdgesPage from './pages/GuideCleanAlphaEdgesPage';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { LanguageProvider, useLanguage } from './LanguageContext';
 import { FFmpegProvider } from './FFmpegContext';
@@ -149,23 +157,22 @@ function Layout({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className={`flex flex-col items-center gap-3 pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
-            <div className={`flex flex-col items-center gap-1 text-[11px] font-medium w-full ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-              <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center w-full">
-                <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors no-underline text-right">Guide</button>
-                <span className="opacity-20 text-center">|</span>
-                <Link to="/privacy" className="hover:text-blue-500 transition-colors no-underline text-left">Privacy</Link>
-                
-                <Link to="/terms" className="hover:text-blue-500 transition-colors no-underline text-right">Terms</Link>
-                <span className="opacity-20 text-center">|</span>
-                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline text-left">Feedback</a>
-
-                <div className="col-span-3 flex justify-center mt-1">
-                  <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-start gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
-                </div>
-              </div>
+            <div className={`flex flex-wrap justify-center gap-x-3 gap-y-2 text-[11px] font-medium w-full ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+              <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors no-underline">App Guide</button>
+              <Link to="/guides" className="hover:text-blue-500 transition-colors no-underline">Guides</Link>
+              <Link to="/examples" className="hover:text-blue-500 transition-colors no-underline">Examples</Link>
+              <Link to="/about" className="hover:text-blue-500 transition-colors no-underline">About</Link>
+              <Link to="/contact" className="hover:text-blue-500 transition-colors no-underline">Contact</Link>
+              <Link to="/privacy" className="hover:text-blue-500 transition-colors no-underline">Privacy</Link>
+              <Link to="/terms" className="hover:text-blue-500 transition-colors no-underline">Terms</Link>
+              <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline">Feedback</a>
             </div>
             
-            <div className={`text-[10px] text-center mt-2 ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
+            <div className="w-full flex justify-center mt-1">
+              <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-center gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
+            </div>
+            
+            <div className={`text-[10px] text-center mt-1 ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
               © 2026 BananaCut | BY. DALGRACSTUDIO
             </div>
           </div>
@@ -255,18 +262,18 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
         
         <div className="flex flex-col items-center gap-2 mb-4 w-full px-4">
-          <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2 items-center text-[11px] font-medium w-full max-w-[240px]">
-            <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors text-right">Guide</button>
-            <span className="opacity-20 text-center">|</span>
-            <Link to="/privacy" className="hover:text-blue-500 transition-colors text-left">Privacy</Link>
-            
-            <Link to="/terms" className="hover:text-blue-500 transition-colors text-right">Terms</Link>
-            <span className="opacity-20 text-center">|</span>
-            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors text-left">Feedback</a>
-
-            <div className="col-span-3 flex justify-center mt-1">
-              <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-start gap-1 font-bold">Support 🍌</button>
-            </div>
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 text-[11px] font-medium w-full max-w-[280px]">
+            <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors">App Guide</button>
+            <Link to="/guides" className="hover:text-blue-500 transition-colors">Guides</Link>
+            <Link to="/examples" className="hover:text-blue-500 transition-colors">Examples</Link>
+            <Link to="/about" className="hover:text-blue-500 transition-colors">About</Link>
+            <Link to="/contact" className="hover:text-blue-500 transition-colors">Contact</Link>
+            <Link to="/privacy" className="hover:text-blue-500 transition-colors">Privacy</Link>
+            <Link to="/terms" className="hover:text-blue-500 transition-colors">Terms</Link>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
+          </div>
+          <div className="w-full flex justify-center mt-1">
+            <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-center gap-1 font-bold">Support 🍌</button>
           </div>
         </div>
 
@@ -499,6 +506,14 @@ function App() {
                 <Route path="/recover" element={<Layout><RecoverPage /></Layout>} />
                 <Route path="/asset" element={<Layout><AssetPage /></Layout>} />
                 <Route path="/guide" element={<Layout><GuidePage /></Layout>} />
+                <Route path="/guides" element={<Layout><GuidesIndexPage /></Layout>} />
+                <Route path="/guides/remove-background-from-video" element={<Layout><GuideRemoveBackgroundPage /></Layout>} />
+                <Route path="/guides/ai-video-to-game-asset" element={<Layout><GuideAiVideoAssetPage /></Layout>} />
+                <Route path="/guides/sprite-sheet-generator" element={<Layout><GuideSpriteSheetPage /></Layout>} />
+                <Route path="/guides/clean-alpha-edges" element={<Layout><GuideCleanAlphaEdgesPage /></Layout>} />
+                <Route path="/about" element={<Layout><AboutPage /></Layout>} />
+                <Route path="/contact" element={<Layout><ContactPage /></Layout>} />
+                <Route path="/examples" element={<Layout><ExamplesPage /></Layout>} />
                 <Route path="/privacy" element={<Layout><PrivacyPage /></Layout>} />
                 <Route path="/terms" element={<Layout><TermsPage /></Layout>} />
               </Routes>

@@ -7,11 +7,8 @@ import {
 import { useTheme } from "../ThemeContext";
 import { useLanguage } from "../LanguageContext";
 import {
-  Scissors,
   Wand2,
-  Download,
   Smartphone,
-  Play,
   PlaySquare,
   Shield,
   Sun,
@@ -163,7 +160,31 @@ export default function LandingPage() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [demoError, setDemoError] = useState(false);
+  const [demoState, setDemoState] = useState<"checking" | "local" | "youtube" | "error">("checking");
+  const [localVideoSrc, setLocalVideoSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkLocalVideo = async () => {
+      try {
+        let res = await fetch("/videos/bananacut-demo.webm", { method: "HEAD" });
+        if (res.ok) {
+          setLocalVideoSrc("/videos/bananacut-demo.webm");
+          setDemoState("local");
+          return;
+        }
+        res = await fetch("/videos/bananacut-demo.mp4", { method: "HEAD" });
+        if (res.ok) {
+          setLocalVideoSrc("/videos/bananacut-demo.mp4");
+          setDemoState("local");
+          return;
+        }
+        setDemoState("youtube");
+      } catch (err) {
+        setDemoState("youtube");
+      }
+    };
+    checkLocalVideo();
+  }, []);
 
   return (
     <div
@@ -305,7 +326,11 @@ export default function LandingPage() {
             <div
               className={`aspect-video rounded-3xl flex items-center justify-center border overflow-hidden relative shadow-2xl group ${isDark ? "bg-[#0a0a0a] border-white/10" : "bg-black border-gray-200"}`}
             >
-              {demoError ? (
+              {demoState === "checking" ? (
+                <div className="flex flex-col items-center justify-center text-white/50 space-y-4">
+                  <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
+                </div>
+              ) : demoState === "error" ? (
                 <div className="flex flex-col items-center justify-center text-white/50 space-y-4">
                   <PlaySquare className="w-12 h-12 opacity-50" />
                   <p>
@@ -329,6 +354,21 @@ export default function LandingPage() {
                         : "YouTubeで見る"}
                   </a>
                 </div>
+              ) : demoState === "local" && localVideoSrc ? (
+                <video
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  controls={false}
+                  poster="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={() => setDemoState("youtube")}
+                >
+                  <source src={localVideoSrc} type={localVideoSrc.endsWith(".webm") ? "video/webm" : "video/mp4"} />
+                  <p>Your browser does not support HTML5 video.</p>
+                </video>
               ) : (
                 <iframe
                   className="w-full h-full absolute inset-0 object-cover"
@@ -336,7 +376,7 @@ export default function LandingPage() {
                   title="BananaCut Demo Video"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
-                  onError={() => setDemoError(true)}
+                  onError={() => setDemoState("error")}
                 />
               )}
             </div>
@@ -348,10 +388,10 @@ export default function LandingPage() {
                   className={`text-base font-medium ${isDark ? "text-white/90" : "text-gray-800"}`}
                 >
                   {lang === "KR"
-                    ? "제작 영상 배경 애니메이션 앱/게임용 에셋을 빠르게 정리하세요."
+                    ? "영상과 프레임 에셋을 브라우저에서 빠르게 정리하세요."
                     : lang === "EN"
-                      ? "Clean up AI-generated character videos, green-screen animations, and app/game frame assets in one browser workflow."
-                      : "AI生成キャラクター動画、グリーンバックアニメーション、アプリ・ゲーム用フレーム素材をブラウザだけで整理できます。"}
+                      ? "Clean up generated videos, green-screen animations, and app/game frame assets in one browser workflow."
+                      : "生成動画、グリーンバックアニメーション、アプリ・ゲーム用フレーム素材をブラウザで整理できます。"}
                 </p>
               </div>
               <div
@@ -366,10 +406,10 @@ export default function LandingPage() {
                   className={`leading-relaxed ${isDark ? "text-white/60" : "text-gray-600"}`}
                 >
                   {lang === "KR"
-                    ? "웹브라우저에 직접 영상을 업로드 합니다."
+                    ? "영상을 브라우저에서 바로 불러옵니다."
                     : lang === "EN"
-                      ? "Upload videos directly to your web browser."
-                      : "ウェブブラウザに直接動画をアップロードします。"}
+                      ? "Load your video directly in the browser."
+                      : "動画をブラウザで直接読み込みます。"}
                 </p>
               </div>
               <div
@@ -384,10 +424,10 @@ export default function LandingPage() {
                   className={`leading-relaxed ${isDark ? "text-white/60" : "text-gray-600"}`}
                 >
                   {lang === "KR"
-                    ? "배경 색상을 선택하고 오차 범위를 조절하여 피사체를 즉시 추출합니다."
+                    ? "배경색을 선택하고, 프레임에서 피사체를 분리합니다."
                     : lang === "EN"
-                      ? "Select background color and adjust tolerance to extract subjects."
-                      : "背景色を選択し、誤差範囲を調整して被写体を即座に抽出します。"}
+                      ? "Pick the background color and separate the subject from each frame."
+                      : "背景色を選び、各フレームから被写体を切り出します。"}
                 </p>
               </div>
               <div
@@ -402,10 +442,10 @@ export default function LandingPage() {
                   className={`leading-relaxed ${isDark ? "text-white/60" : "text-gray-600"}`}
                 >
                   {lang === "KR"
-                    ? "손상된 알파 채널을 스마트 필 알고리즘으로 정교하게 복구합니다."
+                    ? "배경 제거 후 생긴 빈틈과 가장자리 얼룩을 손쉽게 다듬을 수 있습니다."
                     : lang === "EN"
-                      ? "Precisely recover damaged alpha channels with the Smart Fill algorithm."
-                      : "損傷したアルファチャネルをスマートフィルで精巧に復元します。"}
+                      ? "Fix gaps and rough edges left after background removal."
+                      : "背景除去後に残った隙間やエッジの汚れを整えられます。"}
                 </p>
               </div>
             </div>
@@ -554,11 +594,25 @@ export default function LandingPage() {
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
-                    {lang === "KR"
-                      ? "A: 네. BananaCut은 회원가입 없이 무료로 사용할 수 있습니다. 앱 에셋을 만들다 직접 필요해서 만든 도구이고, 같은 문제를 겪는 분들께 공개했습니다."
-                      : lang === "EN"
-                        ? "A: Yes. BananaCut is free to use without creating an account. I built it for my own app assets and shared it for others with the same workflow problem."
-                        : "A: はい。BananaCutはアカウント登録なしで無料で使えます。自分のアプリ用アセット制作で必要になって作り、同じ悩みを持つ人のために公開しています。"}
+                    {lang === "KR" ? (
+                      <>
+                        A: 네. BananaCut은 회원가입 없이 무료로 사용할 수 있습니다.
+                        <br className="mb-2 block" />
+                        앱 에셋을 만들다 직접 필요해서 만든 도구이고, 같은 문제를 겪는 분들께 공개했습니다.
+                      </>
+                    ) : lang === "EN" ? (
+                      <>
+                        A: Yes. BananaCut is free to use without creating an account.
+                        <br className="mb-2 block" />
+                        I built it for my own app assets and shared it for others with the same workflow problem.
+                      </>
+                    ) : (
+                      <>
+                        A: はい。BananaCutはアカウント登録なしで無料で使えます。
+                        <br className="mb-2 block" />
+                        自分のアプリ用アセット制作で必要になって作り、同じ悩みを持つ人のために公開しています。
+                      </>
+                    )}
                   </p>
                 </div>
                 <div
