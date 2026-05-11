@@ -96,6 +96,22 @@ export function useMediaImport({
     setIsPlaying(false);
   }, [frames, setFrames, revokeFrameUrls, setIsPlaying]);
 
+const probeVideo = (file: File): Promise<{ width: number; height: number; duration: number }> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(video.src);
+      resolve({ width: video.videoWidth, height: video.videoHeight, duration: video.duration });
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(video.src);
+      reject(new Error('Failed to load video metadata'));
+    };
+    video.src = URL.createObjectURL(file);
+  });
+};
+
   const processFile = async (file: File, overrideFps?: number) => {
     const targetFps = overrideFps || fps;
     
@@ -116,6 +132,7 @@ export function useMediaImport({
     }
     
     if (file.type.startsWith('image/')) {
+      // image loading logic remains same
       setUploadState('image-loading');
       const url = URL.createObjectURL(file);
       const img = new Image();
@@ -158,6 +175,41 @@ export function useMediaImport({
     }
     
     if (file.type.includes('video/mp4') || file.type.includes('video/quicktime')) {
+      try {
+        const meta = await probeVideo(file);
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+        const estimatedFrames = Math.ceil(meta.duration * targetFps);
+        const estimatedMemoryMB = (meta.width * meta.height * 4 * estimatedFrames * 2.4) / 1024 / 1024;
+        const hardFrames = isMobile ? 180 : 500;
+        const hardMemoryMB = isMobile ? 320 : 900;
+        const softFrames = isMobile ? 100 : 300;
+        const softMemoryMB = isMobile ? 180 : 512;
+
+        if (estimatedFrames > hardFrames || estimatedMemoryMB > hardMemoryMB) {
+          alert(lang === 'KR' 
+            ? "이 영상은 브라우저에서 처리하기에 너무 클 수 있습니다. FPS를 낮추거나 더 짧은 클립을 사용해 주세요." 
+            : lang === 'EN' 
+            ? "This video may be too large to process safely in the browser. Try a lower FPS or a shorter clip." 
+            : "この動画はブラウザで安全に処理するには大きすぎる可能性があります。FPSを下げるか、短いクリップを使用してください。");
+          setUploadState('idle');
+          return;
+        }
+
+        if (estimatedFrames > softFrames || estimatedMemoryMB > softMemoryMB) {
+          const proceed = window.confirm(lang === 'KR' 
+            ? "이 영상은 크기가 커서 브라우저가 느려질 수 있습니다. 계속하시겠습니까?\nFPS를 낮추거나 더 짧은 영상을 권장합니다." 
+            : lang === 'EN' 
+            ? "This video is large and may slow down your browser. Continue?\nWe recommend lowering FPS or using a shorter clip." 
+            : "この動画は大きく、ブラウザの動作が遅くなる可能性があります。続行しますか？\nFPSを下げるか、短い動画を使用することをお勧めします。");
+          if (!proceed) {
+            setUploadState('idle');
+            return;
+          }
+        }
+      } catch(e) {
+        console.warn('Probe failed', e);
+      }
+
       abortControllerRef.current = new AbortController();
       
       setUploadState('video-extracting');

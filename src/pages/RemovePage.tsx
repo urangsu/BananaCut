@@ -27,6 +27,7 @@ import { useBatchJob } from "../hooks/useBatchJob";
 import { useMediaImport } from "../hooks/useMediaImport";
 import { useLanguage } from "../LanguageContext";
 import { generateStrokeMask, applyChromaKeyAdvanced } from "../utils/chromaKey";
+import { normalizeChromaKeyParams } from "../utils/chromaKeyParams";
 import { PerfLogger } from "../utils/performanceLogger";
 import {
   generateSampleFrames,
@@ -347,7 +348,7 @@ export default function RemovePage() {
           imgData.data,
           canvas.width,
           canvas.height,
-          {
+          normalizeChromaKeyParams({
             keyingMode,
             previewMode: "result",
             tolerance,
@@ -360,7 +361,7 @@ export default function RemovePage() {
             dilate,
             feather,
             alphaContrast,
-          },
+          }),
           mask,
         );
         PerfLogger.end("processFramesForDownload_applyChromaKey");
@@ -600,7 +601,7 @@ export default function RemovePage() {
       data,
       width,
       height,
-      {
+      normalizeChromaKeyParams({
         keyingMode,
         previewMode,
         tolerance: tol,
@@ -613,7 +614,7 @@ export default function RemovePage() {
         dilate,
         feather,
         alphaContrast,
-      },
+      }),
       exclusionMask,
     );
   };

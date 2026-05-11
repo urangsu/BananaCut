@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useBatchJob } from "../hooks/useBatchJob";
 import { generateStrokeMask, applyChromaKeyAdvanced } from "../utils/chromaKey";
+import { normalizeChromaKeyParams } from "../utils/chromaKeyParams";
 import { PerfLogger } from "../utils/performanceLogger";
 import { getFrameDisplayUrl } from "../utils/frameUtils";
 import { analyzeFrameBounds, Box } from "../utils/boundingBox";
@@ -99,7 +100,7 @@ export default function AssetPage() {
     const newFrames = [...frames];
 
     // Load config from localStorage
-    const params = {
+    const params = normalizeChromaKeyParams({
       keyingMode:
         (localStorage.getItem("ck_keyingMode") as any) || "greenAdvanced",
       previewMode: "result" as const,
@@ -109,15 +110,19 @@ export default function AssetPage() {
         Number(localStorage.getItem("ck_enclosedTolerance")) || 10,
       chromaKeyColor:
         (localStorage.getItem("ck_chromaKeyColor") as any) || "White",
-      pickedColor: JSON.parse(
-        localStorage.getItem("ck_pickedColor") || '{"r":255,"g":255,"b":255}',
-      ),
+      pickedColor: (() => {
+        try {
+          return JSON.parse(localStorage.getItem("ck_pickedColor") || '{"r":255,"g":255,"b":255}');
+        } catch {
+          return { r: 255, g: 255, b: 255 };
+        }
+      })(),
       despill: Number(localStorage.getItem("ck_despill")) || 0,
       erode: Number(localStorage.getItem("ck_erode")) || 0,
       dilate: Number(localStorage.getItem("ck_dilate")) || 0,
       feather: Number(localStorage.getItem("ck_feather")) || 0,
       alphaContrast: Number(localStorage.getItem("ck_alphaContrast")) || 0,
-    };
+    });
 
     return new Promise((resolve) => {
       startJob<number, void>({
@@ -710,7 +715,17 @@ export default function AssetPage() {
               </div>
 
               <div className="mt-auto space-y-4">
-                {isVideoProcessing ? (
+                {loadState === 'error' ? (
+                  <div className={`w-full p-4 rounded-xl text-sm border flex flex-col items-center justify-center text-center ${isDark ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-red-50 border-red-200 text-red-600"}`}>
+                    <AlertTriangle className="w-5 h-5 mb-2 opacity-80" />
+                    <span>
+                    {lang === 'KR' ? '보안 정책(COEP)으로 인해 WebM을 사용할 수 없습니다.' : lang === 'EN' ? 'WebM is disabled due to environment security constraints (COEP).' : 'ブラウザのセキュリティ制限(COEP)によりWebMは使用できません。'}
+                    </span>
+                    <span className="text-xs opacity-70 mt-1 block">
+                    {lang === 'KR' ? '대신 스프라이트 시트를 사용하세요.' : lang === 'EN' ? 'Please use Sprite Sheet export instead.' : '代わりにスプライトシートを使用してください。'}
+                    </span>
+                  </div>
+                ) : isVideoProcessing ? (
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>

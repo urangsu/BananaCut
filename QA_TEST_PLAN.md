@@ -62,4 +62,46 @@
 
 3. **Privacy & Policy Checks**
    - Action: View Privacy Policy.
-   - Expected: Clearly states Google AdSense compatibility without explicitly guaranteeing "No Ads".
+ ## 4. Launch Hardening P0 Tests
+
+1. **Privacy claim network inspection**
+   - Action: Open Network tab, upload a video, apply key, export Sprite Sheet.
+   - Expected: No requests to `/api/process-*` or any external backend endpoints. Everything is local to `blob:` or `localhost:3000`.
+
+2. **production build dist key grep**
+   - Action: Run `grep -R "GEMINI_API_KEY|AIza" dist || true`.
+   - Expected: No matches in the production bundle.
+
+3. `/api/process-*` production path 없음을 확인
+   - Action: Inspect the loaded source code.
+   - Expected: `fetch('/api/process-frames')` or similar API calls do not exist in the client chunk.
+
+4. **1080p 300 frames & 720p 300 frames (Desktop)**
+   - Action: Upload a ~10 sec 1080p video (30fps) on Desktop.
+   - Expected: Passes the hard cap, triggers soft cap prompt, user can proceed. Video shouldn't crash.
+
+5. **mobile 100 frames**
+   - Action: Upload a ~3.5 sec video on an emulated Mobile device.
+   - Expected: Passes soft cap, user confirms. Successful extraction without memory crash.
+
+6. **hard cap 초과 영상 차단**
+   - Action: Upload a 30-minute 4K video.
+   - Expected: Immediate block by hard cap limits in `useMediaImport.ts` before extraction even starts. Clean exit.
+
+7. **FFmpeg unavailable 상태 (Graceful Degrade)**
+   - Action: Block `/ffmpeg-core.js` in network tab or simulate COEP failure.
+   - Expected: WebM Export displays an error box "WebM is disabled due to environment security constraints". Sprite Sheet export remains fully functional.
+
+8. **Transparent Video disabled but Sprite Sheet available**
+   - Condition: FFmpeg failed to initialize.
+   - Action: Click Sprite Sheet export.
+   - Expected: Sprite Sheet works seamlessly and generates PNG + JSON correctly.
+
+9. **AdSense script + COOP/COEP coexistence**
+   - Condition: Live environment.
+   - Expected: Either WebM works if headers are perfectly set, or WebM degrades gracefully without breaking the rest of the application including Google AdSense.
+
+10. **Cross-browser Compatibility**
+   - Action: Open BananaCut and test basic removal workflow.
+   - Targets: Safari latest, Chrome latest, iPhone Safari, Android Chrome.
+   - Expected: Functions core capabilities (Sprite Sheet / PNG generation). FFmpeg WebM might be unsupported on iOS Safari, which should fail gracefully via the FFmpegContext error handler.
