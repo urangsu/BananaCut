@@ -682,49 +682,20 @@ export default function LandingPage() {
 
         {/* Footer for Landing Page */}
         <footer
-          className={`w-full py-6 mt-12 border-t px-6 flex flex-col md:flex-row items-center justify-between gap-4 ${isDark ? "border-white/10 text-white/40" : "border-gray-200 text-gray-500"}`}
+          className={`w-full py-8 mt-12 border-t px-6 flex flex-col items-center justify-center gap-6 ${isDark ? "border-white/10 text-white/40" : "border-gray-200 text-gray-500"}`}
         >
-          <div className="text-xs font-medium">
-            © 2026 BananaCut | BY. DALGRACSTUDIO
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs font-medium max-w-2xl">
+            <Link to="/guides" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Guides</Link>
+            <Link to="/examples" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Examples</Link>
+            <Link to="/privacy" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Privacy</Link>
+            <Link to="/terms" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Terms</Link>
+            <Link to="/contact" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Contact</Link>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Feedback</a>
+            <button onClick={() => setShowGetApp(true)} className="text-yellow-600 dark:text-yellow-500 hover:text-yellow-500 dark:hover:text-yellow-400 transition-colors flex items-center gap-1">Support 🍌</button>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-medium">
-            <Link
-              to="/guide"
-              className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-            >
-              Guide
-            </Link>
-            <span className="opacity-20">|</span>
-            <Link
-              to="/privacy"
-              className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-            >
-              Privacy
-            </Link>
-            <span className="opacity-20">|</span>
-            <Link
-              to="/terms"
-              className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-            >
-              Terms
-            </Link>
-            <span className="opacity-20">|</span>
-            <a
-              href="https://tally.so/r/44vorO"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-            >
-              Feedback
-            </a>
-            <span className="opacity-20">|</span>
-            <button
-              onClick={() => setShowGetApp(true)}
-              className="text-yellow-600 dark:text-yellow-500 hover:text-yellow-500 dark:hover:text-yellow-400 transition-colors flex items-center gap-1"
-            >
-              Support 🍌
-            </button>
+          <div className="text-xs font-medium">
+            © 2026 BananaCut | BY. DALGRACSTUDIO
           </div>
         </footer>
       </main>

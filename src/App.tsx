@@ -9,7 +9,8 @@ import {
   X,
   Mail,
   Shield,
-  Smartphone
+  Smartphone,
+  MoreHorizontal
 } from 'lucide-react';
 import RemovePage from './pages/RemovePage';
 import RecoverPage from './pages/RecoverPage';
@@ -40,6 +41,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   const [showHelp, setShowHelp] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [showGetApp, setShowGetApp] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [imgError, setImgError] = useState(false);
 
@@ -157,23 +159,13 @@ function Layout({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className={`flex flex-col items-center gap-3 pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
-            <div className={`flex flex-wrap justify-center gap-x-3 gap-y-2 text-[11px] font-medium w-full ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+            <div className={`flex justify-center gap-x-4 text-[11px] font-medium w-full ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
               <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors no-underline">App Guide</button>
-              <Link to="/guides" className="hover:text-blue-500 transition-colors no-underline">Guides</Link>
-              <Link to="/examples" className="hover:text-blue-500 transition-colors no-underline">Examples</Link>
-              <Link to="/about" className="hover:text-blue-500 transition-colors no-underline">About</Link>
-              <Link to="/contact" className="hover:text-blue-500 transition-colors no-underline">Contact</Link>
-              <Link to="/privacy" className="hover:text-blue-500 transition-colors no-underline">Privacy</Link>
-              <Link to="/terms" className="hover:text-blue-500 transition-colors no-underline">Terms</Link>
-              <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors no-underline">Feedback</a>
-            </div>
-            
-            <div className="w-full flex justify-center mt-1">
-              <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition-colors no-underline flex items-center justify-center gap-1 font-medium text-yellow-600 dark:text-yellow-500">Support 🍌</button>
+              <button onClick={() => setShowMore(true)} className="hover:text-blue-500 transition-colors no-underline">More</button>
             </div>
             
             <div className={`text-[10px] text-center mt-1 ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
-              © 2026 BananaCut | BY. DALGRACSTUDIO
+              © 2026 BananaCut
             </div>
           </div>
         </div>
@@ -262,23 +254,14 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
         
         <div className="flex flex-col items-center gap-2 mb-4 w-full px-4">
-          <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 text-[11px] font-medium w-full max-w-[280px]">
+          <div className="flex justify-center gap-x-4 text-[11px] font-medium w-full">
             <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors">App Guide</button>
-            <Link to="/guides" className="hover:text-blue-500 transition-colors">Guides</Link>
-            <Link to="/examples" className="hover:text-blue-500 transition-colors">Examples</Link>
-            <Link to="/about" className="hover:text-blue-500 transition-colors">About</Link>
-            <Link to="/contact" className="hover:text-blue-500 transition-colors">Contact</Link>
-            <Link to="/privacy" className="hover:text-blue-500 transition-colors">Privacy</Link>
-            <Link to="/terms" className="hover:text-blue-500 transition-colors">Terms</Link>
-            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
-          </div>
-          <div className="w-full flex justify-center mt-1">
-            <button onClick={() => setShowSupport(true)} className="text-yellow-500 hover:text-yellow-600 transition-colors flex items-center justify-center gap-1 font-bold">Support 🍌</button>
+            <button onClick={() => setShowMore(true)} className="hover:text-blue-500 transition-colors">More</button>
           </div>
         </div>
 
         <div className={`text-[9px] text-center ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
-          © 2026 BananaCut | BY. DALGRACSTUDIO
+          © 2026 BananaCut
         </div>
       </footer>
 
@@ -470,6 +453,58 @@ function Layout({ children }: { children: React.ReactNode }) {
 
           <div className={`text-xs font-medium tracking-widest uppercase mt-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
             BY. DALGRACSTUDIO
+          </div>
+        </div>
+      </Modal>
+
+      {/* More Modal */}
+      <Modal
+        isOpen={showMore}
+        onClose={() => setShowMore(false)}
+        title={lang === 'KR' ? '더보기' : lang === 'EN' ? 'More' : 'その他'}
+        icon={MoreHorizontal}
+        lang={lang}
+        setLang={setLang}
+        maxWidthClass="max-w-[400px]"
+      >
+        <div className="space-y-6 py-2">
+          {/* Learn */}
+          <div>
+            <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Learn</h4>
+            <div className="flex flex-col gap-1">
+              <Link to="/guides" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                Guides
+              </Link>
+              <Link to="/examples" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                Examples
+              </Link>
+            </div>
+          </div>
+          
+          {/* Legal */}
+          <div>
+            <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Legal</h4>
+            <div className="flex flex-col gap-1">
+              <Link to="/privacy" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                Privacy
+              </Link>
+              <Link to="/terms" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                Terms
+              </Link>
+            </div>
+          </div>
+
+          {/* Feedback */}
+          <div>
+            <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Feedback</h4>
+            <div className="flex flex-col gap-1">
+              <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                Feedback
+              </a>
+              <button onClick={() => { setShowMore(false); setShowSupport(true); }} className="w-full text-left px-3 py-2.5 rounded-xl transition-colors text-yellow-600 dark:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 font-bold flex items-center justify-between">
+                <span>Support 🍌</span>
+              </button>
+            </div>
           </div>
         </div>
       </Modal>
