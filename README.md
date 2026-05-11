@@ -43,7 +43,7 @@ npm run build
 - If deploying in an environment (like some ad networks or strict iFrames) where COEP breaks other scripts (e.g., Google AdSense), you may need to disable global COEP. In that case, WebM export will gracefully disable itself, while the core app and Sprite Sheet export remain fully functional.
 
 ## Privacy Note
-The production version of BananaCut operates entirely client-side. The `experimental/backend` directory contains legacy scripts and is **not used in production**. No media files are ever uploaded to any server.
+The production version of BananaCut operates entirely client-side. The `experimental/backend-legacy/` directory contains legacy scripts and is **not used in production**. No media files are ever uploaded to any server.
 
 ## Known Limits
 - Memory exhaustion on mobile devices if the video is too long.

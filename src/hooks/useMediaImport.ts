@@ -3,6 +3,7 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
 import { extractFramesNative } from '../utils/nativeVideoExtract';
 import { StudioFrame } from '../StudioContext';
+import { getMediaLimits } from '../utils/mediaLimits';
 
 export type UploadState = 'idle' | 'image-loading' | 'video-engine-loading' | 'video-extracting' | 'ready' | 'error';
 
@@ -175,17 +176,16 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
     }
     
     if (file.type.includes('video/mp4') || file.type.includes('video/quicktime')) {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+      const limits = getMediaLimits(isMobile);
+
       try {
         const meta = await probeVideo(file);
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
         const estimatedFrames = Math.ceil(meta.duration * targetFps);
         const estimatedMemoryMB = (meta.width * meta.height * 4 * estimatedFrames * 2.4) / 1024 / 1024;
-        const hardFrames = isMobile ? 180 : 500;
-        const hardMemoryMB = isMobile ? 320 : 900;
-        const softFrames = isMobile ? 100 : 300;
-        const softMemoryMB = isMobile ? 180 : 512;
 
-        if (estimatedFrames > hardFrames || estimatedMemoryMB > hardMemoryMB) {
+        if (estimatedFrames > limits.hardFrames || estimatedMemoryMB > limits.hardMemoryMB) {
+          // TODO: replace window.alert with app modal before public launch polish.
           alert(lang === 'KR' 
             ? "이 영상은 브라우저에서 처리하기에 너무 클 수 있습니다. FPS를 낮추거나 더 짧은 클립을 사용해 주세요." 
             : lang === 'EN' 
@@ -195,7 +195,8 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
           return;
         }
 
-        if (estimatedFrames > softFrames || estimatedMemoryMB > softMemoryMB) {
+        if (estimatedFrames > limits.softFrames || estimatedMemoryMB > limits.softMemoryMB) {
+          // TODO: replace window.confirm with app modal before public launch polish.
           const proceed = window.confirm(lang === 'KR' 
             ? "이 영상은 크기가 커서 브라우저가 느려질 수 있습니다. 계속하시겠습니까?\nFPS를 낮추거나 더 짧은 영상을 권장합니다." 
             : lang === 'EN' 
@@ -208,6 +209,17 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
         }
       } catch(e) {
         console.warn('Probe failed', e);
+        alert(lang === 'KR'
+          ? "이 영상의 정보를 읽을 수 없어 안전하게 처리할 수 없습니다. 다른 형식으로 변환하거나 더 짧은 클립을 사용해 주세요."
+          : lang === 'EN'
+          ? "We could not read this video’s metadata safely. Try converting it to another format or using a shorter clip."
+          : "この動画の情報を安全に読み取れませんでした。別の形式に変換するか、短いクリップを使用してください。");
+        setUploadState('idle');
+        setIsPlaying(false);
+        setExtractionProgress({ current: 0, total: 0 });
+        setExtractionStartMs(null);
+        setExtractionStalled(false);
+        return;
       }
 
       abortControllerRef.current = new AbortController();
@@ -222,9 +234,8 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
       extractionProgressRef.current = { current: 0, lastUpdated: Date.now() };
       let accumulatedFrames: StudioFrame[] = [];
       try {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
         const maxRes = isMobile ? 720 : 1080;
-        const maxFramesLimit = isMobile ? 500 : 1500;
+        const maxFramesLimit = limits.hardFrames;
 
         const { frames: extractedFrames, skippedFrames } = await extractFramesNative(file, {
           fps: targetFps,
@@ -330,8 +341,9 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
       setImgDims(null);
       
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+      const limits = getMediaLimits(isMobile);
       const maxRes = isMobile ? 720 : 1080;
-      const maxFramesLimit = isMobile ? 500 : 1500;
+      const maxFramesLimit = limits.hardFrames;
       
       console.log(`Running FFmpeg command with scaling (Max ${maxRes}p, Device: ${isMobile ? 'Mobile' : 'Desktop'})...`);
       
