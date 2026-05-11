@@ -12,7 +12,7 @@ export default function AboutPage() {
       <div className="flex items-center gap-3 mb-8 border-b pb-6 border-gray-200 dark:border-white/10">
         <Info className={`w-8 h-8 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
         <h1 className="text-3xl font-semibold tracking-tight">
-          {lang === 'KR' ? 'About BananaCut' : lang === 'EN' ? 'About BananaCut' : 'About BananaCut'}
+          {lang === 'KR' ? 'Why I Built BananaCut' : lang === 'EN' ? 'Why I Built BananaCut' : 'Why I Built BananaCut'}
         </h1>
       </div>
 
@@ -23,8 +23,7 @@ export default function AboutPage() {
               BananaCut은 앱에 사용할 에셋을 만들던 과정에서 시작한 브라우저 기반 도구입니다.
             </p>
             <p>
-              동영상이나 이미지 시퀀스에서 배경을 제거하고, 남은 프레임의 빈틈이나 가장자리 얼룩을 정리하며, 
-              PNG 시퀀스와 스프라이트 시트를 내보내는 과정을 더 빠르고 쉽게 만드는 것을 목표로 합니다.
+              배경 제거와 프레임 정리가 반복적이고 번거로워 직접 만들었고, 같은 문제를 겪는 분들도 사용할 수 있도록 공개했습니다.
             </p>
             <p>
               모든 작업은 브라우저 내에서 안전하게 로컬로 처리되며 서버로 파일이 업로드되지 않습니다.
@@ -36,10 +35,10 @@ export default function AboutPage() {
         {lang === 'EN' && (
           <div className="space-y-6">
             <p>
-              BananaCut was built while preparing assets for an app project.
+              BananaCut started while I was preparing assets for an app project.
             </p>
             <p>
-              It helps creators remove backgrounds, clean frames, and export reusable assets like PNG sequences, WebM videos, and sprite sheets for apps, games, videos, and websites.
+              I built it because background removal and frame cleanup were repetitive and inconvenient, then made it available for others with the same workflow problem.
             </p>
             <p>
               All processing happens locally and securely within your browser, meaning your media files are never uploaded to any server. Our goal is to make asset creation faster and easier for fellow creators.
@@ -50,10 +49,10 @@ export default function AboutPage() {
         {lang === 'JP' && (
           <div className="space-y-6">
             <p>
-              BananaCutは、アプリ用のゲームアセットを作成する過程から生まれたブラウザベースのツールです。
+              BananaCutは、自身のアプリプロジェクト用アセットを準備していた過程で始まりました。
             </p>
             <p>
-              背景の除去、フレームの整理、アプリ・ゲーム・映像・Webサイト向けのPNGシーケンスやスプライトシートの書き出しを、より簡単かつ迅速にすることを目指しています。
+              背景の除去やフレームのクリーンアップが反復的で面倒だったため自作し、同じワークフローの悩みを抱える他のクリエイターも使えるように公開しました。
             </p>
             <p>
               すべての処理はブラウザ内で安全に行われ、メディアファイルがサーバーにアップロードされることはありません。クリエイターの皆様が、より手軽に必要なリソースを作成できるよう支援します。
