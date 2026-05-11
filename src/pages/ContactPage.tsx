@@ -19,9 +19,9 @@ export default function ContactPage() {
       <div className={`space-y-8 text-base leading-relaxed p-6 md:p-8 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
         <div className="space-y-6">
           <p className="opacity-80">
-            {lang === 'KR' ? '제휴, 버그 리포트, 아이디어 제안 등 모든 문의를 환영합니다.' 
-             : lang === 'EN' ? 'We welcome all inquiries, bug reports, and suggestions.' 
-             : '提携、バグ報告、アイデアの提案など、すべてのお問い合わせを歓迎します。'}
+            {lang === 'KR' ? '버그 제보, 기능 제안, 사용 중 불편한 점을 편하게 보내주세요.' 
+             : lang === 'EN' ? 'Send bug reports, feature ideas, or feedback about your workflow.' 
+             : 'バグ報告、機能提案、使いにくい点などをお気軽にお送りください。'}
           </p>
           
           <div className="space-y-4">

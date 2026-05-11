@@ -24,6 +24,9 @@ export default function ExamplesPage() {
             <Video className={`w-6 h-6 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
             <h2 className="text-2xl font-bold">1. Green-screen character animation</h2>
           </div>
+          <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
+            <img src="/images/examples/placeholder-1.svg" alt="Green-screen character animation" className="w-full h-auto block" />
+          </div>
           <div className="space-y-4 text-base opacity-80">
             <div>
               <strong className="block mb-1 opacity-100">Problem:</strong>
@@ -50,6 +53,9 @@ export default function ExamplesPage() {
             <Sparkles className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
             <h2 className="text-2xl font-bold">2. AI-generated motion clip</h2>
           </div>
+          <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
+            <img src="/images/examples/placeholder-2.svg" alt="AI-generated motion clip after cleanup" className="w-full h-auto block" />
+          </div>
           <div className="space-y-4 text-base opacity-80">
             <div>
               <strong className="block mb-1 opacity-100">Problem:</strong>
@@ -75,6 +81,9 @@ export default function ExamplesPage() {
           <div className="flex items-center gap-3 mb-6">
             <Grid className={`w-6 h-6 ${isDark ? 'text-orange-400' : 'text-orange-600'}`} />
             <h2 className="text-2xl font-bold">3. App/game sprite sheet workflow</h2>
+          </div>
+          <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
+            <img src="/images/examples/placeholder-3.svg" alt="App or game sprite sheet workflow" className="w-full h-auto block" />
           </div>
           <div className="space-y-4 text-base opacity-80">
             <div>

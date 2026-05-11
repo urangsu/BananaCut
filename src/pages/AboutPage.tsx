@@ -17,48 +17,39 @@ export default function AboutPage() {
       </div>
 
       <div className={`space-y-8 text-base leading-relaxed p-6 md:p-8 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-        {lang === 'KR' && (
-          <div className="space-y-6">
-            <p>
-              BananaCut은 앱에 사용할 에셋을 만들던 과정에서 시작한 브라우저 기반 도구입니다.
-            </p>
-            <p>
-              배경 제거와 프레임 정리가 반복적이고 번거로워 직접 만들었고, 같은 문제를 겪는 분들도 사용할 수 있도록 공개했습니다.
-            </p>
-            <p>
-              모든 작업은 브라우저 내에서 안전하게 로컬로 처리되며 서버로 파일이 업로드되지 않습니다.
-              창작자들이 게임, 앱, 웹사이트, 영상 제작에 필요한 리소스를 쉽고 빠르게 얻을 수 있도록 돕겠습니다.
-            </p>
-          </div>
-        )}
+        <p className="opacity-90">
+          BananaCut is a personal project born out of frustration. It started while I was preparing assets for an app project. I built it because background removal and frame cleanup were repetitive and inconvenient, then made it available for others with the same workflow problem.
+        </p>
         
-        {lang === 'EN' && (
-          <div className="space-y-6">
-            <p>
-              BananaCut started while I was preparing assets for an app project.
+        <div className="space-y-8 mt-8">
+          <section>
+            <h2 className="text-xl font-bold mb-3">What BananaCut is for</h2>
+            <p className="opacity-80">
+              When creating small apps, indie games, or prototyping UI, you often need isolated moving assets. You either record something on a green screen or generate a quick motion clip using AI. The problem is removing that solid background perfectly across dozens of frames. Professional video editing software is heavy, expensive, and overkill for extracting a simple sprite sheet. BananaCut is a lightweight tool specifically for developers and creators to solve this narrow problem quickly.
             </p>
-            <p>
-              I built it because background removal and frame cleanup were repetitive and inconvenient, then made it available for others with the same workflow problem.
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold mb-3">Why browser-based processing matters</h2>
+            <p className="opacity-80">
+              Many background removal services act as black boxes. You upload your video to a server, wait for a queue, pay credits, and hope the result is acceptable. BananaCut runs entirely locally in your browser. Utilizing modern WebAssembly and in-memory frame processing, the media files never leave your computer. This gives you instant feedback, zero privacy risks, and no unnecessary server latency.
             </p>
-            <p>
-              All processing happens locally and securely within your browser, meaning your media files are never uploaded to any server. Our goal is to make asset creation faster and easier for fellow creators.
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold mb-3">What BananaCut does not do</h2>
+            <p className="opacity-80">
+              It is not a complex video editor. It does not create advanced motion graphics, handle multi-track audio, or generate complex visual effects. It is a utility for cleaning alpha channels, fixing frame artifacts, and exporting usable assets. If you need to make a movie, use standard software. If you need a transparent running character for your web project, use BananaCut.
             </p>
-          </div>
-        )}
-        
-        {lang === 'JP' && (
-          <div className="space-y-6">
-            <p>
-              BananaCutは、自身のアプリプロジェクト用アセットを準備していた過程で始まりました。
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold mb-3">Feedback and improvements</h2>
+            <p className="opacity-80">
+              This tool is continuously evolving based on what breaks and what feels too slow in real-world workflows. If you encounter bugs, have ideas to make the interface faster, or run into specific video formats that fail to load, please reach out.
             </p>
-            <p>
-              背景の除去やフレームのクリーンアップが反復的で面倒だったため自作し、同じワークフローの悩みを抱える他のクリエイターも使えるように公開しました。
-            </p>
-            <p>
-              すべての処理はブラウザ内で安全に行われ、メディアファイルがサーバーにアップロードされることはありません。クリエイターの皆様が、より手軽に必要なリソースを作成できるよう支援します。
-            </p>
-          </div>
-        )}
+          </section>
+        </div>
       </div>
     </div>
   );
