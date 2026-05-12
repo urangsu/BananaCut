@@ -1678,6 +1678,14 @@ export default function RemovePage() {
                 </div>
               </div>
 
+              <p className={`mb-4 text-sm ${isDark ? "text-white/60" : "text-gray-600"}`}>
+                {lang === "KR"
+                  ? "피커로 배경색을 찍고, 브러시로 남길 영역을 보호하세요."
+                  : lang === "EN"
+                    ? "Pick the background color and protect areas to keep with the brush."
+                    : "ピッカーで背景色を選び、ブラシで残したい部分を保護します。"}
+              </p>
+
               <div className="space-y-6">
                 {isBrushActive && (
                   <div

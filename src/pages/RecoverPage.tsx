@@ -943,7 +943,14 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
 
           {/* Smart Fill Tools */}
           <div className={`order-2 border rounded-2xl p-5 ${panelBg}`}>
-            <h3 className={`text-sm font-medium mb-4 ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>{lang === 'KR' ? 'Smart Fill (스마트 채우기)' : lang === 'EN' ? 'Smart Fill' : 'スマート塗りつぶし'}</h3>
+            <h3 className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>{lang === 'KR' ? 'Smart Fill (스마트 채우기)' : lang === 'EN' ? 'Smart Fill' : 'スマート塗りつぶし'}</h3>
+            <p className={`mb-4 text-xs ${theme === 'dark' ? 'text-white/60' : 'text-gray-600'}`}>
+              {lang === "KR"
+                ? "피커로 주변 색을 가져와 지워진 가장자리를 복구하세요."
+                : lang === "EN"
+                  ? "Pick nearby colors and recover the removed edges."
+                  : "周囲の色をピッカーで取り、消えたエッジを復元します。"}
+            </p>
             
             <div className="space-y-5">
               <div>

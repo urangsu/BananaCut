@@ -196,7 +196,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             }`}
           >
             <Smartphone className="w-3.5 h-3.5" />
-            {lang === 'KR' ? '로드맵' : lang === 'EN' ? 'Roadmap' : 'ロードマップ'}
+            {lang === 'KR' ? '앱 다운로드' : lang === 'EN' ? 'GET APP' : 'アプリ入手'}
           </button>
           
           {/* Language Toggle */}
@@ -400,7 +400,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       <Modal
         isOpen={showGetApp}
         onClose={() => setShowGetApp(false)}
-        title="Roadmap"
+        title="GET APP"
         icon={Smartphone}
         lang={lang}
         setLang={setLang}
@@ -425,7 +425,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           
           <div className="space-y-2">
             <h3 className="text-xl font-bold">
-              {lang === 'KR' ? '웹 버전이 안정화된 뒤 앱 버전을 검토할 예정입니다.' : lang === 'EN' ? 'An app version is planned after the web workflow is stable.' : 'Web版が安定した後、アプリ版を検討する予定です。'}
+              {lang === 'KR' ? '아직 어플 준비 중입니다.' : lang === 'EN' ? 'App is under development.' : 'アプリは準備中です。'}
             </h3>
             <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
               {lang === 'KR' ? '반응이 좋으면 준비해볼게요! 🍌' : lang === 'EN' ? "We'll prepare it if there's good feedback! 🍌" : '反響が良ければ準備します！ 🍌'}

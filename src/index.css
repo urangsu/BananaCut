@@ -55,3 +55,9 @@
 .text-balance {
   text-wrap: balance;
 }
+
+.copy-readable {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.75;
+}
