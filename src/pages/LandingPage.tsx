@@ -13,6 +13,7 @@ import {
   Shield,
   Sun,
   Moon,
+  HelpCircle,
 } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { BrandLogo } from "../components/BrandLogo";
@@ -194,7 +195,7 @@ const DEMO_TIMELINE = [
   {
     id: 'remove',
     time: 35,
-    label: '01:35 - REMOVE',
+    label: '00:35 - REMOVE',
     title: {
       KR: '배경 제거',
       EN: 'REMOVE',
@@ -228,6 +229,7 @@ export default function LandingPage() {
   const { isDark, toggleTheme } = useTheme();
   const { lang, setLang } = useLanguage();
   const [showGetApp, setShowGetApp] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -780,7 +782,9 @@ export default function LandingPage() {
             <Link to="/terms" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Terms</Link>
             <Link to="/contact" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Contact</Link>
             <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Feedback</a>
-            <button onClick={() => setShowGetApp(true)} className="text-yellow-600 dark:text-yellow-500 hover:text-yellow-500 dark:hover:text-yellow-400 transition-colors flex items-center gap-1">Support 🍌</button>
+            <button onClick={() => setShowSupport(true)} className="flex items-center justify-center gap-1 text-[#FACC15] hover:text-yellow-400 transition-colors">
+              {lang === 'KR' ? '후원하기' : lang === 'EN' ? 'Support' : '応援する'} 🍌
+            </button>
           </div>
 
           <div className="text-xs font-medium">
@@ -864,6 +868,53 @@ export default function LandingPage() {
           >
             BY. DALGRACSTUDIO
           </div>
+        </div>
+      </Modal>
+
+      {/* Support Modal */}
+      <Modal
+        isOpen={showSupport}
+        onClose={() => setShowSupport(false)}
+        title={lang === 'KR' ? '후원하기' : lang === 'EN' ? 'Support Us' : 'サポート'}
+        icon={HelpCircle}
+        lang={lang}
+        setLang={setLang}
+        maxWidthClass="max-w-[350px]"
+      >
+        <div className="grid grid-cols-1 gap-3 py-2">
+          <button
+            onClick={() => {
+              if (window.innerWidth < 768) {
+                window.open("https://toon.at/donate/dalgracstudio", "_blank");
+              } else {
+                const width = 450;
+                const height = 600;
+                const left = (window.screen.width / 2) - (width / 2);
+                const top = (window.screen.height / 2) - (height / 2);
+                window.open(
+                  "https://toon.at/donate/dalgracstudio",
+                  "ToonationPopup",
+                  `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no`
+                );
+              }
+              setShowSupport(false);
+            }}
+            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[#673ab7] text-white font-medium hover:bg-[#5e35b1] transition-colors shadow-sm whitespace-nowrap text-sm"
+          >
+            <span className="text-base">☕</span>
+            {lang === 'KR' ? '익명으로 커피 후원하기' : lang === 'EN' ? 'Buy us a coffee anonymously' : '匿名でコーヒーを一杯おごる'}
+          </button>
+          
+          <a
+            href="https://ko-fi.com/siuuuukim"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setShowSupport(false)}
+            className={`flex items-center justify-center gap-2 p-3 rounded-xl font-medium transition-colors border whitespace-nowrap text-sm ${isDark ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-gray-100'}`}
+          >
+            <span className="text-base">🍌</span>
+            {lang === 'KR' ? 'Ko-fi로 후원하기' : lang === 'EN' ? 'Support via Ko-fi' : 'Ko-fiでサポート'}
+          </a>
         </div>
       </Modal>
     </div>
