@@ -34,6 +34,7 @@ PASS
 - 예시 이미지 재생성 요건 완료 (Binary PNG 생성 제한으로 코드 수준에서 대응): PASS
 - 이미지 fallback 컴포넌트 추가 및 적용: PASS
 - YouTube 썸네일 로컬화 (/images/demo-thumbnail.jpg): PASS
+- Smart Crop Recommendation & Stable Safe Box 구현: PASS
 
 ## 검증 결과
 npm run lint: PASS

@@ -368,6 +368,8 @@ export default function AssetPage() {
           exportSizeMode,
           alphaThreshold,
           padding: cropPadding,
+          sourceWidth: sourceDim?.width,
+          sourceHeight: sourceDim?.height,
           cropApplied: exportSizeMode === "recommendedStableCrop" && !!stableBox,
           rawFramesPreservedOriginalCanvas: true
         },
@@ -711,12 +713,57 @@ export default function AssetPage() {
                 {analyzeProgress > 0 && <span className="ml-2 text-xs">{analyzeProgress}%</span>}
 
                 {stableBox && (
-                  <div className="mt-4 text-xs space-y-1 opacity-80">
-                    <div>Current canvas: {sourceDim?.width} × {sourceDim?.height}</div>
-                    <div>Recommended safe box: {stableBox.w} × {stableBox.h}</div>
-                    <div>Transparent waste: {Math.round(transparentWasteRatio * 100)}%</div>
-                    <div>Padding: {cropPadding}px</div>
-                    <div>Alpha threshold: {alphaThreshold}</div>
+                  <div className="mt-4 space-y-4">
+                    <div className="text-xs space-y-1 opacity-80">
+                      <div>Current canvas: {sourceDim?.width} × {sourceDim?.height}</div>
+                      <div>Recommended safe box: {stableBox.w} × {stableBox.h}</div>
+                      <div>Transparent waste: {Math.round(transparentWasteRatio * 100)}%</div>
+                      <div>Padding: {cropPadding}px</div>
+                      <div>Alpha threshold: {alphaThreshold}</div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowCropPreview(!showCropPreview)}
+                        className={`text-xs px-3 py-1.5 rounded-lg font-bold ${showCropPreview ? 'bg-blue-600' : 'bg-gray-600'} text-white`}
+                      >
+                        {showCropPreview ? 'Hide Preview' : 'Preview Box'}
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-xs font-bold block">Export Size Mode</label>
+                       <select 
+                         value={exportSizeMode}
+                         onChange={(e) => setExportSizeMode(e.target.value as any)}
+                         className="w-full text-xs p-1.5 rounded bg-white dark:bg-black border border-white/10"
+                       >
+                         <option value="original">Original Canvas</option>
+                         <option value="recommendedStableCrop">Recommended Stable Crop</option>
+                         <option value="customCanvas">Custom Canvas</option>
+                       </select>
+                    </div>
+
+                    {exportSizeMode === 'customCanvas' && (
+                      <div className="space-y-2 text-xs">
+                        <div className="flex gap-2">
+                          <input type="number" placeholder="W" value={customWidth} onChange={(e) => setCustomWidth(Number(e.target.value))} className="w-1/2 p-1.5 rounded bg-white dark:bg-black border border-white/10" />
+                          <input type="number" placeholder="H" value={customHeight} onChange={(e) => setCustomHeight(Number(e.target.value))} className="w-1/2 p-1.5 rounded bg-white dark:bg-black border border-white/10" />
+                        </div>
+                        <select value={customFit} onChange={(e) => setCustomFit(e.target.value as any)} className="w-full p-1.5 rounded bg-white dark:bg-black border border-white/10">
+                          <option value="contain">Contain</option>
+                          <option value="cover">Cover</option>
+                          <option value="none">None</option>
+                        </select>
+                        <select value={customAnchor} onChange={(e) => setCustomAnchor(e.target.value as any)} className="w-full p-1.5 rounded bg-white dark:bg-black border border-white/10">
+                          <option value="center">Center</option>
+                          <option value="top">Top</option>
+                          <option value="bottom">Bottom</option>
+                          <option value="left">Left</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

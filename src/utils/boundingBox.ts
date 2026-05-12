@@ -118,6 +118,9 @@ export async function analyzeFrameBounds(
 
   let count = 0;
   for (const idx of indicesToAnalyze) {
+    if (count > 0 && count % 15 === 0) {
+      await new Promise((r) => requestAnimationFrame(r));
+    }
     const f = processedFrames[idx];
     const url = useProcessed ? f.processedUrl || f.base64 : f.rawUrl;
     if (!url) continue;
