@@ -154,6 +154,54 @@ function ScratchOverlay({
   );
 }
 
+const DEMO_TIMELINE = [
+  {
+    id: 'upload',
+    time: 34,
+    label: '00:34 - Upload',
+    title: {
+      KR: '영상 업로드',
+      EN: 'Upload',
+      JP: 'アップロード'
+    },
+    description: {
+      KR: '영상을 브라우저에서 바로 불러옵니다.',
+      EN: 'Load your video directly in the browser.',
+      JP: '動画をブラウザで直接読み込みます。'
+    }
+  },
+  {
+    id: 'remove',
+    time: 35,
+    label: '00:35 - REMOVE',
+    title: {
+      KR: '배경 제거',
+      EN: 'REMOVE',
+      JP: '背景除去'
+    },
+    description: {
+      KR: '배경색을 선택하고, 프레임에서 피사체를 분리합니다.',
+      EN: 'Pick the background color and separate the subject from each frame.',
+      JP: '背景色を選び、各フレームから被写体を切り出します。'
+    }
+  },
+  {
+    id: 'recover',
+    time: 74,
+    label: '01:14 - RECOVER',
+    title: {
+      KR: '가장자리 복구',
+      EN: 'RECOVER',
+      JP: '復元'
+    },
+    description: {
+      KR: '배경 제거 후 생긴 빈틈과 가장자리 얼룩을 손쉽게 다듬을 수 있습니다.',
+      EN: 'Fix gaps and rough edges left after background removal.',
+      JP: '背景除去後に残った隙間やエッジの汚れを整えられます。'
+    }
+  }
+];
+
 export default function LandingPage() {
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
@@ -164,6 +212,32 @@ export default function LandingPage() {
   const [imgError, setImgError] = useState(false);
   const [demoState, setDemoState] = useState<"checking" | "local" | "youtube" | "error">("checking");
   const [localVideoSrc, setLocalVideoSrc] = useState<string | null>(null);
+  const demoVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  const openYouTubeAt = (seconds: number) => {
+    window.open(
+      `https://www.youtube.com/watch?v=rTOB6sX-zA8&t=${seconds}s`,
+      '_blank',
+      'noopener,noreferrer'
+    );
+  };
+
+  const playDemoAt = async (seconds: number) => {
+    trackEvent('Click_Demo_Timestamp', 'Landing Page Demo', `seconds_${seconds}`);
+
+    if (demoState === 'local' && demoVideoRef.current) {
+      const video = demoVideoRef.current;
+      try {
+        video.currentTime = seconds;
+        await video.play();
+      } catch (err) {
+        openYouTubeAt(seconds);
+      }
+      return;
+    }
+
+    openYouTubeAt(seconds);
+  };
 
   useEffect(() => {
     const checkLocalVideo = async () => {
@@ -333,31 +407,27 @@ export default function LandingPage() {
                   <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
                 </div>
               ) : demoState === "error" ? (
-                <div className="flex flex-col items-center justify-center text-white/50 space-y-4">
-                  <PlaySquare className="w-12 h-12 opacity-50" />
-                  <p>
-                    {lang === "KR"
-                      ? "데모 영상을 불러오지 못했습니다."
-                      : lang === "EN"
-                        ? "Demo video could not be loaded."
-                        : "デモ動画を読み込めませんでした。"}
-                  </p>
-                  <a
-                    href="https://www.youtube.com/watch?v=rTOB6sX-zA8"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors flex items-center gap-2 font-medium"
-                  >
-                    <PlaySquare className="w-5 h-5" />
-                    {lang === "KR"
-                      ? "YouTube에서 보기"
-                      : lang === "EN"
-                        ? "Watch on YouTube"
-                        : "YouTubeで見る"}
-                  </a>
-                </div>
+                 <a
+                  href="https://www.youtube.com/watch?v=rTOB6sX-zA8"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center justify-center text-white/50 space-y-4 hover:text-white transition-colors"
+                >
+                  <img
+                    src="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg"
+                    onError={(e) => {
+                      e.currentTarget.src = "https://img.youtube.com/vi/rTOB6sX-zA8/hqdefault.jpg";
+                    }}
+                    alt="BananaCut demo video thumbnail"
+                    className="w-full h-full object-cover rounded-3xl"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <PlaySquare className="w-12 h-12" />
+                  </div>
+                </a>
               ) : demoState === "local" && localVideoSrc ? (
                 <video
+                  ref={demoVideoRef}
                   autoPlay
                   muted
                   loop
@@ -369,17 +439,25 @@ export default function LandingPage() {
                   onError={() => setDemoState("youtube")}
                 >
                   <source src={localVideoSrc} type={localVideoSrc.endsWith(".webm") ? "video/webm" : "video/mp4"} />
-                  <p>Your browser does not support HTML5 video.</p>
                 </video>
               ) : (
-                <iframe
-                  className="w-full h-full absolute inset-0 object-cover"
-                  src="https://www.youtube.com/embed/rTOB6sX-zA8?autoplay=1&mute=1&playsinline=1&controls=0&rel=0&modestbranding=1"
-                  title="BananaCut Demo Video"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  onError={() => setDemoState("error")}
-                />
+                <button
+                  type="button"
+                  onClick={() => playDemoAt(0)}
+                  className="relative w-full h-full flex items-center justify-center group"
+                >
+                  <img
+                    src="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg"
+                    onError={(e) => {
+                      e.currentTarget.src = "https://img.youtube.com/vi/rTOB6sX-zA8/hqdefault.jpg";
+                    }}
+                    alt="BananaCut demo video thumbnail"
+                    className="w-full h-full object-cover rounded-3xl"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
+                    <PlaySquare className="w-16 h-16 text-white" />
+                  </div>
+                </button>
               )}
             </div>
 
@@ -396,60 +474,31 @@ export default function LandingPage() {
                       : "生成動画、グリーンバックアニメーション、アプリ・ゲーム用フレーム素材をブラウザで整理できます。"}
                 </p>
               </div>
-              <div
-                className={`p-6 rounded-2xl shadow-sm ${isDark ? "bg-white/5 border border-white/10" : "bg-gray-50 border border-gray-100"}`}
-              >
-                <strong
-                  className={`block mb-3 text-base ${isDark ? "text-white" : "text-black"}`}
+              {DEMO_TIMELINE.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => playDemoAt(item.time)}
+                  aria-label={`Play demo from ${item.label}`}
+                  className={`p-6 rounded-2xl shadow-sm text-left transition-all hover:scale-[1.02] ${isDark ? "bg-white/5 border border-white/10 hover:bg-white/10" : "bg-gray-50 border border-gray-100 hover:bg-gray-100"}`}
                 >
-                  00:34 - Upload
-                </strong>
-                <p
-                  className={`leading-relaxed ${isDark ? "text-white/60" : "text-gray-600"}`}
-                >
-                  {lang === "KR"
-                    ? "영상을 브라우저에서 바로 불러옵니다."
-                    : lang === "EN"
-                      ? "Load your video directly in the browser."
-                      : "動画をブラウザで直接読み込みます。"}
-                </p>
-              </div>
-              <div
-                className={`p-6 rounded-2xl shadow-sm ${isDark ? "bg-white/5 border border-white/10" : "bg-gray-50 border border-gray-100"}`}
-              >
-                <strong
-                  className={`block mb-3 text-base ${isDark ? "text-white" : "text-black"}`}
-                >
-                  00:35 - REMOVE
-                </strong>
-                <p
-                  className={`leading-relaxed ${isDark ? "text-white/60" : "text-gray-600"}`}
-                >
-                  {lang === "KR"
-                    ? "배경색을 선택하고, 프레임에서 피사체를 분리합니다."
-                    : lang === "EN"
-                      ? "Pick the background color and separate the subject from each frame."
-                      : "背景色を選び、各フレームから被写体を切り出します。"}
-                </p>
-              </div>
-              <div
-                className={`p-6 rounded-2xl shadow-sm ${isDark ? "bg-white/5 border border-white/10" : "bg-gray-50 border border-gray-100"}`}
-              >
-                <strong
-                  className={`block mb-3 text-base ${isDark ? "text-white" : "text-black"}`}
-                >
-                  01:14 - RECOVER
-                </strong>
-                <p
-                  className={`leading-relaxed ${isDark ? "text-white/60" : "text-gray-600"}`}
-                >
-                  {lang === "KR"
-                    ? "배경 제거 후 생긴 빈틈과 가장자리 얼룩을 손쉽게 다듬을 수 있습니다."
-                    : lang === "EN"
-                      ? "Fix gaps and rough edges left after background removal."
-                      : "背景除去後に残った隙間やエッジの汚れを整えられます。"}
-                </p>
-              </div>
+                  <strong
+                    className={`block mb-3 text-base ${isDark ? "text-white" : "text-black"}`}
+                  >
+                    {item.label}
+                  </strong>
+                  <p
+                    className={`leading-relaxed mb-4 ${isDark ? "text-white/60" : "text-gray-600"}`}
+                  >
+                    {item.description[lang === "KR" ? "KR" : lang === "JP" ? "JP" : "EN"]}
+                  </p>
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                    {demoState === 'local'
+                      ? lang === 'KR' ? '이 지점부터 재생' : lang === 'EN' ? 'Play from here' : 'ここから再生'
+                      : lang === 'KR' ? 'YouTube에서 이 지점부터 보기' : lang === 'EN' ? 'Watch from here on YouTube' : 'YouTubeでここから見る'}
+                  </span>
+                </button>
+              ))}
             </div>
           </section>
 

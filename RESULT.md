@@ -29,6 +29,8 @@ PASS
 - Roadmap 문구 없음: PASS
 - PNG 바이너리 수정 없음: PASS
 - 작업 화면 광고 유닛 없음: PASS
+- 데모 영상 iframe 제거: PASS
+- 타임라인 카드 인터랙션 구현: PASS
 
 ## 검증 결과
 npm run lint: PASS
