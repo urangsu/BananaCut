@@ -8,7 +8,7 @@ import { getMediaLimits } from '../utils/mediaLimits';
 export type UploadState = 'idle' | 'image-loading' | 'video-engine-loading' | 'video-extracting' | 'ready' | 'error';
 
 export type ImportGuardModalState = {
-  type: 'hard-limit' | 'soft-warning' | 'metadata-failed';
+  type: 'hard-limit' | 'soft-warning' | 'metadata-failed' | 'invalid-format';
   estimatedFrames?: number;
   estimatedMemoryMB?: number;
   limits?: ReturnType<typeof getMediaLimits>;
@@ -335,12 +335,17 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
       return;
     }
     
-    alert(lang === 'KR' ? "MP4, MOV 또는 PNG 파일을 업로드해주세요." : lang === 'EN' ? "Please upload an MP4, MOV, or PNG file." : "MP4、MOV、またはPNGファイルをアップロードしてください。");
-    setUploadState('idle');
-    setExtractionStartMs(null);
-    setExtractionStalled(false);
-    setExtractionProgress({ current: 0, total: 0 });
-    setIsPlaying(false);
+    setImportGuardModal({
+      type: 'invalid-format',
+      onConfirm: () => {
+        setImportGuardModal(null);
+        setUploadState('idle');
+        setExtractionStartMs(null);
+        setExtractionStalled(false);
+        setExtractionProgress({ current: 0, total: 0 });
+        setIsPlaying(false);
+      }
+    });
   };
 
   const extractFramesWithFFmpeg = async (file: File, targetFps: number, engine: FFmpeg) => {

@@ -2953,6 +2953,10 @@ export default function RemovePage() {
                     lang === 'KR' ? '이 영상의 정보를 읽을 수 없어 안전하게 처리할 수 없습니다. 다른 형식으로 변환하거나 더 짧은 클립을 사용해 주세요.' :
                     lang === 'EN' ? 'We could not read this video’s metadata safely. Try converting it to another format or using a shorter clip.' :
                     'この動画の情報を安全に読み取れませんでした。別の形式に変換するか、短いクリップを使用してください。'
+                  ) : importGuardModal.type === 'invalid-format' ? (
+                    lang === 'KR' ? 'MP4, MOV 또는 PNG 파일을 업로드해주세요.' :
+                    lang === 'EN' ? 'Please upload an MP4, MOV, or PNG file.' :
+                    'MP4、MOV、またはPNGファイルをアップロードしてください。'
                   ) : (
                     lang === 'KR' ? '이 영상은 크기가 커서 브라우저가 느려질 수 있습니다. 계속하시겠습니까?' :
                     lang === 'EN' ? 'This video is large and may slow down your browser. Do you want to continue?' :
