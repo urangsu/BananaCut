@@ -22,6 +22,7 @@ import { useStudio, BrushStroke, StudioFrame } from "../StudioContext";
 import { trackEvent } from "../lib/analytics";
 import { revokeUrlsSafely } from "../utils/urlUtils";
 import { getFrameDisplayUrl } from "../utils/frameUtils";
+import { exportPngSequenceZip, exportGifPreview } from "../utils/exportEngine";
 import { DownloadModal } from "../components/DownloadModal";
 import { DownloadRequest } from "../types/export";
 import { useBatchJob } from "../hooks/useBatchJob";
@@ -977,182 +978,24 @@ export default function RemovePage() {
     });
   };
 
-  const handleDownload = async (type: "withRaw" | "resultOnly" | "gif") => {
+  const handleDownload = async (request: DownloadRequest) => {
     if (frames.length === 0) return;
 
     trackEvent("Download_Asset");
     setIsProcessing(true);
     setShowDownloadModal(false);
     try {
-      if (type === "gif") {
-        const GIF = (await import("gif.js")).default;
-        const gif = new GIF({
-          workers: 2,
-          quality: 10,
-          width: imgDims?.w || 512,
-          height: imgDims?.h || 512,
-          transparent: "rgba(0,0,0,0)",
-        });
-
-        for (let i = 0; i < frames.length; i++) {
-          const frame = frames[i];
-          const img = new Image();
-          img.src = getFrameDisplayUrl(frame);
-          await new Promise((resolve) => {
-            img.onload = resolve;
-          });
-
-          const canvas = document.createElement("canvas"); // Chroma-keyer
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext("2d", { willReadFrequently: true });
-          if (!ctx) continue;
-
-          ctx.drawImage(img, 0, 0);
-
-          if (!frame.processedUrl || frame.dirty) {
-            const imageData = ctx.getImageData(
-              0,
-              0,
-              canvas.width,
-              canvas.height,
-            );
-            const currentMask = generateStrokeMask(
-              canvas.width,
-              canvas.height,
-              exclusionStrokes,
-              i,
-            );
-            applyChromaKey(
-              imageData.data,
-              canvas.width,
-              canvas.height,
-              tolerance,
-              softness,
-              enclosedTolerance,
-              chromaKeyColor,
-              pickedColor,
-              currentMask,
-            );
-            ctx.putImageData(imageData, 0, 0);
-          }
-
-          gif.addFrame(canvas, { delay: 1000 / fps });
-        }
-
-        gif.on("finished", (blob: Blob) => {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `${charName}_animated.gif`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          setIsProcessing(false);
-        });
-
-        gif.render();
-        return; // Exit early for GIF, as it handles its own processing state
+      switch (request.format) {
+        case 'zipWithRaw':
+        case 'zipResultOnly':
+          await exportPngSequenceZip(request, frames);
+          break;
+        case 'gifPreview':
+          await exportGifPreview(request, frames);
+          break;
+        default:
+          throw new Error("Unsupported format");
       }
-
-      const zip = new JSZip();
-
-      for (const seg of segments) {
-        const startIdx = Math.floor(seg.start * fps);
-        const endIdx =
-          frames.length === 1
-            ? 1
-            : Math.min(Math.floor(seg.end * fps), frames.length);
-
-        for (let i = startIdx; i < endIdx; i++) {
-          const frame = frames[i];
-          const img = new Image();
-          img.src = getFrameDisplayUrl(frame);
-          await new Promise((resolve) => {
-            img.onload = resolve;
-          });
-
-          const canvas = document.createElement("canvas");
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext("2d", { willReadFrequently: true });
-          if (!ctx) continue;
-
-          ctx.drawImage(img, 0, 0);
-
-          if (!frame.processedUrl || frame.dirty) {
-            const imageData = ctx.getImageData(
-              0,
-              0,
-              canvas.width,
-              canvas.height,
-            );
-            const currentMask = generateStrokeMask(
-              canvas.width,
-              canvas.height,
-              exclusionStrokes,
-              i,
-            );
-            applyChromaKey(
-              imageData.data,
-              canvas.width,
-              canvas.height,
-              tolerance,
-              softness,
-              enclosedTolerance,
-              chromaKeyColor,
-              pickedColor,
-              currentMask,
-            );
-            ctx.putImageData(imageData, 0, 0);
-          }
-
-          const blob = await new Promise<Blob | null>((resolve) =>
-            canvas.toBlob(resolve, "image/png"),
-          );
-          if (blob) {
-            const frameNum = String(i - startIdx + 1).padStart(3, "0");
-            const resultDir = type === "withRaw" ? "result/" : "";
-            zip.file(
-              `${resultDir}${charName}_${seg.name}_${frameNum}.png`,
-              blob,
-            );
-          }
-        }
-      }
-
-      zip.file(
-        "export_metadata.json",
-        JSON.stringify(
-          {
-            cropApplied: false,
-          },
-          null,
-          2,
-        ),
-      );
-
-      if (type === "withRaw") {
-        for (let i = 0; i < frames.length; i++) {
-          const response = await fetch(
-            frames[i].processedUrl ?? frames[i].rawUrl,
-          );
-          const blob = await response.blob();
-          const frameNum = String(i + 1).padStart(3, "0");
-          zip.file(`raw/${charName}_raw_${frameNum}.png`, blob);
-        }
-      }
-
-      const content = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(content);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${charName}_assets.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Processing failed:", error);
       setLocalAlert(
@@ -1163,9 +1006,7 @@ export default function RemovePage() {
             : "フレームの処理に失敗しました。",
       );
     } finally {
-      if (type !== "gif") {
-        setIsProcessing(false);
-      }
+      setIsProcessing(false);
     }
   };
 
@@ -2892,6 +2733,8 @@ export default function RemovePage() {
             lang={downloadLang}
             onDownload={handleDownload}
             isDark={isDark}
+            defaultFps={fps}
+            defaultSizeMode="original"
           />
           
           {localAlert && (
