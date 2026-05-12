@@ -194,7 +194,7 @@ export default function LandingPage() {
     >
       <SEO 
         title="BananaCut — Remove Backgrounds. Make It Yours."
-        description="Clean up videos and frames, then export transparent assets directly in your browser."
+        description="Clean up videos and frames in your browser, then turn them into assets that fit your work."
         canonical="https://www.bananacut.art/"
       />
       {/* Header */}
@@ -244,7 +244,7 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-4">
             <button
               onClick={() => setShowGetApp(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg"
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all border backdrop-blur-md ${isDark ? "bg-white/5 border-white/10 text-white/80 hover:bg-white/10" : "bg-white/70 border-gray-200 text-gray-700 hover:bg-gray-100"}`}
             >
               <Smartphone className="w-4 h-4" strokeWidth={1} />
               GET APP
@@ -262,7 +262,7 @@ export default function LandingPage() {
             </button>
             <button
               onClick={() => setShowGetApp(true)}
-              className="md:hidden px-3 py-1.5 rounded-full text-[9px] font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg whitespace-nowrap"
+              className={`md:hidden px-3 py-1.5 rounded-full text-[9px] font-bold transition-all border backdrop-blur-md whitespace-nowrap ${isDark ? "bg-white/5 border-white/10 text-white/80 hover:bg-white/10" : "bg-white/70 border-gray-200 text-gray-700 hover:bg-gray-100"}`}
             >
               GET APP
             </button>
@@ -390,7 +390,7 @@ export default function LandingPage() {
                   className={`text-base font-medium ${isDark ? "text-white/90" : "text-gray-800"}`}
                 >
                   {lang === "KR"
-                    ? "영상과 프레임 에셋을 브라우저에서 빠르게 정리하세요."
+                    ? "영상과 프레임 에셋을 브라우저에서 한 흐름으로 정리하세요."
                     : lang === "EN"
                       ? "Clean up generated videos, green-screen animations, and app/game frame assets in one browser workflow."
                       : "生成動画、グリーンバックアニメーション、アプリ・ゲーム用フレーム素材をブラウザで整理できます。"}
