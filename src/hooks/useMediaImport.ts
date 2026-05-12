@@ -7,6 +7,15 @@ import { getMediaLimits } from '../utils/mediaLimits';
 
 export type UploadState = 'idle' | 'image-loading' | 'video-engine-loading' | 'video-extracting' | 'ready' | 'error';
 
+export type ImportGuardModalState = {
+  type: 'hard-limit' | 'soft-warning' | 'metadata-failed';
+  estimatedFrames?: number;
+  estimatedMemoryMB?: number;
+  limits?: ReturnType<typeof getMediaLimits>;
+  onConfirm?: () => void;
+  onCancel?: () => void;
+} | null;
+
 export interface UseMediaImportProps {
   frames: StudioFrame[];
   setFrames: React.Dispatch<React.SetStateAction<StudioFrame[]>>;
@@ -39,6 +48,8 @@ export function useMediaImport({
   const [extractionStalled, setExtractionStalled] = useState(false);
   const [extractionStartMs, setExtractionStartMs] = useState<number | null>(null);
   const [extractionElapsedText, setExtractionElapsedText] = useState('00:00');
+  const [importGuardModal, setImportGuardModal] = useState<ImportGuardModalState>(null);
+
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const extractionRunIdRef = useRef(0);
@@ -185,40 +196,52 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
         const estimatedMemoryMB = (meta.width * meta.height * 4 * estimatedFrames * 2.4) / 1024 / 1024;
 
         if (estimatedFrames > limits.hardFrames || estimatedMemoryMB > limits.hardMemoryMB) {
-          // TODO: replace window.alert with app modal before public launch polish.
-          alert(lang === 'KR' 
-            ? "이 영상은 브라우저에서 처리하기에 너무 클 수 있습니다. FPS를 낮추거나 더 짧은 클립을 사용해 주세요." 
-            : lang === 'EN' 
-            ? "This video may be too large to process safely in the browser. Try a lower FPS or a shorter clip." 
-            : "この動画はブラウザで安全に処理するには大きすぎる可能性があります。FPSを下げるか、短いクリップを使用してください。");
-          setUploadState('idle');
+          setImportGuardModal({
+            type: 'hard-limit',
+            estimatedFrames,
+            estimatedMemoryMB,
+            limits,
+            onConfirm: () => {
+              setImportGuardModal(null);
+              setUploadState('idle');
+            }
+          });
           return;
         }
 
         if (estimatedFrames > limits.softFrames || estimatedMemoryMB > limits.softMemoryMB) {
-          // TODO: replace window.confirm with app modal before public launch polish.
-          const proceed = window.confirm(lang === 'KR' 
-            ? "이 영상은 크기가 커서 브라우저가 느려질 수 있습니다. 계속하시겠습니까?\nFPS를 낮추거나 더 짧은 영상을 권장합니다." 
-            : lang === 'EN' 
-            ? "This video is large and may slow down your browser. Continue?\nWe recommend lowering FPS or using a shorter clip." 
-            : "この動画は大きく、ブラウザの動作が遅くなる可能性があります。続行しますか？\nFPSを下げるか、短い動画を使用することをお勧めします。");
-          if (!proceed) {
-            setUploadState('idle');
-            return;
-          }
+          await new Promise<void>((resolve, reject) => {
+            setImportGuardModal({
+              type: 'soft-warning',
+              estimatedFrames,
+              estimatedMemoryMB,
+              limits,
+              onConfirm: () => {
+                setImportGuardModal(null);
+                resolve();
+              },
+              onCancel: () => {
+                setImportGuardModal(null);
+                setUploadState('idle');
+                reject(new Error('User cancelled'));
+              }
+            });
+          });
         }
-      } catch(e) {
-        console.warn('Probe failed', e);
-        alert(lang === 'KR'
-          ? "이 영상의 정보를 읽을 수 없어 안전하게 처리할 수 없습니다. 다른 형식으로 변환하거나 더 짧은 클립을 사용해 주세요."
-          : lang === 'EN'
-          ? "We could not read this video’s metadata safely. Try converting it to another format or using a shorter clip."
-          : "この動画の情報を安全に読み取れませんでした。別の形式に変換するか、短いクリップを使用してください。");
-        setUploadState('idle');
-        setIsPlaying(false);
-        setExtractionProgress({ current: 0, total: 0 });
-        setExtractionStartMs(null);
-        setExtractionStalled(false);
+      } catch (e) {
+        if (e instanceof Error && e.message === "User cancelled") return;
+        console.warn("Probe failed", e);
+        setImportGuardModal({
+          type: 'metadata-failed',
+          onConfirm: () => {
+            setImportGuardModal(null);
+            setUploadState("idle");
+            setIsPlaying(false);
+            setExtractionProgress({ current: 0, total: 0 });
+            setExtractionStartMs(null);
+            setExtractionStalled(false);
+          }
+        });
         return;
       }
 
@@ -442,6 +465,7 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
     isExtracting,
     processFile,
     extractFramesWithFFmpeg,
-    cancelExtraction
+    cancelExtraction,
+    importGuardModal
   };
 }

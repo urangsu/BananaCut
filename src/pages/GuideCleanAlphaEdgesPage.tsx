@@ -39,6 +39,7 @@ export default function GuideCleanAlphaEdgesPage() {
             <li><a href="#exclusion">Protecting Assets with the Exclusion Brush</a></li>
             <li><a href="#filling-gaps">Filling Core Gaps with the Recover Brush</a></li>
             <li><a href="#recommended-settings">Recommended Edge Strategies</a></li>
+            <li><a href="#common-mistakes">Common Mistakes to Avoid</a></li>
             <li><a href="#practical-tips">Practical Tips for Fast Workflows</a></li>
             <li><a href="#faq">Frequently Asked Questions (FAQ)</a></li>
           </ul>
@@ -108,6 +109,13 @@ export default function GuideCleanAlphaEdgesPage() {
             <li><strong>Start Global:</strong> Never pick up the brush first. Spend 90% of your effort tuning the global Color Pick, Tolerance, and Softness.</li>
             <li><strong>Verify Temporal Stability:</strong> A softness setting of 5% might look great on Frame 1, but scrub to Frame 30. If the subject moves into shadow, the edge boundary might shift. Always check the extremes of your timeline.</li>
           </ul>
+        </section>
+
+        <section id="common-mistakes" className="space-y-4">
+          <h2 className="text-2xl font-bold">Common Mistakes to Avoid</h2>
+          <p className="opacity-80">
+            A frequent error is over-using the manual brush tools when global settings could solve the problem. If you find yourself painting masks on more than 5 frames, you should stop, reset the tools, and try color picking a different pixel on the background or adjusting the tolerance. The brush tools should be reserved for isolated glitches, not the primary extraction mechanic.
+          </p>
         </section>
 
         <hr className={`my-8 ${isDark ? 'border-white/10' : 'border-gray-200'}`} />

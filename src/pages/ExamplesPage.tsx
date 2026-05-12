@@ -24,8 +24,15 @@ export default function ExamplesPage() {
             <Video className={`w-6 h-6 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
             <h2 className="text-2xl font-bold">1. Green-screen character animation</h2>
           </div>
-          <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
-            <img src="/images/examples/placeholder-1.svg" alt="Green-screen character animation" className="w-full h-auto block" />
+          <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 grid grid-cols-2 gap-px bg-white/10">
+            <div className="relative">
+              <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">Before</span>
+              <img src="/images/examples/green-screen-before.svg" alt="Green-screen bright green" className="w-full h-auto block" />
+            </div>
+            <div className="relative">
+              <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">After</span>
+              <img src="/images/examples/green-screen-after.svg" alt="Green-screen transparent" className="w-full h-auto block" />
+            </div>
           </div>
           <div className="space-y-4 text-base opacity-80">
             <div>
@@ -53,8 +60,15 @@ export default function ExamplesPage() {
             <Sparkles className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
             <h2 className="text-2xl font-bold">2. AI-generated motion clip</h2>
           </div>
-          <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
-            <img src="/images/examples/placeholder-2.svg" alt="AI-generated motion clip after cleanup" className="w-full h-auto block" />
+          <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 grid grid-cols-2 gap-px bg-white/10">
+            <div className="relative">
+              <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">Before</span>
+              <img src="/images/examples/ai-motion-before.svg" alt="AI-generated video with solid background" className="w-full h-auto block" />
+            </div>
+            <div className="relative">
+              <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">After</span>
+              <img src="/images/examples/ai-motion-after.svg" alt="AI-generated video cleaned up" className="w-full h-auto block" />
+            </div>
           </div>
           <div className="space-y-4 text-base opacity-80">
             <div>
@@ -83,7 +97,7 @@ export default function ExamplesPage() {
             <h2 className="text-2xl font-bold">3. App/game sprite sheet workflow</h2>
           </div>
           <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
-            <img src="/images/examples/placeholder-3.svg" alt="App or game sprite sheet workflow" className="w-full h-auto block" />
+            <img src="/images/examples/sprite-sheet-example.svg" alt="App or game sprite sheet workflow" className="w-full h-auto block" />
           </div>
           <div className="space-y-4 text-base opacity-80">
             <div>

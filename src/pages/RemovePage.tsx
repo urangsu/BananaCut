@@ -236,6 +236,7 @@ export default function RemovePage() {
     isExtracting,
     processFile,
     cancelExtraction,
+    importGuardModal
   } = useMediaImport({
     frames,
     setFrames,
@@ -2879,6 +2880,66 @@ export default function RemovePage() {
             onDownload={handleDownload}
             isDark={isDark}
           />
+          
+          {importGuardModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div className={`w-full max-w-sm p-6 rounded-2xl shadow-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {lang === 'KR' ? '영상 가져오기 알림' : lang === 'EN' ? 'Video Import Notice' : '動画インポートの通知'}
+                </h3>
+                
+                <p className={`text-sm mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {importGuardModal.type === 'hard-limit' ? (
+                    lang === 'KR' ? '이 영상은 브라우저에서 처리하기에 너무 클 수 있습니다. FPS를 낮추거나 더 짧은 클립을 사용해 주세요.' : 
+                    lang === 'EN' ? 'This video may be too large to process safely in the browser. Try a lower FPS or a shorter clip.' :
+                    'この動画はブラウザで安全に処理するには大きすぎる可能性があります。FPSを下げるか、短いクリップを使用してください。'
+                  ) : importGuardModal.type === 'metadata-failed' ? (
+                    lang === 'KR' ? '이 영상의 정보를 읽을 수 없어 안전하게 처리할 수 없습니다. 다른 형식으로 변환하거나 더 짧은 클립을 사용해 주세요.' :
+                    lang === 'EN' ? 'We could not read this video’s metadata safely. Try converting it to another format or using a shorter clip.' :
+                    'この動画の情報を安全に読み取れませんでした。別の形式に変換するか、短いクリップを使用してください。'
+                  ) : (
+                    lang === 'KR' ? '이 영상은 크기가 커서 브라우저가 느려질 수 있습니다. 계속하시겠습니까?' :
+                    lang === 'EN' ? 'This video is large and may slow down your browser. Do you want to continue?' :
+                    'この動画はサイズが大きいため、ブラウザの動作が遅くなる可能性があります。続行しますか？'
+                  )}
+                </p>
+
+                {(importGuardModal.estimatedFrames || 0) > 0 && (
+                  <div className={`p-3 rounded-xl mb-4 text-xs font-mono space-y-1 ${isDark ? 'bg-gray-900/50 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
+                    <div className="flex justify-between">
+                      <span>Frames:</span>
+                      <span className={importGuardModal.estimatedFrames! > importGuardModal.limits!.softFrames ? 'text-orange-500' : ''}>
+                        ~{importGuardModal.estimatedFrames}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 mt-6">
+                  {importGuardModal.type === 'soft-warning' && (
+                    <button
+                      onClick={() => importGuardModal.onCancel?.()}
+                      className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
+                        isDark 
+                          ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                      }`}
+                    >
+                      {lang === 'KR' ? '취소' : lang === 'EN' ? 'Cancel' : 'キャンセル'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => importGuardModal.onConfirm?.()}
+                    className="px-4 py-2 text-sm font-semibold rounded-xl bg-yellow-400 text-black hover:bg-yellow-500 transition-all"
+                  >
+                    {importGuardModal.type === 'soft-warning' 
+                      ? (lang === 'KR' ? '계속하기' : lang === 'EN' ? 'Continue' : '続行')
+                      : 'OK'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {new URLSearchParams(window.location.search).get("debug") === "1" && (
             <div className="fixed bottom-2 left-2 z-[9999] bg-black/80 text-green-400 text-[10px] font-mono px-2 py-1 rounded pointer-events-none">

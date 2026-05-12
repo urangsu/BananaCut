@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#00FF00" />
+  <circle cx="200" cy="150" r="100" fill="#3b82f6" />
+  <text x="200" y="280" font-family="sans-serif" font-size="20" text-anchor="middle" font-weight="bold" fill="#000">Before: Green Screen</text>
+</svg>
