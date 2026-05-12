@@ -22,7 +22,7 @@ import { useStudio, BrushStroke, StudioFrame } from "../StudioContext";
 import { trackEvent } from "../lib/analytics";
 import { revokeUrlsSafely } from "../utils/urlUtils";
 import { getFrameDisplayUrl } from "../utils/frameUtils";
-import { exportPngSequenceZip, exportGifPreview } from "../utils/exportEngine";
+import { exportPngSequenceZip, exportGifPreview, downloadBlob } from "../utils/exportEngine";
 import { DownloadModal } from "../components/DownloadModal";
 import { DownloadRequest } from "../types/export";
 import { useBatchJob } from "../hooks/useBatchJob";
@@ -36,6 +36,7 @@ import {
   revokeSampleFrames,
 } from "../utils/sampleProject";
 
+type ExportStatus = 'idle' | 'preparing' | 'encoding' | 'complete' | 'failed' | 'fallbackZip';
 /*
   Feature Design: Artifact Cleanup (Future Enhancement)
   
@@ -260,6 +261,7 @@ export default function RemovePage() {
   const [localAlert, setLocalAlert] = useState<string | null>(null);
   const [localConfirm, setLocalConfirm] = useState<{message: string, onConfirm: () => void, onCancel?: () => void} | null>(null);
   const [downloadLang, setDownloadLang] = useState<"KR" | "EN" | "JP">("EN");
+  const [exportStatus, setExportStatus] = useState<ExportStatus>('idle');
 
   const handleLoadSampleProject = async () => {
     trackEvent("Try_Sample_Project");
@@ -983,20 +985,38 @@ export default function RemovePage() {
 
     trackEvent("Download_Asset");
     setIsProcessing(true);
+    setExportStatus('preparing');
     setShowDownloadModal(false);
     try {
+      let result: any;
+      if (request.format === 'gifPreview') setExportStatus('encoding');
+
       switch (request.format) {
         case 'zipWithRaw':
         case 'zipResultOnly':
-          await exportPngSequenceZip(request, frames);
+          result = await exportPngSequenceZip(request, frames);
           break;
         case 'gifPreview':
-          await exportGifPreview(request, frames);
+          result = await exportGifPreview(request, frames);
+          if (result.format === 'pngSequenceZipFallback') setExportStatus('fallbackZip');
           break;
         default:
           throw new Error("Unsupported format");
       }
+      
+      if (result.blob && result.ok) {
+        downloadBlob(result.blob, result.filename || "export.zip");
+        setExportStatus('complete');
+      } else {
+        setExportStatus('failed');
+      }
+      
+      if (result.warnings && result.warnings.length > 0) {
+        setLocalAlert(result.warnings.join("\n"));
+      }
+      setTimeout(() => setExportStatus('idle'), 3000);
     } catch (error) {
+      setExportStatus('failed');
       console.error("Processing failed:", error);
       setLocalAlert(
         lang === "KR"
@@ -2737,6 +2757,15 @@ export default function RemovePage() {
             defaultSizeMode="original"
           />
           
+          {exportStatus !== 'idle' && (
+            <div className={`fixed bottom-4 right-4 p-4 rounded-xl shadow-lg ${isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+              {exportStatus === 'preparing' && 'Preparing frames...'}
+              {exportStatus === 'encoding' && 'Encoding...'}
+              {exportStatus === 'fallbackZip' && 'GIF failed. PNG ZIP generated.'}
+              {exportStatus === 'failed' && 'Export failed.'}
+            </div>
+          )}
+
           {localAlert && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
               <div className={`w-full max-w-sm p-6 rounded-2xl shadow-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
