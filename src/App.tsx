@@ -159,7 +159,12 @@ function Layout({ children }: { children: React.ReactNode }) {
               <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[11px] font-medium w-full text-center">
                 <Link to="/privacy" className="hover:text-blue-500 transition-colors">Privacy</Link>
                 <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
-                <button onClick={() => setShowSupport(true)} className="hover:text-blue-500 transition-colors">Support</button>
+                <button 
+                  onClick={() => setShowSupport(true)} 
+                  className="flex items-center justify-center gap-1 text-[#FACC15] hover:text-yellow-400 transition-colors"
+                >
+                  {lang === 'KR' ? '후원하기' : lang === 'EN' ? 'Support' : '応援する'} 🍌
+                </button>
                 <button onClick={() => setShowMore(true)} className="hover:text-blue-500 transition-colors">More</button>
               </div>
               
@@ -249,7 +254,12 @@ function Layout({ children }: { children: React.ReactNode }) {
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full text-center">
             <Link to="/privacy" className="hover:text-blue-500 transition-colors">Privacy</Link>
             <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
-            <button onClick={() => setShowSupport(true)} className="hover:text-blue-500 transition-colors">Support</button>
+            <button 
+              onClick={() => setShowSupport(true)} 
+              className="flex items-center justify-center gap-1 text-[#FACC15] hover:text-yellow-400 transition-colors"
+            >
+              {lang === 'KR' ? '후원하기' : lang === 'EN' ? 'Support' : '応援する'} 🍌
+            </button>
             <button onClick={() => setShowMore(true)} className="hover:text-blue-500 transition-colors">More</button>
           </div>
         </div>

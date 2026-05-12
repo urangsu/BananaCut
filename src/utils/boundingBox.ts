@@ -39,8 +39,21 @@ export function getAlphaBoundingBox(
   };
 }
 
+function yieldToBrowser() {
+  return new Promise((resolve) => {
+    const handle = setTimeout(() => {
+      cancelAnimationFrame(id);
+      resolve(null);
+    }, 50);
+    const id = requestAnimationFrame(() => {
+      clearTimeout(handle);
+      resolve(null);
+    });
+  });
+}
+
 export async function analyzeFrameBounds(
-  frames: any[], // StudioFrame type, but we use any to avoid importing circle dependencies if any, or we can use the exact type.
+  frames: any[],
   options: {
     alphaThreshold: number;
     padding: number;
@@ -58,11 +71,8 @@ export async function analyzeFrameBounds(
 }> {
   const { alphaThreshold, padding, useProcessed, onProgress, maxSamples } =
     options;
-  const processedFrames = useProcessed
-    ? frames.filter((f) => f.processedUrl || f.base64)
-    : frames;
 
-  if (processedFrames.length === 0) {
+  if (frames.length === 0) {
     return {
       frameBoxes: [],
       stableBox: null,
@@ -73,13 +83,20 @@ export async function analyzeFrameBounds(
     };
   }
 
-  // To get source dimensions, load the first frame
-  const firstFrameUrl = useProcessed
-    ? processedFrames[0].processedUrl || processedFrames[0].base64
-    : processedFrames[0].rawUrl;
+  // Find first frame with URL to get dimensions
+  let firstFrameIdx = -1;
+  let firstFrameUrl = "";
+  for (let i = 0; i < frames.length; i++) {
+    const url = useProcessed ? frames[i].processedUrl || frames[i].base64 : frames[i].rawUrl;
+    if (url) {
+      firstFrameIdx = i;
+      firstFrameUrl = url;
+      break;
+    }
+  }
 
-  if (!firstFrameUrl) {
-    throw new Error("No image URL found for the first frame.");
+  if (firstFrameIdx === -1) {
+    throw new Error("No image URL found in any frame.");
   }
 
   const firstImg = await loadImage(firstFrameUrl);
@@ -100,18 +117,18 @@ export async function analyzeFrameBounds(
   if (!ctx) throw new Error("Failed to get 2d context");
 
   const totalToAnalyze = maxSamples
-    ? Math.min(processedFrames.length, maxSamples)
-    : processedFrames.length;
+    ? Math.min(frames.length, maxSamples)
+    : frames.length;
   // If maxSamples is provided, pick evenly distributed frames
-  const indicesToAnalyze = [];
-  if (maxSamples && processedFrames.length > maxSamples) {
+  const indicesToAnalyze: number[] = [];
+  if (maxSamples && frames.length > maxSamples) {
     for (let i = 0; i < maxSamples; i++) {
       indicesToAnalyze.push(
-        Math.floor((i * (processedFrames.length - 1)) / (maxSamples - 1)),
+        Math.floor((i * (frames.length - 1)) / (maxSamples - 1)),
       );
     }
   } else {
-    for (let i = 0; i < processedFrames.length; i++) {
+    for (let i = 0; i < frames.length; i++) {
       indicesToAnalyze.push(i);
     }
   }
@@ -119,11 +136,17 @@ export async function analyzeFrameBounds(
   let count = 0;
   for (const idx of indicesToAnalyze) {
     if (count > 0 && count % 15 === 0) {
-      await new Promise((r) => requestAnimationFrame(r));
+      await yieldToBrowser();
     }
-    const f = processedFrames[idx];
+    const f = frames[idx];
     const url = useProcessed ? f.processedUrl || f.base64 : f.rawUrl;
-    if (!url) continue;
+    
+    if (!url) {
+        frameBoxes.push({ index: idx, box: null });
+        count++;
+        if (onProgress) onProgress(count, indicesToAnalyze.length);
+        continue;
+    }
 
     try {
       const img = await loadImage(url);
@@ -142,6 +165,7 @@ export async function analyzeFrameBounds(
       }
     } catch (err) {
       console.error("Failed to load frame for analysis", err);
+      frameBoxes.push({ index: idx, box: null });
     }
 
     count++;
@@ -192,7 +216,6 @@ export async function analyzeFrameBounds(
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;

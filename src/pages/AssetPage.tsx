@@ -306,10 +306,6 @@ export default function AssetPage() {
       setStableBox(result.stableBox);
       setRecommendedCanvas(result.recommendedCanvas);
       setTransparentWasteRatio(result.transparentWasteRatio);
-
-      if (result.stableBox) {
-        setExportSizeMode("recommendedStableCrop");
-      }
     } catch (err) {
       console.error("Analyze failed", err);
     } finally {
@@ -712,59 +708,47 @@ export default function AssetPage() {
                   </button>
                 {analyzeProgress > 0 && <span className="ml-2 text-xs">{analyzeProgress}%</span>}
 
-                {stableBox && (
-                  <div className="mt-4 space-y-4">
+                {stableBox ? (
+                  <div className="space-y-4">
                     <div className="text-xs space-y-1 opacity-80">
                       <div>Current canvas: {sourceDim?.width} × {sourceDim?.height}</div>
                       <div>Recommended safe box: {stableBox.w} × {stableBox.h}</div>
                       <div>Transparent waste: {Math.round(transparentWasteRatio * 100)}%</div>
-                      <div>Padding: {cropPadding}px</div>
-                      <div>Alpha threshold: {alphaThreshold}</div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => setShowCropPreview(!showCropPreview)}
-                        className={`text-xs px-3 py-1.5 rounded-lg font-bold ${showCropPreview ? 'bg-blue-600' : 'bg-gray-600'} text-white`}
+                        onClick={() => setShowCropPreview(true)}
+                        className={`text-xs px-3 py-1.5 rounded-lg font-bold bg-gray-600 text-white`}
                       >
-                        {showCropPreview ? 'Hide Preview' : 'Preview Box'}
+                        Preview Box
+                      </button>
+                      
+                      <button
+                        onClick={() => setExportSizeMode("recommendedStableCrop")}
+                        className={`text-xs px-3 py-1.5 rounded-lg font-bold ${exportSizeMode === "recommendedStableCrop" ? "bg-blue-600" : "bg-gray-600"} text-white`}
+                      >
+                        Use Recommended Crop
+                      </button>
+
+                      <button
+                        onClick={() => setExportSizeMode("original")}
+                        className={`text-xs px-3 py-1.5 rounded-lg font-bold ${exportSizeMode === "original" ? "bg-blue-600" : "bg-gray-600"} text-white`}
+                      >
+                       Keep Original
                       </button>
                     </div>
-
-                    <div className="space-y-2">
-                       <label className="text-xs font-bold block">Export Size Mode</label>
-                       <select 
-                         value={exportSizeMode}
-                         onChange={(e) => setExportSizeMode(e.target.value as any)}
-                         className="w-full text-xs p-1.5 rounded bg-white dark:bg-black border border-white/10"
-                       >
-                         <option value="original">Original Canvas</option>
-                         <option value="recommendedStableCrop">Recommended Stable Crop</option>
-                         <option value="customCanvas">Custom Canvas</option>
-                       </select>
-                    </div>
-
-                    {exportSizeMode === 'customCanvas' && (
-                      <div className="space-y-2 text-xs">
-                        <div className="flex gap-2">
-                          <input type="number" placeholder="W" value={customWidth} onChange={(e) => setCustomWidth(Number(e.target.value))} className="w-1/2 p-1.5 rounded bg-white dark:bg-black border border-white/10" />
-                          <input type="number" placeholder="H" value={customHeight} onChange={(e) => setCustomHeight(Number(e.target.value))} className="w-1/2 p-1.5 rounded bg-white dark:bg-black border border-white/10" />
-                        </div>
-                        <select value={customFit} onChange={(e) => setCustomFit(e.target.value as any)} className="w-full p-1.5 rounded bg-white dark:bg-black border border-white/10">
-                          <option value="contain">Contain</option>
-                          <option value="cover">Cover</option>
-                          <option value="none">None</option>
-                        </select>
-                        <select value={customAnchor} onChange={(e) => setCustomAnchor(e.target.value as any)} className="w-full p-1.5 rounded bg-white dark:bg-black border border-white/10">
-                          <option value="center">Center</option>
-                          <option value="top">Top</option>
-                          <option value="bottom">Bottom</option>
-                          <option value="left">Left</option>
-                          <option value="right">Right</option>
-                        </select>
-                      </div>
-                    )}
                   </div>
+                ) : (
+                  <button
+                    onClick={handleAnalyzeCrop}
+                    disabled={isAnalyzingCrop}
+                    className={`w-full py-2 text-sm font-medium rounded-lg border transition-colors ${isDark ? "border-blue-500/50 text-blue-400 hover:bg-blue-500/10" : "border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100"} ${isAnalyzingCrop ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    {isAnalyzingCrop
+                      ? `${lang === "KR" ? "분석 중..." : "Analyzing..."} ${analyzeProgress}%`
+                      : `${lang === "KR" ? "프레임 분석하기" : "Analyze Frames"}`}
+                  </button>
                 )}
               </div>
 
