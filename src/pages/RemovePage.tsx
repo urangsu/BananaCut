@@ -1367,10 +1367,10 @@ export default function RemovePage() {
                     className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                   >
                     {lang === "KR"
-                      ? "샘플 프로젝트로 체험하기"
+                      ? "샘플로 체험하기"
                       : lang === "EN"
-                        ? "Try Sample Project"
-                        : "サンプルプロジェクトを試す"}
+                        ? "Try Sample"
+                        : "サンプルを試す"}
                   </button>
                 </div>
               </div>
@@ -1491,10 +1491,10 @@ export default function RemovePage() {
                     className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                   >
                     {lang === "KR"
-                      ? "샘플 프로젝트로 체험하기"
+                      ? "샘플로 체험하기"
                       : lang === "EN"
-                        ? "Try Sample Project"
-                        : "サンプルプロジェクトを試す"}
+                        ? "Try Sample"
+                        : "サンプルを試す"}
                   </button>
                 </div>
               )}

@@ -662,7 +662,7 @@ export default function AssetPage() {
                 }}
                 className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
               >
-                {lang === 'KR' ? '샘플 프로젝트 체험하기' : lang === 'EN' ? 'Try Sample Project' : 'サンプルプロジェクトを試す'}
+                {lang === 'KR' ? '샘플 체험하기' : lang === 'EN' ? 'Try Sample' : 'サンプルを試す'}
               </button>
             </div>
           </div>

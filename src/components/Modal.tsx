@@ -11,9 +11,10 @@ interface ModalProps {
   setLang: (lang: 'KR' | 'EN' | 'JP') => void;
   children: ReactNode;
   maxWidthClass?: string;
+  showLanguageToggle?: boolean;
 }
 
-export function Modal({ isOpen, onClose, title, icon: Icon, lang, setLang, children, maxWidthClass = 'max-w-2xl' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, icon: Icon, lang, setLang, children, maxWidthClass = 'max-w-2xl', showLanguageToggle = false }: ModalProps) {
   const { isDark } = useTheme();
 
   if (!isOpen) return null;
@@ -39,22 +40,23 @@ export function Modal({ isOpen, onClose, title, icon: Icon, lang, setLang, child
           </h2>
           
           <div className="flex items-center gap-4">
-            {/* Segmented Control */}
-            <div className={`flex p-0.5 rounded-lg ${isDark ? 'bg-black/50' : 'bg-gray-200/50'}`}>
-              {(['KR', 'EN', 'JP'] as const).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLang(l)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                    lang === l 
-                      ? (isDark ? 'bg-[#2c2c2e] text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm')
-                      : (isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700')
-                  }`}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
+            {showLanguageToggle && (
+              <div className={`flex p-0.5 rounded-lg ${isDark ? 'bg-black/50' : 'bg-gray-200/50'}`}>
+                {(['KR', 'EN', 'JP'] as const).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setLang(l)}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                      lang === l 
+                        ? (isDark ? 'bg-[#2c2c2e] text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm')
+                        : (isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700')
+                    }`}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
             
             <button 
               onClick={onClose}

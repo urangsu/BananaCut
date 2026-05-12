@@ -1,1 +1,57 @@
 @import "tailwindcss";
+
+:root {
+  font-family:
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Pretendard Variable",
+    "Pretendard",
+    "Noto Sans KR",
+    "Noto Sans JP",
+    sans-serif;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --bc-yellow: #FACC15;
+  --bc-yellow-soft: #FEF3C7;
+  --bc-ink: #171717;
+  --bc-ink-soft: #3F3F46;
+  --bc-paper: #FFFFFF;
+  --bc-paper-warm: #FFFBEB;
+  --bc-line: rgba(23, 23, 23, 0.10);
+  --bc-muted: rgba(23, 23, 23, 0.56);
+  --bc-blue: #2563EB;
+  --bc-green: #16A34A;
+  --bc-red: #DC2626;
+}
+
+.dark {
+  --bc-yellow: #FACC15;
+  --bc-yellow-soft: rgba(250, 204, 21, 0.14);
+  --bc-ink: #FAFAFA;
+  --bc-ink-soft: #D4D4D8;
+  --bc-paper: #111111;
+  --bc-paper-warm: #18181B;
+  --bc-line: rgba(255, 255, 255, 0.10);
+  --bc-muted: rgba(255, 255, 255, 0.56);
+}
+
+.font-brand {
+  font-weight: 850;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+}
+
+.font-ui {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.text-balance {
+  text-wrap: balance;
+}

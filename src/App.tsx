@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, useLocation, BrowserRouter, Link } from 'react-router-dom';
 import { 
-  Eraser, 
-  PaintBucket, 
   Sun, 
   Moon, 
   HelpCircle, 
@@ -12,6 +10,8 @@ import {
   Smartphone,
   MoreHorizontal
 } from 'lucide-react';
+import { BrandLogo } from './components/BrandLogo';
+import { CutoutIcon, RepairIcon, SpriteSheetIcon } from './components/icons/BananaCutIcons';
 import RemovePage from './pages/RemovePage';
 import RecoverPage from './pages/RecoverPage';
 import AssetPage from './pages/AssetPage';
@@ -71,11 +71,8 @@ function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex w-64 border-r flex-col shrink-0 z-40 transition-colors duration-300 ${isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-        <div className={`p-6 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-          <h1 className={`text-2xl font-bold tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            BananaCut
-          </h1>
-          <p className={`text-xs mt-1 font-medium tracking-widest uppercase ${isDark ? 'text-white/40' : 'text-gray-500'}`}>BY. DALGRACSTUDIO</p>
+        <div className={`p-6 border-b flex items-center ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+          <BrandLogo size="md" />
         </div>
         
         <nav className="flex-1 p-4 space-y-2">
@@ -90,10 +87,10 @@ function Layout({ children }: { children: React.ReactNode }) {
               }`
             }
           >
-            <Eraser className="w-5 h-5" strokeWidth={1} />
-            <div className="flex flex-col">
+            <CutoutIcon className="w-5 h-5" />
+            <div className="flex flex-col text-left">
               <span>REMOVE</span>
-              <span className="text-[10px] opacity-60">(투명화)</span>
+              <span className="text-[10px] opacity-60">Background</span>
             </div>
           </NavLink>
 
@@ -108,10 +105,10 @@ function Layout({ children }: { children: React.ReactNode }) {
               }`
             }
           >
-            <PaintBucket className="w-5 h-5" strokeWidth={1} />
-            <div className="flex flex-col">
+            <RepairIcon className="w-5 h-5" />
+            <div className="flex flex-col text-left">
               <span>RECOVER</span>
-              <span className="text-[10px] opacity-60">(복구)</span>
+              <span className="text-[10px] opacity-60">Edges</span>
             </div>
           </NavLink>
 
@@ -126,10 +123,10 @@ function Layout({ children }: { children: React.ReactNode }) {
               }`
             }
           >
-            <Smartphone className="w-5 h-5" strokeWidth={1} />
-            <div className="flex flex-col">
+            <SpriteSheetIcon className="w-5 h-5" />
+            <div className="flex flex-col text-left">
               <span>ASSET</span>
-              <span className="text-[10px] opacity-60">(에셋)</span>
+              <span className="text-[10px] opacity-60">Export</span>
             </div>
           </NavLink>
         </nav>
@@ -174,14 +171,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <header className={`lg:hidden sticky top-0 flex flex-col shrink-0 z-50 ${isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-gray-50 border-gray-200'} border-b`}>
         <div className="flex items-center justify-between p-3">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 font-bold text-lg tracking-tighter">
-              BananaCut
-            </div>
-            <div className={`text-[9px] font-medium tracking-widest uppercase leading-tight ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-              <div>BY. DALGRACSTUDIO</div>
-            </div>
-          </div>
+          <BrandLogo size="sm" />
           <div className="flex items-center gap-2">
             <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-white/5' : 'bg-gray-200'}`}>
               <NavLink to="/remove" onClick={() => trackEvent('Switch_To_Remove')} className={({isActive}) => `px-3 py-1.5 text-xs font-medium rounded-md transition-all ${isActive ? (isDark ? 'bg-purple-500/20 text-purple-400 shadow-sm' : 'bg-white text-gray-900 shadow-sm') : (isDark ? 'text-white/60' : 'text-gray-500')}`}>Remove</NavLink>
@@ -206,7 +196,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             }`}
           >
             <Smartphone className="w-3.5 h-3.5" />
-            {lang === 'KR' ? '앱 다운로드' : lang === 'EN' ? 'GET APP' : 'アプリ入手'}
+            {lang === 'KR' ? '로드맵' : lang === 'EN' ? 'Roadmap' : 'ロードマップ'}
           </button>
           
           {/* Language Toggle */}
@@ -320,6 +310,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         icon={HelpCircle}
         lang={lang}
         setLang={setLang}
+        showLanguageToggle={true}
       >
         <div className="space-y-6 text-sm leading-relaxed">
           {lang === 'KR' && (
@@ -409,7 +400,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       <Modal
         isOpen={showGetApp}
         onClose={() => setShowGetApp(false)}
-        title="GET APP"
+        title="Roadmap"
         icon={Smartphone}
         lang={lang}
         setLang={setLang}
@@ -434,7 +425,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           
           <div className="space-y-2">
             <h3 className="text-xl font-bold">
-              {lang === 'KR' ? '아직 어플 준비 중입니다.' : lang === 'EN' ? 'App is under development.' : 'アプリは準備中です。'}
+              {lang === 'KR' ? '웹 버전이 안정화된 뒤 앱 버전을 검토할 예정입니다.' : lang === 'EN' ? 'An app version is planned after the web workflow is stable.' : 'Web版が安定した後、アプリ版を検討する予定です。'}
             </h3>
             <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
               {lang === 'KR' ? '반응이 좋으면 준비해볼게요! 🍌' : lang === 'EN' ? "We'll prepare it if there's good feedback! 🍌" : '反響が良ければ準備します！ 🍌'}

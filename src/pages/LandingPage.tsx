@@ -15,6 +15,7 @@ import {
   Moon,
 } from "lucide-react";
 import { Modal } from "../components/Modal";
+import { BrandLogo } from "../components/BrandLogo";
 import { trackEvent } from "../lib/analytics";
 import { SEO } from "../components/SEO";
 
@@ -201,12 +202,7 @@ export default function LandingPage() {
         className={`relative z-50 flex items-center justify-between p-6 border-b ${isDark ? "bg-[#121212] border-white/10" : "bg-white border-gray-200"}`}
       >
         <div className="flex flex-col">
-          <div className="text-2xl font-bold tracking-tighter">BananaCut</div>
-          <div
-            className={`text-[10px] font-medium tracking-widest uppercase mt-0.5 ${isDark ? "text-white/40" : "text-gray-500"}`}
-          >
-            BY. DALGRACSTUDIO
-          </div>
+          <BrandLogo size="md" />
         </div>
         <div className="flex items-center gap-2 md:gap-4">
           <div className="flex items-center gap-1 p-1 rounded-full border bg-white/50 dark:bg-black/50 backdrop-blur-md border-gray-200 dark:border-white/10">
@@ -251,7 +247,7 @@ export default function LandingPage() {
               className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg"
             >
               <Smartphone className="w-4 h-4" strokeWidth={1} />
-              GET APP
+              {lang === "KR" ? "로드맵" : lang === "EN" ? "Roadmap" : "ロードマップ"}
             </button>
           </div>
           <div className="flex flex-row gap-2 md:gap-4">
@@ -268,7 +264,7 @@ export default function LandingPage() {
               onClick={() => setShowGetApp(true)}
               className="md:hidden px-3 py-1.5 rounded-full text-[9px] font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg whitespace-nowrap"
             >
-              GET APP
+              Roadmap
             </button>
           </div>
         </div>
@@ -303,10 +299,10 @@ export default function LandingPage() {
               className={`text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${isDark ? "text-white/60" : "text-gray-600"}`}
             >
               {lang === "KR"
-                ? "영상과 프레임을 브라우저에서 다듬고, 바로 쓸 수 있는 에셋으로 내보내세요."
+                ? "영상과 프레임을 정리하고, 앱·게임·웹에서 다시 쓸 수 있는 에셋으로 내보내세요."
                 : lang === "EN"
-                  ? "Clean up videos and frames, then export transparent assets directly in your browser."
-                  : "動画やフレームをブラウザで整理し、すぐ使えるアセットとして書き出せます。"}
+                  ? "Clean up videos and frames, then export reusable assets for apps, games, websites, and videos."
+                  : "動画やフレームを整理し、アプリ・ゲーム・Webで再利用できるアセットとして書き出せます。"}
             </p>
             <div className="flex flex-col items-center justify-center gap-4">
               <button
@@ -322,7 +318,7 @@ export default function LandingPage() {
                 }}
                 className={`w-full sm:w-auto px-10 py-4 rounded-full text-lg font-bold transition-all border-2 ${isDark ? "border-white text-white hover:bg-white hover:text-black" : "border-black text-black hover:bg-black hover:text-white"} hover:scale-105 uppercase tracking-tight`}
               >
-                Try Sample Project
+                Try Sample
               </button>
             </div>
           </section>
@@ -458,33 +454,38 @@ export default function LandingPage() {
           </section>
 
           {/* Before/After Demo */}
-          <section className="max-w-4xl mx-auto space-y-4">
-            <div className="rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-white/10">
-              <ReactCompareSlider
-                itemOne={
-                  <ReactCompareSliderImage
-                    src="https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80"
-                    alt="Before"
-                  />
-                }
-                itemTwo={
-                  <ReactCompareSliderImage
-                    src="https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80"
-                    style={{ filter: "grayscale(100%) brightness(1.5)" }}
-                    alt="After"
-                  />
-                }
-                className="h-[400px] lg:h-[500px] w-full"
-              />
+          <section className="max-w-4xl mx-auto space-y-8">
+            <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-center">
+              From raw frames to reusable assets
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col items-center gap-2">
+                <div className={`w-full rounded-2xl overflow-hidden shadow-lg border ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+                  <img src="/images/examples/sample-before.png" alt="Original Frame" className="w-full object-cover" />
+                </div>
+                <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Original Frame</span>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <div className={`w-full rounded-2xl overflow-hidden shadow-lg border ${isDark ? 'border-white/10' : 'border-gray-200'} bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+CjxyZWN0IHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iI2ZmZiIgLz4KPHBhdGggZD0iTTAgMGgxMnYxMkgweiIgZmlsbD0iI2VlZSIgLz4KPHBhdGggZD0iTTEyIDEyaDEydjEySDEyeiIgZmlsbD0iI2VlZSIgLz4KPC9zdmc+')]`}>
+                  <img src="/images/examples/sample-after.png" alt="Cleaned Frame" className="w-full object-cover" />
+                </div>
+                <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Cleaned Frame</span>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <div className={`w-full rounded-2xl overflow-hidden shadow-lg border ${isDark ? 'border-white/10' : 'border-gray-200'} bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+CjxyZWN0IHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iI2ZmZiIgLz4KPHBhdGggZD0iTTAgMGgxMnYxMkgweiIgZmlsbD0iI2VlZSIgLz4KPHBhdGggZD0iTTEyIDEyaDEydjEySDEyeiIgZmlsbD0iI2VlZSIgLz4KPC9zdmc+')]`}>
+                  <img src="/images/examples/sample-sprite-sheet.png" alt="Sprite Sheet" className="w-full object-cover" />
+                </div>
+                <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Sprite Sheet</span>
+              </div>
             </div>
             <p
-              className={`text-center text-sm font-medium ${isDark ? "text-white/40" : "text-gray-400"}`}
+              className={`text-center text-sm font-medium ${isDark ? "text-white/60" : "text-gray-500"}`}
             >
               {lang === "KR"
-                ? "이제 에셋을 간편하게 만들어보세요"
+                ? "생성 영상, 그린스크린 애니메이션, 프레임 시퀀스를 앱·게임·웹에서 다시 쓸 수 있는 에셋으로 정리하세요."
                 : lang === "EN"
-                  ? "Now, create assets easily"
-                  : "今、アセットを簡単に作成しましょう"}
+                  ? "Turn generated clips, green-screen animations, and frame sequences into reusable assets for apps, games, and websites."
+                  : "生成動画、グリーンバックアニメーション、フレームシーケンスを、アプリ・ゲーム・Webで再利用できるアセットとして整理できます。"}
             </p>
           </section>
 
@@ -502,44 +503,56 @@ export default function LandingPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                 <div className="space-y-4">
                   <h3 className="text-2xl font-bold tracking-tight">
-                    Files Stay With You
+                    {lang === "KR"
+                      ? "영상에서 바로 에셋으로"
+                      : lang === "EN"
+                        ? "From Clip to Asset"
+                        : "クリップからアセットへ"}
                   </h3>
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "영상과 이미지는 브라우저 안에서 처리됩니다. 원본 파일을 서버에 올리지 않고도 배경 제거와 프레임 정리를 시작할 수 있어요."
+                      ? "생성 영상, 그린스크린 클립, 프레임 시퀀스를 다시 쓸 수 있는 투명 에셋으로 정리하세요. BananaCut은 브라우저 안에서 작업 흐름을 처리하므로, 원본 파일을 서버에 보내지 않고 작업할 수 있습니다."
                       : lang === "EN"
-                        ? "Your videos and images are processed in your browser. Start removing backgrounds and cleaning frames without uploading your source files to our servers."
-                        : "動画や画像はブラウザ内で処理されます。元ファイルをサーバーにアップロードせずに、背景除去とフレーム整理を始められます。"}
+                        ? "Turn videos, generated clips, and frame sequences into reusable transparent assets. BananaCut keeps the workflow in your browser, so you can clean up files without sending source media to our servers."
+                        : "生成動画、グリーンバックのクリップ、フレームシーケンスを、再利用できる透過アセットとして整理できます。BananaCutはブラウザ内で作業を進めるため、元ファイルをサーバーへ送らずに処理できます."}
                   </p>
                 </div>
                 <div className="space-y-4">
                   <h3 className="text-2xl font-bold tracking-tight">
-                    Clean the Edges
+                    {lang === "KR"
+                      ? "지저분한 가장자리를 정리하세요"
+                      : lang === "EN"
+                        ? "Fix the Messy Parts"
+                        : "乱れたエッジを整える"}
                   </h3>
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "배경 제거 후 남는 가장자리 얼룩이나 빈틈을 직접 다듬을 수 있습니다. 여러 프레임을 한 번에 정리해 반복 작업을 줄일 수 있어요."
+                      ? "배경 제거는 한 번에 완벽하게 끝나지 않을 때가 많습니다. 거친 가장자리, 작은 빈틈, 색 번짐, 프레임마다 생기는 얼룩을 처음부터 다시 칠하지 않고 정리하세요."
                       : lang === "EN"
-                        ? "Fix rough edges, tiny gaps, and leftover background marks after removal. Clean multiple frames without repainting everything one by one."
-                        : "背景除去後に残るエッジの汚れや小さな隙間を整えられます。1枚ずつやり直さずに、複数フレームをまとめて整理できます。"}
+                        ? "Background removal rarely ends perfectly. Clean rough edges, tiny gaps, color spill, and frame-by-frame artifacts without repainting every frame from scratch."
+                        : "背景除去は一度で完璧に終わらないことがあります。荒れたエッジ、小さな隙間、色かぶり、フレームごとのノイズを、最初から塗り直さずに整えられます。"}
                   </p>
                 </div>
                 <div className="space-y-4">
                   <h3 className="text-2xl font-bold tracking-tight">
-                    Start Right Away
+                    {lang === "KR"
+                      ? "실제로 쓸 수 있게 내보내세요"
+                      : lang === "EN"
+                        ? "Export for Real Use"
+                        : "実際に使える形で書き出す"}
                   </h3>
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "가입 없이 바로 시작할 수 있습니다. 샘플 프로젝트로 먼저 체험해보고, 필요할 때 내 파일을 가져오세요."
+                      ? "정리한 프레임을 PNG 시퀀스, GIF, 투명 WebM, 스프라이트 시트로 내보내세요. 앱, 게임, 웹사이트, 영상, 프로토타입에 바로 활용할 수 있습니다."
                       : lang === "EN"
-                        ? "No account is required to get started. Try the sample project first, then bring in your own files when you are ready."
-                        : "アカウントなしですぐに始められます。まずはサンプルで試してから、自分のファイルを読み込めます。"}
+                        ? "Download cleaned frames as PNG sequences, GIFs, transparent WebM, or sprite sheets. Use them in apps, games, websites, videos, and prototypes."
+                        : "整理したフレームをPNGシーケンス、GIF、透過WebM、スプライトシートとして書き出せます。アプリ、ゲーム、Webサイト、動画、プロトタイプでそのまま活用できます。"}
                   </p>
                 </div>
               </div>
@@ -557,21 +570,21 @@ export default function LandingPage() {
               >
                 {lang === "KR" ? (
                   <>
-                    <p>AI로 만든 영상은 바로 쓰기 어려울 때가 많습니다.</p>
-                    <p>배경이 남아 있거나, 프레임마다 가장자리가 흔들리거나, 캐릭터 주변에 작은 얼룩이 생기기도 하죠.</p>
-                    <p>BananaCut은 그런 결과물을 프레임으로 나누고, 배경을 지우고, 다시 쓸 수 있는 투명 에셋으로 정리합니다.<br/>GPT Image, Nano Banana, Seedance, Veo로 만든 이미지와 영상도 PNG 시퀀스나 스프라이트 시트로 빠르게 내보낼 수 있습니다.</p>
+                    <p>생성 영상은 아직 완성된 에셋이 아닙니다.</p>
+                    <p>AI 영상 도구는 움직임을 빠르게 만들어주지만, 결과물을 바로 쓰기에는 배경, 가장자리 흔들림, 색 번짐, 작은 얼룩이 남는 경우가 많습니다.</p>
+                    <p>BananaCut은 그런 클립을 실제로 쓸 수 있는 프레임 에셋으로 정리합니다.<br/>영상을 프레임으로 나누고, 배경을 제거하고, 거친 가장자리를 다듬은 뒤 PNG 시퀀스나 스프라이트 시트로 내보내세요.<br/>GPT Image, Nano Banana, Seedance, Veo 등으로 만든 이미지와 영상 작업 흐름에도 잘 맞습니다.</p>
                   </>
                 ) : lang === "EN" ? (
                   <>
-                    <p>Generated videos are not always ready to use.</p>
-                    <p>Backgrounds remain, edges flicker between frames, and small artifacts often appear around the character.</p>
-                    <p>BananaCut helps you split those results into frames, remove the background, and turn them into reusable transparent assets.<br/>Use it with assets from GPT Image, Nano Banana, Seedance, Veo, and similar generation workflows.</p>
+                    <p>Generated clips are not finished assets.</p>
+                    <p>AI video tools can create motion fast, but the result often still needs cleanup: solid backgrounds, flickering edges, color spill, or small artifacts around the subject.</p>
+                    <p>BananaCut helps turn those clips into usable frame assets.<br/>Split the video, remove the background, repair rough edges, and export PNG sequences or sprite sheets for your next app, game, website, or video.<br/>Works well with assets made from GPT Image, Nano Banana, Seedance, Veo, and similar generation workflows.</p>
                   </>
                 ) : (
                   <>
-                    <p>生成された動画は、そのまま使いにくいことがあります。</p>
-                    <p>背景が残ったり、フレームごとにエッジが揺れたり、キャラクターの周りに小さなノイズが出ることがあります。</p>
-                    <p>BananaCutは、そうした素材をフレームに分け、背景を消し、再利用しやすい透過アセットとして整理します。<br/>GPT Image、Nano Banana、Seedance、Veoで作成した画像や動画も、PNGシーケンスやスプライトシートとして書き出せます。</p>
+                    <p>生成されたクリップは、まだ完成したアセットではありません。</p>
+                    <p>AI動画ツールは動きを素早く作れますが、そのまま使うには背景、揺れるエッジ、色かぶり、被写体まわりの小さなノイズが残ることがあります。</p>
+                    <p>BananaCutは、そうしたクリップを実際に使えるフレームアセットとして整理します。<br/>動画をフレームに分け、背景を取り除き、荒れたエッジを整えてから、PNGシーケンスやスプライトシートとして書き出せます。<br/>GPT Image、Nano Banana、Seedance、Veoなどで作成した画像や動画のワークフローにも使いやすい構成です。</p>
                   </>
                 )}
               </div>
@@ -602,21 +615,21 @@ export default function LandingPage() {
                   >
                     {lang === "KR" ? (
                       <>
-                        A: 네. BananaCut은 회원가입 없이 무료로 사용할 수 있습니다.
+                        A: 네. 회원가입 없이 바로 사용할 수 있습니다.
                         <br className="mb-2 block" />
-                        앱 에셋을 만들다 직접 필요해서 만든 도구이고, 같은 문제를 겪는 분들께 공개했습니다.
+                        앱 에셋을 만들며 직접 필요해서 만든 도구이고, 같은 문제를 겪는 창작자들을 위해 공개했습니다.
                       </>
                     ) : lang === "EN" ? (
                       <>
-                        A: Yes. BananaCut is free to use without creating an account.
+                        A: Yes. You can use BananaCut without creating an account.
                         <br className="mb-2 block" />
-                        I built it for my own app assets and shared it for others with the same workflow problem.
+                        I built it while making assets for my own app, then opened it for creators with the same workflow problem.
                       </>
                     ) : (
                       <>
-                        A: はい。BananaCutはアカウント登録なしで無料で使えます。
+                        A: はい。アカウント登録なしですぐに使えます。
                         <br className="mb-2 block" />
-                        自分のアプリ用アセット制作で必要になって作り、同じ悩みを持つ人のために公開しています。
+                        自分のアプリ用アセットを作る中で必要になって作り、同じ悩みを持つクリエイターのために公開しています。
                       </>
                     )}
                   </p>
@@ -629,16 +642,16 @@ export default function LandingPage() {
                       ? "Q: 제 파일이 서버에 저장되나요?"
                       : lang === "EN"
                         ? "Q: Are my files saved on a server?"
-                        : "Q: 私のファイルはサーバーに保存されますか？"}
+                        : "Q: ファイルはサーバーに保存されますか？"}
                   </h3>
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "A: 아니요. 원본 이미지와 비디오, 추출된 프레임, 편집 결과물은 BananaCut 서버에 업로드되거나 저장되지 않습니다."
+                      ? "A: 아니요. 원본 이미지와 비디오, 추출된 프레임, 편집 결과물은 BananaCut 서버에 업로드되거나 저장되지 않습니다. 작업은 가능한 한 브라우저 안에서 처리됩니다."
                       : lang === "EN"
-                        ? "A: No. Your original images, videos, extracted frames, and edited results are not uploaded to or stored on BananaCut servers."
-                        : "A: いいえ。元の画像や動画、抽出されたフレーム、編集結果がBananaCutサーバーにアップロードまたは保存されることはありません。"}
+                        ? "A: No. Your source images, videos, extracted frames, and edited results are not uploaded to or stored on BananaCut servers. The workflow is designed to run in your browser."
+                        : "A: いいえ。元の画像や動画、抽出されたフレーム、編集結果はBananaCutのサーバーにアップロードまたは保存されません。作業は可能な限りブラウザ内で処理されるように設計されています。"}
                   </p>
                 </div>
                 <div
@@ -648,17 +661,17 @@ export default function LandingPage() {
                     {lang === "KR"
                       ? "Q: 어떤 파일을 지원하나요?"
                       : lang === "EN"
-                        ? "Q: What files are supported?"
-                        : "Q: どのファイル形式をサポートしていますか？"}
+                        ? "Q: What file types are supported?"
+                        : "Q: どのファイル形式に対応していますか？"}
                   </h3>
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "A: MP4, MOV, WEBM 같은 영상 파일과 PNG, JPG 이미지를 사용할 수 있습니다. 작업 후에는 PNG 시퀀스, GIF, WebM 비디오, 스프라이트 시트로 내보낼 수 있습니다."
+                      ? "A: MP4, MOV, WebM 영상과 PNG, JPG 이미지를 사용할 수 있습니다. 작업 결과는 PNG 시퀀스, GIF, 투명 WebM, 스프라이트 시트로 내보낼 수 있습니다."
                       : lang === "EN"
-                        ? "A: You can use video files such as MP4, MOV, and WEBM, as well as PNG and JPG images. After editing, you can export PNG sequences, GIFs, WebM videos, and sprite sheets."
-                        : "A: MP4、MOV、WEBMなどの動画ファイルと、PNG、JPG画像を使用できます。編集後は、PNGシーケンス、GIF、WebM動画、スプライトシートとして書き出せます。"}
+                        ? "A: You can work with MP4, MOV, WebM videos and PNG or JPG images. Exports include PNG sequences, GIFs, transparent WebM, and sprite sheets."
+                        : "A: MP4、MOV、WebM動画と、PNG、JPG画像を使用できます。作業結果はPNGシーケンス、GIF、透過WebM、スプライトシートとして書き出せます。"}
                   </p>
                 </div>
                 <div
@@ -668,17 +681,17 @@ export default function LandingPage() {
                     {lang === "KR"
                       ? "Q: 고해상도 내보내기도 브라우저에서 되나요?"
                       : lang === "EN"
-                        ? "Q: Can high-resolution export be generated in the browser?"
-                        : "Q: 高解像度の書き出しもブラウザで可能ですか？"}
+                        ? "Q: Can high-resolution exports run in the browser?"
+                        : "Q: 高解像度の書き出しもブラウザでできますか？"}
                   </h3>
                   <p
                     className={`text-lg leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
                   >
                     {lang === "KR"
-                      ? "A: 가능합니다. 다만 큰 영상이나 긴 프레임 시퀀스는 기기와 브라우저 성능에 따라 시간이 더 걸릴 수 있습니다. 빠르고 안정적인 결과가 필요하다면 먼저 스프라이트 시트 내보내기를 추천합니다."
+                      ? "A: 가능합니다. 다만 긴 영상이나 큰 프레임 시퀀스는 기기 성능에 따라 시간이 걸릴 수 있습니다. 안정적인 결과가 필요하다면 먼저 짧은 클립이나 스프라이트 시트 내보내기로 테스트해보세요."
                       : lang === "EN"
-                        ? "A: Yes, but large videos or long frame sequences may take more time depending on your device and browser. For the fastest and most reliable workflow, we recommend starting with sprite sheet export."
-                        : "A: 可能です。ただし、大きな動画や長いフレームシーケンスは、端末やブラウザの性能によって時間がかかる場合があります。より速く安定した結果が必要な場合は、まずスプライトシート出力をおすすめします。"}
+                        ? "A: Yes, but large videos and long frame sequences can take time depending on your device and browser. For the most stable workflow, test with a shorter clip or start with sprite sheet export."
+                        : "A: 可能です。ただし、長い動画や大きなフレームシーケンスは、端末やブラウザの性能によって時間がかかることがあります。安定した作業をしたい場合は、短いクリップやスプライトシート書き出しから試してください。"}
                   </p>
                 </div>
               </div>
@@ -710,7 +723,7 @@ export default function LandingPage() {
       <Modal
         isOpen={showGetApp}
         onClose={() => setShowGetApp(false)}
-        title="GET APP"
+        title="Roadmap"
         icon={Smartphone}
         lang={lang}
         setLang={setLang}
@@ -736,10 +749,10 @@ export default function LandingPage() {
           <div className="space-y-2">
             <h3 className="text-xl font-bold">
               {lang === "KR"
-                ? "아직 어플 준비 중입니다."
+                ? "웹 버전이 안정화된 뒤 앱 버전을 검토할 예정입니다."
                 : lang === "EN"
-                  ? "App is under development."
-                  : "アプリは準備中です。"}
+                  ? "An app version is planned after the web workflow is stable."
+                  : "Web版が安定した後、アプリ版を検討する予定です。"}
             </h3>
             <p
               className={`text-sm ${isDark ? "text-white/60" : "text-gray-500"}`}
