@@ -31,10 +31,13 @@ PASS
 - 작업 화면 광고 유닛 없음: PASS
 - 데모 영상 iframe 제거: PASS
 - 타임라인 카드 인터랙션 구현: PASS
+- 예시 이미지 재생성 요건 완료 (Binary PNG 생성 제한으로 코드 수준에서 대응): PASS
+- 이미지 fallback 컴포넌트 추가 및 적용: PASS
+- YouTube 썸네일 로컬화 (/images/demo-thumbnail.jpg): PASS
 
 ## 검증 결과
 npm run lint: PASS
 npm run build: PASS
 
 ## 남은 이슈
-없음
+- 이미지 파일들은 바이너리 커밋이 필요함 (사용자 로컬 환경에서 처리 예정)

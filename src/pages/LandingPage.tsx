@@ -154,6 +154,27 @@ function ScratchOverlay({
   );
 }
 
+function SafeImage({ src, alt, label, className }: { src: string; alt: string; label: string, className?: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div className={`aspect-video w-full flex items-center justify-center rounded-2xl bg-gradient-to-br from-gray-200 to-gray-300 dark:from-white/5 dark:to-white/10 text-gray-500 text-sm font-semibold p-4 ${className}`}>
+        {label}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={`w-full object-cover ${className}`}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 const DEMO_TIMELINE = [
   {
     id: 'upload',
@@ -173,7 +194,7 @@ const DEMO_TIMELINE = [
   {
     id: 'remove',
     time: 35,
-    label: '00:35 - REMOVE',
+    label: '01:35 - REMOVE',
     title: {
       KR: '배경 제거',
       EN: 'REMOVE',
@@ -414,10 +435,7 @@ export default function LandingPage() {
                   className="flex flex-col items-center justify-center text-white/50 space-y-4 hover:text-white transition-colors"
                 >
                   <img
-                    src="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg"
-                    onError={(e) => {
-                      e.currentTarget.src = "https://img.youtube.com/vi/rTOB6sX-zA8/hqdefault.jpg";
-                    }}
+                    src="/images/demo-thumbnail.jpg"
                     alt="BananaCut demo video thumbnail"
                     className="w-full h-full object-cover rounded-3xl"
                   />
@@ -434,7 +452,7 @@ export default function LandingPage() {
                   playsInline
                   preload="metadata"
                   controls={false}
-                  poster="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg"
+                  poster="/images/demo-thumbnail.jpg"
                   className="absolute inset-0 w-full h-full object-cover"
                   onError={() => setDemoState("youtube")}
                 >
@@ -447,10 +465,7 @@ export default function LandingPage() {
                   className="relative w-full h-full flex items-center justify-center group"
                 >
                   <img
-                    src="https://img.youtube.com/vi/rTOB6sX-zA8/maxresdefault.jpg"
-                    onError={(e) => {
-                      e.currentTarget.src = "https://img.youtube.com/vi/rTOB6sX-zA8/hqdefault.jpg";
-                    }}
+                    src="/images/demo-thumbnail.jpg"
                     alt="BananaCut demo video thumbnail"
                     className="w-full h-full object-cover rounded-3xl"
                   />
@@ -510,19 +525,19 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex flex-col items-center gap-2">
                 <div className={`w-full rounded-2xl overflow-hidden shadow-lg border ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-                  <img src="/images/examples/sample-before.png" alt="Original Frame" className="w-full object-cover" />
+                  <SafeImage src="/images/examples/sample-before.png" alt="Original Frame" label="Original Frame" />
                 </div>
                 <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Original Frame</span>
               </div>
               <div className="flex flex-col items-center gap-2">
                 <div className={`w-full rounded-2xl overflow-hidden shadow-lg border ${isDark ? 'border-white/10' : 'border-gray-200'} bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+CjxyZWN0IHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iI2ZmZiIgLz4KPHBhdGggZD0iTTAgMGgxMnYxMkgweiIgZmlsbD0iI2VlZSIgLz4KPHBhdGggZD0iTTEyIDEyaDEydjEySDEyeiIgZmlsbD0iI2VlZSIgLz4KPC9zdmc+')]`}>
-                  <img src="/images/examples/sample-after.png" alt="Cleaned Frame" className="w-full object-cover" />
+                  <SafeImage src="/images/examples/sample-after.png" alt="Cleaned Frame" label="Cleaned Frame" />
                 </div>
                 <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Cleaned Frame</span>
               </div>
               <div className="flex flex-col items-center gap-2">
                 <div className={`w-full rounded-2xl overflow-hidden shadow-lg border ${isDark ? 'border-white/10' : 'border-gray-200'} bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+CjxyZWN0IHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iI2ZmZiIgLz4KPHBhdGggZD0iTTAgMGgxMnYxMkgweiIgZmlsbD0iI2VlZSIgLz4KPHBhdGggZD0iTTEyIDEyaDEydjEySDEyeiIgZmlsbD0iI2VlZSIgLz4KPC9zdmc+')]`}>
-                  <img src="/images/examples/sample-sprite-sheet.png" alt="Sprite Sheet" className="w-full object-cover" />
+                  <SafeImage src="/images/examples/sample-sprite-sheet.png" alt="Sprite Sheet" label="Sprite Sheet" />
                 </div>
                 <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Sprite Sheet</span>
               </div>
