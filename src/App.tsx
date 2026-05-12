@@ -146,7 +146,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             }
           >
             <HelpCircle className="w-4 h-4" strokeWidth={1} />
-            Guide (도움말)
+            App Guide
           </NavLink>
           <button 
             onClick={toggleTheme}
