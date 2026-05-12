@@ -255,6 +255,8 @@ export default function RemovePage() {
 
   const [isDragging, setIsDragging] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [localAlert, setLocalAlert] = useState<string | null>(null);
+  const [localConfirm, setLocalConfirm] = useState<{message: string, onConfirm: () => void, onCancel?: () => void} | null>(null);
   const [downloadLang, setDownloadLang] = useState<"KR" | "EN" | "JP">("EN");
 
   const handleLoadSampleProject = async () => {
@@ -285,7 +287,7 @@ export default function RemovePage() {
       console.error(e);
       setUploadState("error");
       trackEvent("Sample_Project_Failed");
-      alert(
+      setLocalAlert(
         lang === "KR"
           ? "샘플 프로젝트 로드에 실패했습니다."
           : "Failed to load sample project.",
@@ -1152,7 +1154,7 @@ export default function RemovePage() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Processing failed:", error);
-      alert(
+      setLocalAlert(
         lang === "KR"
           ? "프레임 처리 실패."
           : lang === "EN"
@@ -2505,26 +2507,28 @@ export default function RemovePage() {
                 });
 
                 if (dirtyIndices.length > 0) {
-                  const confirmed = confirm(
-                    lang === "KR"
+                  setLocalConfirm({
+                    message: lang === "KR"
                       ? `${dirtyIndices.length}개의 프레임이 적용되지 않았습니다. 자동으로 적용하고 다운로드할까요?`
                       : lang === "EN"
                         ? `${dirtyIndices.length} frames are not processed. Do you want to process them automatically and download?`
                         : `${dirtyIndices.length} フレームが適用されていません。自動的に適用してダウンロードしますか？`,
-                  );
-
-                  if (confirmed) {
-                    await processFramesForDownload(dirtyIndices);
-                    setShowDownloadModal(true);
-                  } else {
-                    alert(
-                      lang === "KR"
-                        ? "처리되지 않은 프레임이 있습니다. 화면 위의 '적용' 버튼을 눌러 모든 프레임을 처리해야 내보낼 수 있습니다."
-                        : lang === "EN"
-                          ? "Unprocessed frames detected. You must apply settings to ALL frames to export."
-                          : "未処理のフレームがあります。 すべてのフレームを適用するまでエクスポートできません。",
-                    );
-                  }
+                    onConfirm: async () => {
+                      setLocalConfirm(null);
+                      await processFramesForDownload(dirtyIndices);
+                      setShowDownloadModal(true);
+                    },
+                    onCancel: () => {
+                      setLocalConfirm(null);
+                      setLocalAlert(
+                        lang === "KR"
+                          ? "처리되지 않은 프레임이 있습니다. 화면 위의 '적용' 버튼을 눌러 모든 프레임을 처리해야 내보낼 수 있습니다."
+                          : lang === "EN"
+                            ? "Unprocessed frames detected. You must apply settings to ALL frames to export."
+                            : "未処理のフレームがあります。 すべてのフレームを適用するまでエクスポートできません。"
+                      );
+                    }
+                  });
                   return;
                 }
                 setShowDownloadModal(true);
@@ -2881,6 +2885,58 @@ export default function RemovePage() {
             isDark={isDark}
           />
           
+          {localAlert && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div className={`w-full max-w-sm p-6 rounded-2xl shadow-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {lang === 'KR' ? '알림' : lang === 'EN' ? 'Notice' : '通知'}
+                </h3>
+                <p className={`text-sm mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {localAlert}
+                </p>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setLocalAlert(null)}
+                    className="px-4 py-2 text-sm font-semibold rounded-xl bg-yellow-400 text-black hover:bg-yellow-500 transition-all"
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {localConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div className={`w-full max-w-sm p-6 rounded-2xl shadow-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {lang === 'KR' ? '확인' : lang === 'EN' ? 'Confirm' : '確認'}
+                </h3>
+                <p className={`text-sm mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {localConfirm.message}
+                </p>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button
+                    onClick={() => localConfirm.onCancel?.()}
+                    className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
+                      isDark 
+                        ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                    }`}
+                  >
+                    {lang === 'KR' ? '취소' : lang === 'EN' ? 'Cancel' : 'キャンセル'}
+                  </button>
+                  <button
+                    onClick={() => localConfirm.onConfirm()}
+                    className="px-4 py-2 text-sm font-semibold rounded-xl bg-yellow-400 text-black hover:bg-yellow-500 transition-all"
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {importGuardModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
               <div className={`w-full max-w-sm p-6 rounded-2xl shadow-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>

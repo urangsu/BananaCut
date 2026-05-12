@@ -18,6 +18,34 @@ export default function ExamplesPage() {
       </div>
 
       <div className="space-y-12">
+        {/* Real sample workflow */}
+        <section className={`p-8 rounded-2xl border ${isDark ? 'bg-purple-900/20 border-purple-500/30' : 'bg-purple-50 border-purple-200'}`}>
+          <div className="flex items-center gap-3 mb-6">
+            <Sparkles className={`w-6 h-6 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
+            <h2 className="text-2xl font-bold">Real Sample Workflow</h2>
+          </div>
+          <p className="mb-6 opacity-80">
+            See exactly how BananaCut transforms raw generated footage into game-ready transparent sequence and spritesheets.
+          </p>
+          <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 grid grid-cols-1 md:grid-cols-3 gap-px bg-gray-200 dark:bg-white/10">
+            <div className="relative">
+              <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded z-10 backdrop-blur-sm">1. Original Video</span>
+              <img src="/images/examples/sample-before.png" alt="Original raw video" className="w-full h-auto block" />
+            </div>
+            <div className="relative">
+              <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded z-10 backdrop-blur-sm">2. Transparent Frames</span>
+              <img src="/images/examples/sample-after.png" alt="Cleaned up transparent frame" className="w-full h-auto block bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZjBmMGYwIi8+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjZDFkNWRiIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiNkMWQ1ZGIiLz48L3N2Zz4=')]" />
+            </div>
+            <div className="relative">
+              <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded z-10 backdrop-blur-sm">3. Sprite Sheet Export</span>
+              <img src="/images/examples/sample-sprite-sheet.png" alt="Final sprite sheet asset" className="w-full h-auto block bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZjBmMGYwIi8+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjZDFkNWRiIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiNkMWQ1ZGIiLz48L3N2Zz4=')]" />
+            </div>
+          </div>
+          <p className="text-sm opacity-80">
+            Our entirely browser-side processing handles everything locally without any cloud uploads. Load the original asset, chroma key the background out, refine edges, and combine into a packed tilemap or WEBM instantly.
+          </p>
+        </section>
+
         {/* Example 1 */}
         <section className={`p-8 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
           <div className="flex items-center gap-3 mb-6">

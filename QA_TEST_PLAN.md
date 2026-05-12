@@ -105,3 +105,22 @@
    - Action: Open BananaCut and test basic removal workflow.
    - Targets: Safari latest, Chrome latest, iPhone Safari, Android Chrome.
    - Expected: Functions core capabilities (Sprite Sheet / PNG generation). FFmpeg WebM might be unsupported on iOS Safari, which should fail gracefully via the FFmpegContext error handler.
+
+## 6. Pre-Launch Configuration Checklist
+
+1. **Static Files Check**
+   - Expected: `/robots.txt` returns HTTP 200.
+   - Expected: `/sitemap.xml` returns HTTP 200.
+   - Expected: `/images/og-image.png` returns HTTP 200.
+   - Expected: `/images/twitter-image.png` returns HTTP 200.
+
+2. **Core Pages Return 200**
+   - Expected: `/privacy` returns HTTP 200.
+   - Expected: `/terms` returns HTTP 200.
+   - Expected: `/guides` returns HTTP 200.
+   - Expected: `/examples` returns HTTP 200.
+
+3. **External Platform Integration**
+   - Expected: AdSense script network status is OK (no CORB/CORS block due to headers).
+   - Expected: `crossOriginIsolated` state matches environment capabilities.
+   - Expected: If `Transparent Video` fails due to environment, `Sprite Sheet` remains functional.
