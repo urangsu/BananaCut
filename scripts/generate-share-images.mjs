@@ -4,11 +4,19 @@ import sharp from 'sharp';
 
 async function svgToPng(svgPath, destPath, w, h) {
   const svgBuffer = fs.readFileSync(svgPath);
-  await sharp(svgBuffer)
+  const pngBuffer = await sharp(svgBuffer)
     .resize(w, h)
     .png()
-    .toFile(destPath);
+    .toBuffer();
+    
+  fs.writeFileSync(destPath, pngBuffer);
+  
+  const b = fs.readFileSync(destPath);
+  const sig = [...b.slice(0,8)].map(x=>x.toString(16).padStart(2,'0')).join(' ');
+  const b64 = b.toString('base64').slice(0,12);
   console.log(`Saved ${destPath}`);
+  console.log(`  Signature: ${sig}`);
+  console.log(`  Base64: ${b64}...`);
 }
 
 async function main() {
