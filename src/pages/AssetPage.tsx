@@ -373,7 +373,7 @@ export default function AssetPage() {
         },
       };
 
-      if (exportSizeMode === "recommendedStableCrop") {
+      if (exportSizeMode === "recommendedStableCrop" && stableBox) {
         metadata.meta.stableBox = stableBox;
         metadata.meta.recommendedCanvas = recommendedCanvas;
         metadata.meta.transparentWasteRatio = transparentWasteRatio;
@@ -694,6 +694,31 @@ export default function AssetPage() {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Smart Crop Panel */}
+              <div className={`mb-4 p-4 rounded-xl ${isDark ? "bg-white/5" : "bg-white/50"}`}>
+                <h3 className="text-sm font-bold mb-2">Smart Crop Recommendation</h3>
+                <p className="text-xs opacity-60 mb-3">{lang === 'KR' ? '투명 여백을 분석해 안정적인 내보내기 박스를 추천합니다.' : 'Analyze transparent padding and suggest a stable export box.'}</p>
+                
+                <button
+                    onClick={handleAnalyzeCrop}
+                    disabled={isAnalyzingCrop}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold"
+                  >
+                    {isAnalyzingCrop ? 'Analyzing...' : 'Analyze Frames'}
+                  </button>
+                {analyzeProgress > 0 && <span className="ml-2 text-xs">{analyzeProgress}%</span>}
+
+                {stableBox && (
+                  <div className="mt-4 text-xs space-y-1 opacity-80">
+                    <div>Current canvas: {sourceDim?.width} × {sourceDim?.height}</div>
+                    <div>Recommended safe box: {stableBox.w} × {stableBox.h}</div>
+                    <div>Transparent waste: {Math.round(transparentWasteRatio * 100)}%</div>
+                    <div>Padding: {cropPadding}px</div>
+                    <div>Alpha threshold: {alphaThreshold}</div>
+                  </div>
+                )}
               </div>
 
               <div
