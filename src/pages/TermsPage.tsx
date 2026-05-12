@@ -2,6 +2,7 @@ import React from 'react';
 import { useLanguage } from '../LanguageContext';
 import { useTheme } from '../ThemeContext';
 import { FileText } from 'lucide-react';
+import { SEO } from '../components/SEO';
 
 export default function TermsPage() {
   const { lang } = useLanguage();
@@ -9,6 +10,11 @@ export default function TermsPage() {
 
   return (
     <div className={`max-w-4xl mx-auto p-6 md:p-12 min-h-[calc(100vh-80px)] ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <SEO 
+        title="Terms of Use | BananaCut"
+        description="Read the terms for using BananaCut, including user media ownership, service limits, and third-party links."
+        canonical="https://www.bananacut.art/terms"
+      />
       <div className="flex items-center gap-3 mb-8 border-b pb-6 border-gray-200 dark:border-white/10">
         <FileText className={`w-8 h-8 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
         <h1 className="text-3xl font-semibold tracking-tight">

@@ -2,6 +2,7 @@ import React from 'react';
 import { useLanguage } from '../LanguageContext';
 import { useTheme } from '../ThemeContext';
 import { Info } from 'lucide-react';
+import { SEO } from '../components/SEO';
 
 export default function AboutPage() {
   const { lang } = useLanguage();
@@ -9,6 +10,11 @@ export default function AboutPage() {
 
   return (
     <div className={`max-w-4xl mx-auto p-6 md:p-12 min-h-[calc(100vh-80px)] ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <SEO 
+        title="Why I Built BananaCut | BananaCut"
+        description="BananaCut started as a browser-based tool for preparing app assets, removing backgrounds, and cleaning repeated video frames."
+        canonical="https://www.bananacut.art/about"
+      />
       <div className="flex items-center gap-3 mb-8 border-b pb-6 border-gray-200 dark:border-white/10">
         <Info className={`w-8 h-8 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
         <h1 className="text-3xl font-semibold tracking-tight">

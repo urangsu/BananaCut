@@ -473,7 +473,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Learn</h4>
             <div className="flex flex-col gap-1">
               <Link to="/guides" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
-                Guides
+                Articles
               </Link>
               <Link to="/examples" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
                 Examples

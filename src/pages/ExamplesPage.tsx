@@ -3,6 +3,7 @@ import { useLanguage } from '../LanguageContext';
 import { useTheme } from '../ThemeContext';
 import { Sparkles, Video, Grid } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { SEO } from '../components/SEO';
 
 export default function ExamplesPage() {
   const { lang } = useLanguage();
@@ -10,6 +11,11 @@ export default function ExamplesPage() {
 
   return (
     <div className={`max-w-4xl mx-auto p-6 md:p-12 min-h-[calc(100vh-80px)] ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <SEO 
+        title="Examples and Use Cases | BananaCut"
+        description="See how BananaCut can be used for green-screen animation, AI-generated motion clips, and app or game sprite sheet workflows."
+        canonical="https://www.bananacut.art/examples"
+      />
       <div className="flex items-center gap-3 mb-8 border-b pb-6 border-gray-200 dark:border-white/10">
         <Sparkles className={`w-8 h-8 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
         <h1 className="text-3xl font-semibold tracking-tight">
@@ -105,7 +111,7 @@ export default function ExamplesPage() {
             </div>
             <div>
               <strong className="block mb-1 opacity-100">BananaCut Workflow:</strong>
-              <p>Pick the dominant background color to drop it out. If the AI created strange flickering edges, use the exclusion brush or adjust softness to blend the outline perfectly.</p>
+              <p>Pick the dominant background color to drop it out. If the AI created strange flickering edges, use the exclusion brush or adjust softness to blend the outline smoothly.</p>
             </div>
             <div>
               <strong className="block mb-1 opacity-100">Recommended Export:</strong>

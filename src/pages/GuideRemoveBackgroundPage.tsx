@@ -3,6 +3,7 @@ import { useLanguage } from '../LanguageContext';
 import { useTheme } from '../ThemeContext';
 import { BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { SEO } from '../components/SEO';
 
 export default function GuideRemoveBackgroundPage() {
   const { lang } = useLanguage();
@@ -10,6 +11,11 @@ export default function GuideRemoveBackgroundPage() {
 
   return (
     <div className={`max-w-4xl mx-auto p-6 md:p-12 min-h-[calc(100vh-80px)] ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <SEO 
+        title="How to Remove Backgrounds from Video in Your Browser | BananaCut"
+        description="A practical guide to remove video backgrounds, clean frames, and export PNG sequences, WebM, or sprite sheets in your browser."
+        canonical="https://www.bananacut.art/guides/remove-background-from-video"
+      />
       <div className="mb-8">
         <Link to="/guides" className={`text-sm hover:underline ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           ← Back to Guides

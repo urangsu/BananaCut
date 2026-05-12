@@ -3,6 +3,7 @@ import { useLanguage } from '../LanguageContext';
 import { useTheme } from '../ThemeContext';
 import { BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { SEO } from '../components/SEO';
 
 export default function GuideSpriteSheetPage() {
   const { lang } = useLanguage();
@@ -10,6 +11,11 @@ export default function GuideSpriteSheetPage() {
 
   return (
     <div className={`max-w-4xl mx-auto p-6 md:p-12 min-h-[calc(100vh-80px)] ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <SEO 
+        title="How to Create a Sprite Sheet from Video Frames | BananaCut"
+        description="Learn how to export cleaned video frames as sprite sheets with layout options and metadata for apps and games."
+        canonical="https://www.bananacut.art/guides/sprite-sheet-generator"
+      />
       <div className="mb-8">
         <Link to="/guides" className={`text-sm hover:underline ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           ← Back to Guides

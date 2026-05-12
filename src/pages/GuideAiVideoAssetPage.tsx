@@ -3,6 +3,7 @@ import { useLanguage } from '../LanguageContext';
 import { useTheme } from '../ThemeContext';
 import { BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { SEO } from '../components/SEO';
 
 export default function GuideAiVideoAssetPage() {
   const { lang } = useLanguage();
@@ -10,6 +11,11 @@ export default function GuideAiVideoAssetPage() {
 
   return (
     <div className={`max-w-4xl mx-auto p-6 md:p-12 min-h-[calc(100vh-80px)] ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <SEO 
+        title="Turn AI-Generated Videos into Game Assets | BananaCut"
+        description="Learn how to clean up AI-generated clips and prepare them as reusable assets for apps, games, websites, and videos."
+        canonical="https://www.bananacut.art/guides/ai-video-to-game-asset"
+      />
       <div className="mb-8">
         <Link to="/guides" className={`text-sm hover:underline ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           ← Back to Guides

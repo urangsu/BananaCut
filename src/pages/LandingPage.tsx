@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { trackEvent } from "../lib/analytics";
+import { SEO } from "../components/SEO";
 
 function ScratchOverlay({
   isDark,
@@ -190,6 +191,11 @@ export default function LandingPage() {
     <div
       className={`min-h-screen flex flex-col ${isDark ? "bg-[#121212] text-white" : "bg-white text-gray-900"}`}
     >
+      <SEO 
+        title="BananaCut — Remove Backgrounds. Make It Yours."
+        description="Clean up videos and frames, then export transparent assets directly in your browser."
+        canonical="https://www.bananacut.art/"
+      />
       {/* Header */}
       <header
         className={`relative z-50 flex items-center justify-between p-6 border-b ${isDark ? "bg-[#121212] border-white/10" : "bg-white border-gray-200"}`}
@@ -685,7 +691,7 @@ export default function LandingPage() {
           className={`w-full py-8 mt-12 border-t px-6 flex flex-col items-center justify-center gap-6 ${isDark ? "border-white/10 text-white/40" : "border-gray-200 text-gray-500"}`}
         >
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs font-medium max-w-2xl">
-            <Link to="/guides" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Guides</Link>
+            <Link to="/guides" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Articles</Link>
             <Link to="/examples" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Examples</Link>
             <Link to="/privacy" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Terms</Link>

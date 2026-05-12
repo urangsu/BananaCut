@@ -124,3 +124,16 @@
    - Expected: AdSense script network status is OK (no CORB/CORS block due to headers).
    - Expected: `crossOriginIsolated` state matches environment capabilities.
    - Expected: If `Transparent Video` fails due to environment, `Sprite Sheet` remains functional.
+
+## 7. AdSense Placement Verification
+
+1. **AdSense unit placement check**
+   - Expected: AdSense script may exist in index.html.
+   - Expected: No ad units should be rendered in Remove, Recover, Asset workspace screens.
+   - Expected: Ads, if added after approval, should be limited to Landing, Guides, Examples, or article-style content pages.
+
+2. **AdSense Pre-Review Steps**
+   - Expected: Need to click "Check for updates" in AdSense dashboard.
+   - Expected: If ads.txt status is "Not found", wait 24-72 hours. Low traffic sites can take up to a month.
+   - Expected: Check both https://bananacut.art/ads.txt and https://www.bananacut.art/ads.txt.
+   - Expected: /ads.txt must be served as pure text/plain, not rendering the React app shell.
