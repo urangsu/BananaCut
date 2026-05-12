@@ -1,7 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
-  <rect width="100" height="100" rx="24" fill="#171717"/>
-  <!-- Banana -->
+  <!-- Banana body -->
   <path d="M20 60 C 20 80, 80 80, 80 60" stroke="#FACC15" stroke-width="12" fill="none" stroke-linecap="round"/>
-  <!-- Slash -->
-  <path d="M30 75 L 75 30" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
+  <!-- Slash Cut -->
+  <path d="M30 75 L 75 30" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+  <!-- Cut gap/dash -->
+  <path d="M50 55 L 60 45" stroke="#171717" stroke-width="4" stroke-linecap="round"/>
 </svg>

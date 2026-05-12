@@ -156,15 +156,17 @@ function Layout({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className={`flex flex-col items-center gap-3 pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
-            <div className={`flex justify-center gap-x-4 text-[11px] font-medium w-full ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-              <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors no-underline">App Guide</button>
-              <button onClick={() => setShowMore(true)} className="hover:text-blue-500 transition-colors no-underline">More</button>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[11px] font-medium w-full text-center">
+                <Link to="/privacy" className="hover:text-blue-500 transition-colors">Privacy</Link>
+                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
+                <button onClick={() => setShowSupport(true)} className="hover:text-blue-500 transition-colors">Support</button>
+                <button onClick={() => setShowMore(true)} className="hover:text-blue-500 transition-colors">More</button>
+              </div>
+              
+              <div className={`text-[10px] text-center mt-1 ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
+                © 2026 BananaCut
+              </div>
             </div>
-            
-            <div className={`text-[10px] text-center mt-1 ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
-              © 2026 BananaCut
-            </div>
-          </div>
         </div>
       </aside>
 
@@ -243,9 +245,11 @@ function Layout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         
-        <div className="flex flex-col items-center gap-2 mb-4 w-full px-4">
-          <div className="flex justify-center gap-x-4 text-[11px] font-medium w-full">
-            <button onClick={() => setShowHelp(true)} className="hover:text-blue-500 transition-colors">App Guide</button>
+        <div className="flex flex-col items-center gap-2 mb-4 w-full px-4 text-[11px] font-medium">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full text-center">
+            <Link to="/privacy" className="hover:text-blue-500 transition-colors">Privacy</Link>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
+            <button onClick={() => setShowSupport(true)} className="hover:text-blue-500 transition-colors">Support</button>
             <button onClick={() => setShowMore(true)} className="hover:text-blue-500 transition-colors">More</button>
           </div>
         </div>
@@ -463,6 +467,9 @@ function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Learn</h4>
             <div className="flex flex-col gap-1">
+              <button onClick={() => { setShowMore(false); setShowHelp(true); }} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                App Guide
+              </button>
               <Link to="/guides" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
                 Articles
               </Link>
@@ -472,10 +479,16 @@ function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           
-          {/* Legal */}
+          {/* Company */}
           <div>
-            <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Legal</h4>
+            <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Company</h4>
             <div className="flex flex-col gap-1">
+              <Link to="/about" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                About
+              </Link>
+              <Link to="/contact" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                Contact
+              </Link>
               <Link to="/privacy" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
                 Privacy
               </Link>
@@ -485,15 +498,12 @@ function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          {/* Feedback */}
+          {/* Support */}
           <div>
-            <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Feedback</h4>
+            <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Support</h4>
             <div className="flex flex-col gap-1">
-              <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" onClick={() => setShowMore(false)} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
-                Feedback
-              </a>
-              <button onClick={() => { setShowMore(false); setShowSupport(true); }} className="w-full text-left px-3 py-2.5 rounded-xl transition-colors text-yellow-600 dark:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 font-bold flex items-center justify-between">
-                <span>Support 🍌</span>
+              <button onClick={() => { setShowMore(false); setShowSupport(true); }} className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/10 ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                Support
               </button>
             </div>
           </div>
