@@ -694,64 +694,6 @@ export default function AssetPage() {
                 </div>
               </div>
 
-              {/* Smart Crop Panel */}
-              <div className={`mb-4 p-4 rounded-xl ${isDark ? "bg-white/5" : "bg-white/50"}`}>
-                <h3 className="text-sm font-bold mb-2">Smart Crop Recommendation</h3>
-                <p className="text-xs opacity-60 mb-3">{lang === 'KR' ? '투명 여백을 분석해 안정적인 내보내기 박스를 추천합니다.' : 'Analyze transparent padding and suggest a stable export box.'}</p>
-                
-                <button
-                    onClick={handleAnalyzeCrop}
-                    disabled={isAnalyzingCrop}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold"
-                  >
-                    {isAnalyzingCrop ? 'Analyzing...' : 'Analyze Frames'}
-                  </button>
-                {analyzeProgress > 0 && <span className="ml-2 text-xs">{analyzeProgress}%</span>}
-
-                {stableBox ? (
-                  <div className="space-y-4">
-                    <div className="text-xs space-y-1 opacity-80">
-                      <div>Current canvas: {sourceDim?.width} × {sourceDim?.height}</div>
-                      <div>Recommended safe box: {stableBox.w} × {stableBox.h}</div>
-                      <div>Transparent waste: {Math.round(transparentWasteRatio * 100)}%</div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => setShowCropPreview(true)}
-                        className={`text-xs px-3 py-1.5 rounded-lg font-bold bg-gray-600 text-white`}
-                      >
-                        Preview Box
-                      </button>
-                      
-                      <button
-                        onClick={() => setExportSizeMode("recommendedStableCrop")}
-                        className={`text-xs px-3 py-1.5 rounded-lg font-bold ${exportSizeMode === "recommendedStableCrop" ? "bg-blue-600" : "bg-gray-600"} text-white`}
-                      >
-                        Use Recommended Crop
-                      </button>
-
-                      <button
-                        onClick={() => setExportSizeMode("original")}
-                        className={`text-xs px-3 py-1.5 rounded-lg font-bold ${exportSizeMode === "original" ? "bg-blue-600" : "bg-gray-600"} text-white`}
-                      >
-                       Keep Original
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleAnalyzeCrop}
-                    disabled={isAnalyzingCrop}
-                    className={`w-full py-2 text-sm font-medium rounded-lg border transition-colors ${isDark ? "border-blue-500/50 text-blue-400 hover:bg-blue-500/10" : "border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100"} ${isAnalyzingCrop ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    {isAnalyzingCrop
-                      ? `${lang === "KR" ? "분석 중..." : "Analyzing..."} ${analyzeProgress}%`
-                      : `${lang === "KR" ? "프레임 분석하기" : "Analyze Frames"}`}
-                  </button>
-                )}
-              </div>
-
               <div
                 className={`flex-1 mb-[52px] text-sm leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
               >

@@ -39,15 +39,17 @@ export function getAlphaBoundingBox(
   };
 }
 
-function yieldToBrowser() {
+function yieldToBrowser(): Promise<void> {
   return new Promise((resolve) => {
-    const handle = setTimeout(() => {
-      cancelAnimationFrame(id);
-      resolve(null);
+    let rafId = 0;
+    const timeoutId = window.setTimeout(() => {
+      if (rafId) cancelAnimationFrame(rafId);
+      resolve();
     }, 50);
-    const id = requestAnimationFrame(() => {
-      clearTimeout(handle);
-      resolve(null);
+
+    rafId = requestAnimationFrame(() => {
+      clearTimeout(timeoutId);
+      resolve();
     });
   });
 }
