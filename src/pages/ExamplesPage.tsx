@@ -42,7 +42,7 @@ export default function ExamplesPage() {
             </div>
           </div>
           <p className="text-sm opacity-80">
-            Our entirely browser-side processing handles everything locally without any cloud uploads. Load the original asset, chroma key the background out, refine edges, and combine into a packed tilemap or WEBM instantly.
+            Our entirely browser-side processing handles everything locally without any cloud uploads. Load the original asset, remove the background, refine edges, and export a sprite sheet or transparent video when your browser supports it.
           </p>
         </section>
 
