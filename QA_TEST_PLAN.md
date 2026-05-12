@@ -125,15 +125,24 @@
    - Expected: `crossOriginIsolated` state matches environment capabilities.
    - Expected: If `Transparent Video` fails due to environment, `Sprite Sheet` remains functional.
 
-## 7. AdSense Placement Verification
 
-1. **AdSense unit placement check**
-   - Expected: AdSense script may exist in index.html.
-   - Expected: No ad units should be rendered in Remove, Recover, Asset workspace screens.
-   - Expected: Ads, if added after approval, should be limited to Landing, Guides, Examples, or article-style content pages.
+## 8. Sample Release Gate
 
-2. **AdSense Pre-Review Steps**
-   - Expected: Need to click "Check for updates" in AdSense dashboard.
-   - Expected: If ads.txt status is "Not found", wait 24-72 hours. Low traffic sites can take up to a month.
-   - Expected: Check both https://bananacut.art/ads.txt and https://www.bananacut.art/ads.txt.
-   - Expected: /ads.txt must be served as pure text/plain, not rendering the React app shell.
+| Category | Requirement | Criteria |
+| :--- | :--- | :--- |
+| Sample Flow | Sample Project | Loads within 60s, generates usable assets |
+| Export | Sample GIF Export | 0% failure |
+| Export | GIF Failure -> ZIP | Graceful fallback |
+| Export | Sprite Sheet | PNG + JSON Metadata valid |
+| Network | No Media Upload | No background process or storage uploads |
+| Release | Sample Gate | PASS only if all above pass |
+
+- Browser:
+- Device:
+- Frame count:
+- GIF export time:
+- ZIP export time:
+- Sprite Sheet export time:
+- Errors:
+- Fallback triggered (GIF->ZIP):
+- Pass/Fail:

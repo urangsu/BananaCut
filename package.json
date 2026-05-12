@@ -19,7 +19,6 @@
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "clsx": "^2.1.1",
-    "gif.js": "^0.2.0",
     "gifenc": "^1.0.3",
     "jszip": "^3.10.1",
     "lucide-react": "^0.546.0",

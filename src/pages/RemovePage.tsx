@@ -23,6 +23,7 @@ import { trackEvent } from "../lib/analytics";
 import { revokeUrlsSafely } from "../utils/urlUtils";
 import { getFrameDisplayUrl } from "../utils/frameUtils";
 import { DownloadModal } from "../components/DownloadModal";
+import { DownloadRequest } from "../types/export";
 import { useBatchJob } from "../hooks/useBatchJob";
 import { useMediaImport } from "../hooks/useMediaImport";
 import { useLanguage } from "../LanguageContext";
