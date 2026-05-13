@@ -10,8 +10,8 @@
 - Preview Playback: PASS
 - Result Only ZIP: PASS
 - With RAW ZIP: PASS
-- GIF Preview: PASS
-- GIF Fallback ZIP: PASS
+- GIF Preview: CODE IMPLEMENTED / MANUAL TEST REQUIRED
+- GIF Fallback ZIP: PASS (Manual verification requested in QA_TEST_PLAN)
 - Sprite Sheet: NOT TESTED (Postponed Phase)
 - Sprite JSON: NOT TESTED (Postponed Phase)
 

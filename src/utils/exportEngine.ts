@@ -60,8 +60,8 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
     }
     
     // Policy A: zipResultOnly
-    if (request.format === 'zipResultOnly') {
-        if (!resultBlob) {
+    if (request.format === 'zipResultOnly' || request.format === 'zipWithRaw') {
+        if (!resultBlob && request.format === 'zipResultOnly') {
              failedIndices.push(i);
              warnings.push(`Frame ${i} was skipped because it is not processed.`);
              continue;
@@ -120,21 +120,27 @@ export const exportPngSequenceZip = async (request: DownloadRequest, frames: Stu
   const resultFolder = zip.folder("result");
   const rawFolder = zip.folder("raw");
   
+  let exportedResultCount = 0;
+  let exportedRawCount = 0;
+
   for (const frame of prepared.frames) {
-      if (frame.resultBlob && resultFolder) resultFolder.file(frame.name, frame.resultBlob);
-      if (request.includeRaw && frame.rawBlob && rawFolder) rawFolder.file(frame.name.replace('.png', '_raw.png'), frame.rawBlob);
+      if (frame.resultBlob && resultFolder) {
+          resultFolder.file(frame.name, frame.resultBlob);
+          exportedResultCount++;
+      }
+      if (request.includeRaw && frame.rawBlob && rawFolder) {
+          rawFolder.file(frame.name.replace('.png', '_raw.png'), frame.rawBlob);
+          exportedRawCount++;
+      }
   }
   
-  const report: ExportReport = {
-      format: request.format,
-      sizeMode: request.sizeMode,
-      fps: request.fps,
-      totalFrames: frames.length,
-      exportedFrames: prepared.frames.length - prepared.failedIndices.length,
-      failedIndices: prepared.failedIndices,
-      warnings: prepared.warnings,
-      generatedAt: new Date().toISOString()
-  };
+  const report = createExportReport(
+      request, 
+      frames.length, 
+      exportedResultCount, 
+      prepared.failedIndices, 
+      prepared.warnings
+  );
 
   zip.file("export-report.json", JSON.stringify(report, null, 2));
   
@@ -163,6 +169,7 @@ export const exportGifPreview = async (request: DownloadRequest, frames: StudioF
     const canvas = document.createElement('canvas');
     const gif = new GIFEncoder();
     
+    let writtenFrames = 0;
     let width = 0;
     let height = 0;
 
@@ -172,54 +179,52 @@ export const exportGifPreview = async (request: DownloadRequest, frames: StudioF
         if (!blob) continue;
         
         const imgBlobUrl = URL.createObjectURL(blob);
-        const img = new Image();
-        await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = imgBlobUrl;
-        });
-        
-        if (i === 0) {
-            width = img.width;
-            height = img.height;
-            canvas.width = width;
-            canvas.height = height;
-        }
-        
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
+        try {
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = imgBlobUrl;
+            });
+            
+            if (i === 0) {
+                width = img.width;
+                height = img.height;
+                canvas.width = width;
+                canvas.height = height;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) continue;
+            
+            ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            const data = ctx.getImageData(0, 0, width, height).data;
+            
+            const palette = quantize(data, 256);
+            const index = applyPalette(data, palette);
+            gif.writeFrame(index, width, height, { palette, delay });
+            writtenFrames++;
+        } finally {
             URL.revokeObjectURL(imgBlobUrl);
-            continue;
         }
-        
-        ctx.fillStyle = 'transparent';
-        ctx.fillRect(0, 0, width, height);
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        const data = ctx.getImageData(0, 0, width, height).data;
-        
-        const palette = quantize(data, 256);
-        const index = applyPalette(data, palette);
-        gif.writeFrame(index, width, height, { palette, delay });
-        
-        URL.revokeObjectURL(imgBlobUrl);
     }
     
     gif.finish();
+    if (writtenFrames === 0) throw new Error("No frames written to GIF");
+    
     const blob = new Blob([gif.bytes()], { type: 'image/gif' });
     
     if (blob.size === 0) throw new Error("Generated GIF is empty");
     
-    const report: ExportReport = {
-        format: request.format,
-        sizeMode: request.sizeMode,
-        fps: request.fps,
-        totalFrames: frames.length,
-        exportedFrames: gifFrames.length,
-        failedIndices: prepared.failedIndices,
-        warnings: prepared.warnings,
-        generatedAt: new Date().toISOString()
-    };
+    const report = createExportReport(
+        request, 
+        frames.length, 
+        writtenFrames, 
+        prepared.failedIndices, 
+        prepared.warnings
+    );
     
     return {
         ok: true,
@@ -243,11 +248,25 @@ export const exportGifPreview = async (request: DownloadRequest, frames: StudioF
 };
 
 export const exportSpriteSheet = async (request: DownloadRequest, frames: StudioFrame[]): Promise<ExportResult> => {
-    throw new Error("Not implemented yet");
+    return {
+        ok: false,
+        format: request.format,
+        failedIndices: [],
+        warnings: ['This export path is not implemented in exportEngine yet.'],
+        error: 'Not implemented in exportEngine yet.',
+        report: createExportReport(request, frames.length, 0, [], ['Not implemented'])
+    };
 };
 
 export const exportTransparentWebM = async (request: DownloadRequest, frames: StudioFrame[]): Promise<ExportResult> => {
-    throw new Error("Not implemented yet");
+    return {
+        ok: false,
+        format: request.format,
+        failedIndices: [],
+        warnings: ['This export path is not implemented in exportEngine yet.'],
+        error: 'Not implemented in exportEngine yet.',
+        report: createExportReport(request, frames.length, 0, [], ['Not implemented'])
+    };
 };
 
 export function downloadBlob(blob: Blob, filename: string) {
@@ -259,4 +278,23 @@ export function downloadBlob(blob: Blob, filename: string) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function createExportReport(
+  request: DownloadRequest, 
+  totalFrames: number, 
+  exportedFrames: number, 
+  failedIndices: number[], 
+  warnings: string[]
+): ExportReport {
+  return {
+      format: request.format,
+      sizeMode: request.sizeMode,
+      fps: request.fps,
+      totalFrames: totalFrames,
+      exportedFrames: exportedFrames,
+      failedIndices: failedIndices,
+      warnings: warnings,
+      generatedAt: new Date().toISOString()
+  };
 }
