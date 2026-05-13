@@ -30,6 +30,7 @@ export type ExportReport = {
   fps: number;
   totalFrames: number;
   exportedFrames: number;
+  rawExportedFrames?: number;
   failedIndices: number[];
   warnings: string[];
   generatedAt: string;

@@ -2,6 +2,7 @@
 # BananaCut QA Test Plan
 
 ## Export Preflight Gate
+Status: Planned / Not Implemented
 1. All Frames Processed: 
    - Result Only ZIP -> Expected: Proceeds without preflight or info modal.
 2. Some Dirty Frames:

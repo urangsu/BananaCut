@@ -39,14 +39,10 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
     let rawBlob: Blob | undefined;
     
     // Processed (Result)
-    const formatLogic: Record<string, boolean> = {
-        zipWithRaw: !!request.includeRaw,
-        zipResultOnly: true,
-        gifPreview: true,
-        spriteSheet: false,
-        transparentWebM: false
-    };
-    const shouldFetchProcessed = formatLogic[request.format] || false;
+    const shouldFetchProcessed =
+        request.format === 'zipResultOnly' ||
+        request.format === 'zipWithRaw' ||
+        request.format === 'gifPreview';
 
     if (shouldFetchProcessed) {
         if (frame.processedUrl && !frame.dirty) {
@@ -69,10 +65,11 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
     }
 
     // Raw (for zipWithRaw OR gifPreview fallback)
-    const isZipWithRaw = request.format === 'zipWithRaw';
-    const isGifPreviewWithNoResult = request.format === 'gifPreview' && !resultBlob;
+    const shouldFetchRaw =
+        request.format === 'zipWithRaw' ||
+        (request.format === 'gifPreview' && !resultBlob);
 
-    if (isZipWithRaw || isGifPreviewWithNoResult) {
+    if (shouldFetchRaw) {
         if (frame.rawUrl) {
             try {
                 const response = await fetch(frame.rawUrl);
@@ -135,11 +132,12 @@ export const exportPngSequenceZip = async (request: DownloadRequest, frames: Stu
   }
   
   const report = createExportReport(
-      request, 
-      frames.length, 
-      exportedResultCount, 
-      prepared.failedIndices, 
-      prepared.warnings
+      request,
+      frames.length,
+      exportedResultCount,
+      prepared.failedIndices,
+      prepared.warnings,
+      exportedRawCount
   );
 
   zip.file("export-report.json", JSON.stringify(report, null, 2));
@@ -223,7 +221,8 @@ export const exportGifPreview = async (request: DownloadRequest, frames: StudioF
         frames.length, 
         writtenFrames, 
         prepared.failedIndices, 
-        prepared.warnings
+        prepared.warnings,
+        0
     );
     
     return {
@@ -254,7 +253,7 @@ export const exportSpriteSheet = async (request: DownloadRequest, frames: Studio
         failedIndices: [],
         warnings: ['This export path is not implemented in exportEngine yet.'],
         error: 'Not implemented in exportEngine yet.',
-        report: createExportReport(request, frames.length, 0, [], ['Not implemented'])
+        report: createExportReport(request, frames.length, 0, [], ['Not implemented'], undefined)
     };
 };
 
@@ -265,7 +264,7 @@ export const exportTransparentWebM = async (request: DownloadRequest, frames: St
         failedIndices: [],
         warnings: ['This export path is not implemented in exportEngine yet.'],
         error: 'Not implemented in exportEngine yet.',
-        report: createExportReport(request, frames.length, 0, [], ['Not implemented'])
+        report: createExportReport(request, frames.length, 0, [], ['Not implemented'], undefined)
     };
 };
 
@@ -285,7 +284,8 @@ export function createExportReport(
   totalFrames: number, 
   exportedFrames: number, 
   failedIndices: number[], 
-  warnings: string[]
+  warnings: string[],
+  rawExportedFrames?: number
 ): ExportReport {
   return {
       format: request.format,
@@ -293,6 +293,7 @@ export function createExportReport(
       fps: request.fps,
       totalFrames: totalFrames,
       exportedFrames: exportedFrames,
+      rawExportedFrames,
       failedIndices: failedIndices,
       warnings: warnings,
       generatedAt: new Date().toISOString()
