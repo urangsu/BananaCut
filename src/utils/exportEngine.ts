@@ -1,14 +1,28 @@
 import JSZip from "jszip";
 import { GIFEncoder, quantize, applyPalette } from 'gifenc';
-import { DownloadRequest, ExportResult, ExportReport, PreparedExport, PreparedExportFrame } from "../types/export";
+import { 
+  DownloadRequest, 
+  ExportResult, 
+  ExportReport, 
+  PreparedExport, 
+  PreparedExportFrame 
+} from "../types/export";
 import { StudioFrame } from "../StudioContext";
 
-async function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
+async function getImageDimensionsFromBlob(blob: Blob): Promise<{ width: number; height: number }> {
     return new Promise((resolve, reject) => {
         const url = URL.createObjectURL(blob);
         const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
+        img.onload = () => {
+            const width = img.width;
+            const height = img.height;
+            URL.revokeObjectURL(url);
+            resolve({ width, height });
+        };
+        img.onerror = (err) => {
+            URL.revokeObjectURL(url);
+            reject(err);
+        };
         img.src = url;
     });
 }
@@ -25,7 +39,16 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
     let rawBlob: Blob | undefined;
     
     // Processed (Result)
-    if (request.format !== 'zipWithRaw' || request.includeRaw) {
+    const formatLogic: Record<string, boolean> = {
+        zipWithRaw: !!request.includeRaw,
+        zipResultOnly: true,
+        gifPreview: true,
+        spriteSheet: false,
+        transparentWebM: false
+    };
+    const shouldFetchProcessed = formatLogic[request.format] || false;
+
+    if (shouldFetchProcessed) {
         if (frame.processedUrl && !frame.dirty) {
             try {
                 const response = await fetch(frame.processedUrl);
@@ -33,20 +56,36 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
             } catch {
                 warnings.push(`Frame ${i} processed image failed to load.`);
             }
-        } else if (request.format === 'zipResultOnly') {
+        }
+    }
+    
+    // Policy A: zipResultOnly
+    if (request.format === 'zipResultOnly') {
+        if (!resultBlob) {
              failedIndices.push(i);
              warnings.push(`Frame ${i} was skipped because it is not processed.`);
              continue;
         }
     }
 
-    // Raw
-    if (request.format === 'zipWithRaw' || (request.format === 'gifPreview' && !resultBlob)) {
-        try {
-            const response = await fetch(frame.rawUrl);
-            rawBlob = await response.blob();
-        } catch {
-            if (request.format === 'zipWithRaw') failedIndices.push(i);
+    // Raw (for zipWithRaw OR gifPreview fallback)
+    const isZipWithRaw = request.format === 'zipWithRaw';
+    const isGifPreviewWithNoResult = request.format === 'gifPreview' && !resultBlob;
+
+    if (isZipWithRaw || isGifPreviewWithNoResult) {
+        if (frame.rawUrl) {
+            try {
+                const response = await fetch(frame.rawUrl);
+                rawBlob = await response.blob();
+            } catch {
+                if (request.format === 'zipWithRaw') failedIndices.push(i);
+            }
+        } else {
+             if (request.format === 'zipWithRaw') failedIndices.push(i);
+        }
+        
+        if (request.format === 'gifPreview' && !resultBlob && rawBlob) {
+            warnings.push(`Frame ${i} used raw frame fallback for GIF preview.`);
         }
     }
     
@@ -54,9 +93,9 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
     const blobToUse = resultBlob || rawBlob;
     let width = 0, height = 0;
     if (blobToUse) {
-        const img = await loadImageFromBlob(blobToUse);
-        width = img.width;
-        height = img.height;
+        const dims = await getImageDimensionsFromBlob(blobToUse);
+        width = dims.width;
+        height = dims.height;
     }
 
     preparedFrames.push({
@@ -78,9 +117,12 @@ export const exportPngSequenceZip = async (request: DownloadRequest, frames: Stu
   const zip = new JSZip();
   const prepared = await prepareFramesForExport(request, frames);
   
+  const resultFolder = zip.folder("result");
+  const rawFolder = zip.folder("raw");
+  
   for (const frame of prepared.frames) {
-      if (frame.resultBlob) zip.file(`result/${frame.name}`, frame.resultBlob);
-      if (request.includeRaw && frame.rawBlob) zip.file(`raw/${frame.name.replace('.png', '_raw.png')}`, frame.rawBlob);
+      if (frame.resultBlob && resultFolder) resultFolder.file(frame.name, frame.resultBlob);
+      if (request.includeRaw && frame.rawBlob && rawFolder) rawFolder.file(frame.name.replace('.png', '_raw.png'), frame.rawBlob);
   }
   
   const report: ExportReport = {
@@ -109,8 +151,9 @@ export const exportPngSequenceZip = async (request: DownloadRequest, frames: Stu
 };
 
 export const exportGifPreview = async (request: DownloadRequest, frames: StudioFrame[]): Promise<ExportResult> => {
+  let prepared: PreparedExport;
   try {
-    const prepared = await prepareFramesForExport(request, frames);
+    prepared = await prepareFramesForExport(request, frames);
     const MAX_GIF_FRAMES = 120;
     const gifFrames = prepared.frames.slice(0, MAX_GIF_FRAMES);
     const fps = request.fps || 12;
@@ -120,25 +163,46 @@ export const exportGifPreview = async (request: DownloadRequest, frames: StudioF
     const canvas = document.createElement('canvas');
     const gif = new GIFEncoder();
     
+    let width = 0;
+    let height = 0;
+
     for (let i = 0; i < gifFrames.length; i++) {
         const frame = gifFrames[i];
         const blob = frame.resultBlob || frame.rawBlob;
         if (!blob) continue;
         
-        const img = await loadImageFromBlob(blob);
+        const imgBlobUrl = URL.createObjectURL(blob);
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = imgBlobUrl;
+        });
+        
         if (i === 0) {
-            canvas.width = img.width;
-            canvas.height = img.height;
+            width = img.width;
+            height = img.height;
+            canvas.width = width;
+            canvas.height = height;
         }
         
         const ctx = canvas.getContext('2d');
-        if (!ctx) continue;
-        ctx.drawImage(img, 0, 0);
-        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        if (!ctx) {
+            URL.revokeObjectURL(imgBlobUrl);
+            continue;
+        }
+        
+        ctx.fillStyle = 'transparent';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const data = ctx.getImageData(0, 0, width, height).data;
         
         const palette = quantize(data, 256);
         const index = applyPalette(data, palette);
-        gif.writeFrame(index, canvas.width, canvas.height, { palette, delay });
+        gif.writeFrame(index, width, height, { palette, delay });
+        
+        URL.revokeObjectURL(imgBlobUrl);
     }
     
     gif.finish();
@@ -146,7 +210,7 @@ export const exportGifPreview = async (request: DownloadRequest, frames: StudioF
     
     if (blob.size === 0) throw new Error("Generated GIF is empty");
     
-     const report: ExportReport = {
+    const report: ExportReport = {
         format: request.format,
         sizeMode: request.sizeMode,
         fps: request.fps,
@@ -167,10 +231,11 @@ export const exportGifPreview = async (request: DownloadRequest, frames: StudioF
         report
     };
   } catch (e) {
-    const fallback = await exportPngSequenceZip({...request, format: 'zipResultOnly'}, frames);
+    const fallback = await exportPngSequenceZip({...request, format: 'zipResultOnly', includeRaw: false}, frames);
     return {
         ...fallback,
         format: 'pngSequenceZipFallback',
+        filename: 'bananacut_gif_fallback_png_sequence.zip',
         warnings: ['GIF export failed. PNG sequence ZIP was generated instead.'],
         error: String(e)
     };

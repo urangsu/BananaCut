@@ -2792,10 +2792,11 @@ export default function RemovePage() {
           
           {exportStatus !== 'idle' && (
             <div className={`fixed bottom-4 right-4 p-4 rounded-xl shadow-lg ${isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
-              {exportStatus === 'preparing' && 'Preparing frames...'}
-              {exportStatus === 'encoding' && 'Encoding...'}
-              {exportStatus === 'fallbackZip' && 'GIF failed. PNG ZIP generated.'}
-              {exportStatus === 'failed' && 'Export failed.'}
+              {exportStatus === 'preparing' && (lang === 'KR' ? '내보내기를 준비 중입니다...' : lang === 'EN' ? 'Preparing export...' : '書き出し準備中...')}
+              {exportStatus === 'encoding' && (lang === 'KR' ? 'GIF 미리보기를 생성 중입니다...' : lang === 'EN' ? 'Creating GIF preview...' : 'GIFプレビューを作成中...')}
+              {exportStatus === 'fallbackZip' && (lang === 'KR' ? 'GIF 생성에 실패해 PNG ZIP으로 대체했습니다.' : lang === 'EN' ? 'GIF failed. PNG ZIP fallback was generated.' : 'GIFの作成に失敗したため、PNG ZIPで代替しました。')}
+              {exportStatus === 'complete' && (lang === 'KR' ? '다운로드가 준비되었습니다.' : lang === 'EN' ? 'Download is ready.' : 'ダウンロードの準備ができました。')}
+              {exportStatus === 'failed' && (lang === 'KR' ? '내보내기에 실패했습니다.' : lang === 'EN' ? 'Export failed.' : '書き出しに失敗しました。')}
             </div>
           )}
 
