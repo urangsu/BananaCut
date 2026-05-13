@@ -22,8 +22,11 @@ import { trackEvent } from "../lib/analytics";
 import { revokeUrlsSafely } from "../utils/urlUtils";
 import { getFrameDisplayUrl } from "../utils/frameUtils";
 import { exportPngSequenceZip, exportGifPreview, downloadBlob } from "../utils/exportEngine";
-import { DownloadModal } from "../components/DownloadModal";
 import { DownloadRequest } from "../types/export";
+import { DownloadModal } from "../components/DownloadModal";
+import { ExportPreflightModal } from "../components/ExportPreflightModal";
+import { buildExportPreflight } from "../utils/exportPreflight";
+import { ExportPreflightResult } from "../types/exportPreflight";
 import { useBatchJob } from "../hooks/useBatchJob";
 import { useMediaImport } from "../hooks/useMediaImport";
 import { useLanguage } from "../LanguageContext";
@@ -261,6 +264,10 @@ export default function RemovePage() {
   const [localConfirm, setLocalConfirm] = useState<{message: string, onConfirm: () => void, onCancel?: () => void} | null>(null);
   const [downloadLang, setDownloadLang] = useState<"KR" | "EN" | "JP">("EN");
   const [exportStatus, setExportStatus] = useState<ExportStatus>('idle');
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const [pendingDownloadRequest, setPendingDownloadRequest] = useState<DownloadRequest | null>(null);
+  const [preflightResult, setPreflightResult] = useState<ExportPreflightResult | null>(null);
+  const [showPreflightModal, setShowPreflightModal] = useState(false);
 
   const handleLoadSampleProject = async () => {
     trackEvent("Try_Sample_Project");
@@ -979,7 +986,24 @@ export default function RemovePage() {
     });
   };
 
-  const handleDownload = async (request: DownloadRequest) => {
+  const requestDownload = (request: DownloadRequest) => {
+    const preflight = buildExportPreflight(request, frames);
+    if (!preflight.canProceed || preflight.requiresConfirmation || preflight.issues.length > 0) {
+      setPendingDownloadRequest(request);
+      setPreflightResult(preflight);
+      setShowPreflightModal(true);
+      return;
+    }
+    executeDownload(request);
+  };
+
+  const confirmPreflightExport = () => {
+    if (!pendingDownloadRequest) return;
+    setShowPreflightModal(false);
+    executeDownload(pendingDownloadRequest);
+  };
+
+  const executeDownload = async (request: DownloadRequest) => {
     if (frames.length === 0) return;
 
     trackEvent("Download_Asset");
@@ -2751,11 +2775,20 @@ export default function RemovePage() {
             isOpen={showDownloadModal}
             onClose={() => setShowDownloadModal(false)}
             lang={downloadLang}
-            onDownload={handleDownload}
+            onDownload={requestDownload}
             isDark={isDark}
             defaultFps={fps}
             defaultSizeMode="original"
           />
+          
+    <ExportPreflightModal
+        isOpen={showPreflightModal}
+        result={preflightResult}
+        lang={downloadLang}
+        isDark={isDark}
+        onCancel={() => setShowPreflightModal(false)}
+        onConfirm={confirmPreflightExport}
+    />
           
           {exportStatus !== 'idle' && (
             <div className={`fixed bottom-4 right-4 p-4 rounded-xl shadow-lg ${isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
