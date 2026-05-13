@@ -1,15 +1,28 @@
 import JSZip from "jszip";
-import { DownloadRequest, DownloadFormat } from "../types/export";
+import * as gifenc from 'gifenc';
+import { DownloadRequest, DownloadFormat, ExportSizeMode } from "../types/export";
 import { StudioFrame } from "../StudioContext";
+
+export type ExportReport = {
+  format: string;
+  sizeMode: ExportSizeMode;
+  fps: number;
+  totalFrames: number;
+  exportedFrames: number;
+  failedIndices: number[];
+  warnings: string[];
+  generatedAt: string;
+};
 
 export type ExportResult = {
   ok: boolean;
   format: DownloadFormat | 'pngSequenceZipFallback';
   blob?: Blob;
   filename?: string;
-  failedIndices?: number[];
-  warnings?: string[];
+  failedIndices: number[];
+  warnings: string[];
   error?: string;
+  report: ExportReport;
 };
 
 type PreparedExport = {
@@ -60,15 +73,18 @@ export const exportPngSequenceZip = async (request: DownloadRequest, frames: Stu
       zip.file(frame.name, frame.blob);
   }
   
-  zip.file("export-report.json", JSON.stringify({
+  const report: ExportReport = {
       format: request.format,
       sizeMode: request.sizeMode,
       fps: request.fps,
       totalFrames: frames.length,
       exportedFrames: prepared.frames.length,
       failedIndices: prepared.failedIndices,
-      warnings: prepared.warnings
-  }, null, 2));
+      warnings: prepared.warnings,
+      generatedAt: new Date().toISOString()
+  };
+
+  zip.file("export-report.json", JSON.stringify(report, null, 2));
   
   const content = await zip.generateAsync({ type: "blob" });
   return {
@@ -77,27 +93,24 @@ export const exportPngSequenceZip = async (request: DownloadRequest, frames: Stu
       blob: content,
       filename: "export.zip",
       failedIndices: prepared.failedIndices,
-      warnings: prepared.warnings
+      warnings: prepared.warnings,
+      report
   };
 };
 
 export const exportGifPreview = async (request: DownloadRequest, frames: StudioFrame[]): Promise<ExportResult> => {
-    console.log("GIF export called");
-    try {
-        // Implementation simulation
-        throw new Error("GIF not fully implemented");
-    } catch (e) {
-        // Fallback
-        const fallback = await exportPngSequenceZip({...request, format: 'zipResultOnly'}, frames);
-        return {
-            ok: true,
-            format: 'pngSequenceZipFallback',
-            blob: fallback.blob,
-            filename: "fallback.zip",
-            warnings: ['GIF export failed. PNG sequence ZIP was generated instead.'],
-            error: String(e)
-        };
-    }
+  try {
+    // Basic implementation placeholder - for now simply fallback to PNG
+    throw new Error("GIF not fully implemented");
+  } catch (e) {
+    const fallback = await exportPngSequenceZip({...request, format: 'zipResultOnly'}, frames);
+    return {
+        ...fallback,
+        format: 'pngSequenceZipFallback',
+        warnings: ['GIF export failed. PNG sequence ZIP was generated instead.'],
+        error: String(e)
+    };
+  }
 };
 
 export const exportSpriteSheet = async (request: DownloadRequest, frames: StudioFrame[]): Promise<ExportResult> => {
