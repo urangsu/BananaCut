@@ -10,7 +10,8 @@
     "clean": "rm -rf dist",
     "postinstall": "npx shx mkdir -p public/ffmpeg && npx shx cp -R node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.* public/ffmpeg/",
     "lint": "tsc --noEmit",
-    "check:live": "node scripts/check-live.mjs"
+    "check:live": "node scripts/check-live.mjs",
+    "check:release": "node scripts/sample-release-gate.mjs"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.6",
