@@ -16,7 +16,6 @@ import {
   Flag,
   Pipette,
 } from "lucide-react";
-import JSZip from "jszip";
 import { useTheme } from "../ThemeContext";
 import { useStudio, BrushStroke, StudioFrame } from "../StudioContext";
 import { trackEvent } from "../lib/analytics";
@@ -987,8 +986,9 @@ export default function RemovePage() {
     setIsProcessing(true);
     setExportStatus('preparing');
     setShowDownloadModal(false);
+    
     try {
-      let result: any;
+      let result;
       if (request.format === 'gifPreview') setExportStatus('encoding');
 
       switch (request.format) {
@@ -1014,7 +1014,7 @@ export default function RemovePage() {
       if (result.warnings && result.warnings.length > 0) {
         setLocalAlert(result.warnings.join("\n"));
       }
-      setTimeout(() => setExportStatus('idle'), 3000);
+      setTimeout(() => setExportStatus('idle'), 5000);
     } catch (error) {
       setExportStatus('failed');
       console.error("Processing failed:", error);
