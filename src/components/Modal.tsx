@@ -25,7 +25,7 @@ export function Modal({ isOpen, onClose, title, icon: Icon, lang, setLang, child
       onClick={onClose}
     >
       <div 
-        className={`relative w-full ${maxWidthClass} max-h-[85vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden ${
+        className={`relative w-full ${maxWidthClass} max-h-[90dvh] md:max-h-[85vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden ${
           isDark ? 'bg-[#1c1c1e] border border-white/10' : 'bg-white border border-gray-200'
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -70,7 +70,7 @@ export function Modal({ isOpen, onClose, title, icon: Icon, lang, setLang, child
         </div>
 
         {/* Body */}
-        <div className={`p-6 overflow-y-auto custom-scrollbar ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
+        <div className={`p-6 min-h-0 overflow-y-auto custom-scrollbar ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
           {children}
         </div>
       </div>

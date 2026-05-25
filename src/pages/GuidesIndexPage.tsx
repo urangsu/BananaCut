@@ -10,7 +10,7 @@ export default function GuidesIndexPage() {
   const { isDark } = useTheme();
 
   return (
-    <div className={`w-full h-full overflow-y-auto ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
+    <div className={`h-full min-h-0 overflow-y-auto w-full ${isDark ? 'bg-[#121212] text-white' : 'bg-white text-gray-900'}`}>
       <div className="max-w-4xl mx-auto p-6 md:p-12 min-h-full">
         <SEO 
           title="Guides | BananaCut"

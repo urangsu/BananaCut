@@ -5,12 +5,32 @@ import { Sparkles, Video, Grid } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SEO } from '../components/SEO';
 
+function SafeImg({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [failed, setFailed] = React.useState(false);
+  if (failed) {
+    return (
+      <div className={`aspect-video w-full flex items-center justify-center rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-white/5 dark:to-white/10 text-gray-500 text-xs font-semibold p-4 text-center ${className}`}>
+        {alt}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={() => setFailed(true)}
+      referrerPolicy="no-referrer"
+    />
+  );
+}
+
 export default function ExamplesPage() {
   const { lang } = useLanguage();
   const { isDark } = useTheme();
 
   return (
-    <div className={`max-w-4xl mx-auto p-6 md:p-12 min-h-[calc(100vh-80px)] ${isDark ? 'text-white' : 'text-gray-900'}`}>
+    <div className={`h-full min-h-0 overflow-y-auto w-full max-w-4xl mx-auto p-6 md:p-12 ${isDark ? 'text-white' : 'text-gray-900'}`}>
       <SEO 
         title="Examples and Use Cases | BananaCut"
         description="See how BananaCut can be used for green-screen animation, AI-generated motion clips, and app or game sprite sheet workflows."
@@ -36,15 +56,15 @@ export default function ExamplesPage() {
           <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 grid grid-cols-1 md:grid-cols-3 gap-px bg-gray-200 dark:bg-white/10">
             <div className="relative">
               <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded z-10 backdrop-blur-sm">1. Original Video</span>
-              <img src="/images/examples/sample-before.png" alt="Original raw video" className="w-full h-auto block" />
+              <SafeImg src="/images/examples/sample-before.png" alt="Original raw video" className="w-full h-auto block" />
             </div>
             <div className="relative">
               <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded z-10 backdrop-blur-sm">2. Transparent Frames</span>
-              <img src="/images/examples/sample-after.png" alt="Cleaned up transparent frame" className="w-full h-auto block bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZjBmMGYwIi8+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjZDFkNWRiIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiNkMWQ1ZGIiLz48L3N2Zz4=')]" />
+              <SafeImg src="/images/examples/sample-after.png" alt="Cleaned up transparent frame" className="w-full h-auto block bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZjBmMGYwIi8+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjZDFkNWRiIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiNkMWQ1ZGIiLz48L3N2Zz4=')]" />
             </div>
             <div className="relative">
               <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded z-10 backdrop-blur-sm">3. Sprite Sheet Export</span>
-              <img src="/images/examples/sample-sprite-sheet.png" alt="Final sprite sheet asset" className="w-full h-auto block bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZjBmMGYwIi8+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjZDFkNWRiIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiNkMWQ1ZGIiLz48L3N2Zz4=')]" />
+              <SafeImg src="/images/examples/sample-sprite-sheet.png" alt="Final sprite sheet asset" className="w-full h-auto block bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZjBmMGYwIi8+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjZDFkNWRiIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiNkMWQ1ZGIiLz48L3N2Zz4=')]" />
             </div>
           </div>
           <p className="text-sm opacity-80">
@@ -61,11 +81,11 @@ export default function ExamplesPage() {
           <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 grid grid-cols-2 gap-px bg-white/10">
             <div className="relative">
               <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">Before</span>
-              <img src="/images/examples/green-screen-before.svg" alt="Green-screen bright green" className="w-full h-auto block" />
+              <SafeImg src="/images/examples/green-screen-before.svg" alt="Green-screen bright green" className="w-full h-auto block" />
             </div>
             <div className="relative">
               <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">After</span>
-              <img src="/images/examples/green-screen-after.svg" alt="Green-screen transparent" className="w-full h-auto block" />
+              <SafeImg src="/images/examples/green-screen-after.svg" alt="Green-screen transparent" className="w-full h-auto block" />
             </div>
           </div>
           <div className="space-y-4 text-base opacity-80">
@@ -97,11 +117,11 @@ export default function ExamplesPage() {
           <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 grid grid-cols-2 gap-px bg-white/10">
             <div className="relative">
               <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">Before</span>
-              <img src="/images/examples/ai-motion-before.svg" alt="AI-generated video with solid background" className="w-full h-auto block" />
+              <SafeImg src="/images/examples/ai-motion-before.svg" alt="AI-generated video with solid background" className="w-full h-auto block" />
             </div>
             <div className="relative">
               <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">After</span>
-              <img src="/images/examples/ai-motion-after.svg" alt="AI-generated video cleaned up" className="w-full h-auto block" />
+              <SafeImg src="/images/examples/ai-motion-after.svg" alt="AI-generated video cleaned up" className="w-full h-auto block" />
             </div>
           </div>
           <div className="space-y-4 text-base opacity-80">
@@ -131,7 +151,7 @@ export default function ExamplesPage() {
             <h2 className="text-2xl font-bold">3. App/game sprite sheet workflow</h2>
           </div>
           <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
-            <img src="/images/examples/sprite-sheet-example.svg" alt="App or game sprite sheet workflow" className="w-full h-auto block" />
+            <SafeImg src="/images/examples/sprite-sheet-example.svg" alt="App or game sprite sheet workflow" className="w-full h-auto block" />
           </div>
           <div className="space-y-4 text-base opacity-80">
             <div>

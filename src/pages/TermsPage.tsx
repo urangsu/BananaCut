@@ -9,7 +9,7 @@ export default function TermsPage() {
   const { isDark } = useTheme();
 
   return (
-    <div className={`max-w-4xl mx-auto p-6 md:p-12 min-h-[calc(100vh-80px)] ${isDark ? 'text-white' : 'text-gray-900'}`}>
+    <div className={`h-full min-h-0 overflow-y-auto w-full max-w-4xl mx-auto p-6 md:p-12 ${isDark ? 'text-white' : 'text-gray-900'}`}>
       <SEO 
         title="Terms of Use | BananaCut"
         description="Read the terms for using BananaCut, including user media ownership, service limits, and third-party links."

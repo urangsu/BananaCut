@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTheme } from "../ThemeContext";
 import { useLanguage } from "../LanguageContext";
 
@@ -6,9 +7,16 @@ export default function GuidePage() {
   const { theme } = useTheme();
   const { lang } = useLanguage();
   const isDark = theme === "dark";
-  const [activeTab, setActiveTab] = useState<"quick" | "detailed" | "prompt">(
-    "quick",
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const currentTab = searchParams.get("tab");
+  const activeTab = (currentTab === "quick" || currentTab === "detailed" || currentTab === "prompt")
+    ? currentTab
+    : "quick";
+
+  const setActiveTab = (tab: "quick" | "detailed" | "prompt") => {
+    setSearchParams({ tab });
+  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -17,7 +25,7 @@ export default function GuidePage() {
 
   return (
     <div
-      className={`flex-1 overflow-y-auto w-full h-full ${isDark ? "bg-[#121212] text-white" : "bg-white text-gray-900"}`}
+      className={`h-full min-h-0 overflow-y-auto w-full ${isDark ? "bg-[#121212] text-white" : "bg-white text-gray-900"}`}
     >
       <div className="max-w-4xl mx-auto px-6 py-16 lg:py-24">
         <header className="mb-16 border-b pb-8 border-gray-200 dark:border-white/10">
@@ -723,6 +731,135 @@ export default function GuidePage() {
                       </p>
                     </div>
                   ))}
+                </div>
+              </section>
+
+              {/* [4] Prompts to Avoid */}
+              <section>
+                <h3 className="text-2xl font-bold mb-6 tracking-tight flex items-center gap-2">
+                  🚫{" "}
+                  {lang === "KR"
+                    ? "[4] 피해야 할 프롬프트 및 워터마크 방지"
+                    : lang === "EN"
+                      ? "[4] Prompts to Avoid & Preventing Watermarks"
+                      : "[4] 避けるべきプロンプトとウォーターマーク防止"}
+                </h3>
+                <div className={`p-6 rounded-2xl border ${isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"}`}>
+                  <p className={`mb-4 text-sm ${isDark ? "text-white/70" : "text-gray-700"}`}>
+                    {lang === "KR"
+                      ? "로고, 텍스트, 워터마크 등 생성 시 자잘한 불필요 요소가 화면에 끼지 않도록 막는 부정적인 제어어 모음입니다. 이 키워드들을 입력하여 누끼 경계선이 훼손되는 걸 방지하세요."
+                      : lang === "EN"
+                        ? "Prevent small text, logos, and watermarks from getting in during generation. Keeping these unwanted elements out of your images secures clean borders."
+                        : "ロゴ、テキスト、ウォーターマークなど、生成時に細かな不要要素が画面に入り込まないように防ぐためのコントロールワード集です。"}
+                  </p>
+                  <div className="flex items-center justify-between gap-4 mb-3">
+                    <p className="font-mono text-sm text-red-500 font-semibold break-all">
+                      text, typography, writing, letters, logo, watermark, signature, blurry, multiple angles, cropped head, out of frame
+                    </p>
+                    <button
+                      onClick={() => copyToClipboard("text, typography, writing, letters, logo, watermark, signature, blurry, multiple angles, cropped head, out of frame")}
+                      className={`px-3 py-1 text-xs rounded-lg transition-colors whitespace-nowrap flex-shrink-0 ${isDark ? "bg-white/10 hover:bg-white/20" : "bg-gray-200 hover:bg-gray-300"}`}
+                    >
+                      {lang === "KR" ? "부정어 복사" : lang === "EN" ? "Copy Negative Keywords" : "ネガティブワードコピー"}
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              {/* [5] Practical Sample Prompts */}
+              <section>
+                <h3 className="text-2xl font-bold mb-6 tracking-tight flex items-center gap-2">
+                  💡{" "}
+                  {lang === "KR"
+                    ? "[5] 추천 실전 샘플 프롬프트"
+                    : lang === "EN"
+                      ? "[5] Recommended Practical Sample Prompts"
+                      : "[5] おすすめの実践向けプロンプト"}
+                </h3>
+                <div className="grid gap-6">
+                  {/* Card 1: Green Screen Character */}
+                  <div className={`p-6 rounded-2xl border ${isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"}`}>
+                    <div className="flex justify-between items-start gap-4 mb-2">
+                      <h4 className="text-lg font-bold">
+                        🟢 {lang === "KR" ? "그린 스크린 캐릭터" : lang === "EN" ? "Green Screen Character" : "グリーンバックキャラクター"}
+                      </h4>
+                      <span className="px-2 py-1 text-xs font-bold rounded bg-green-500/10 text-green-500">Chroma Key</span>
+                    </div>
+                    <p className={`text-sm mb-4 ${isDark ? "text-white/60" : "text-gray-500"}`}>
+                      {lang === "KR"
+                        ? "크로마키 배경에서 2D 게임 스타일 캐릭터를 완벽하게 생성합니다."
+                        : lang === "EN"
+                          ? "Generates a 2D game-style character on a flawless neon-green background."
+                          : "クロマキー背景の2Dゲームスタイルキャラクター生成に最適です。"}
+                    </p>
+                    <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-black/5 dark:bg-white/5 font-mono text-xs">
+                      <p className="break-all text-blue-500 font-medium">
+                        Full body, 2D game sprite, cel shaded, flat colors, running hero, active pose, solid neon-green background, no shadows on the ground --ar 1:1
+                      </p>
+                      <button
+                        onClick={() => copyToClipboard("Full body, 2D game sprite, cel shaded, flat colors, running hero, active pose, solid neon-green background, no shadows on the ground --ar 1:1")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${isDark ? "bg-white/10 hover:bg-white/20" : "bg-gray-200 hover:bg-gray-300"}`}
+                      >
+                        {lang === "KR" ? "복사" : lang === "EN" ? "Copy" : "コピー"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Card 2: White Background App Character */}
+                  <div className={`p-6 rounded-2xl border ${isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"}`}>
+                    <div className="flex justify-between items-start gap-4 mb-2">
+                      <h4 className="text-lg font-bold">
+                        ⚪ {lang === "KR" ? "흰색 배경 앱 캐릭터" : lang === "EN" ? "White Background App Character" : "白背景のアプリ向けキャラクター"}
+                      </h4>
+                      <span className="px-2 py-1 text-xs font-bold rounded bg-blue-500/10 text-blue-500">App & UI</span>
+                    </div>
+                    <p className={`text-sm mb-4 ${isDark ? "text-white/60" : "text-gray-500"}`}>
+                      {lang === "KR"
+                        ? "앱 아이콘이나 UI에 어울리게 바닥 그림자가 전혀 없는 깨끗한 단색 화이트 배경을 얻어냅니다."
+                        : lang === "EN"
+                          ? "Creates objects or icons on a pure white background with no ground shadow for UI integration."
+                          : "アプリのアイコンに最適な、床の影が全くない純粋な白背景キャラクターを得られます。"}
+                    </p>
+                    <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-black/5 dark:bg-white/5 font-mono text-xs">
+                      <p className="break-all text-blue-500 font-medium">
+                        Isometric full body view of a futuristic robot, clean vector art, flat design, pure solid white background, no floor textures, no gradient, no shadows --ar 1:1
+                      </p>
+                      <button
+                        onClick={() => copyToClipboard("Isometric full body view of a futuristic robot, clean vector art, flat design, pure solid white background, no floor textures, no gradient, no shadows --ar 1:1")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${isDark ? "bg-white/10 hover:bg-white/20" : "bg-gray-200 hover:bg-gray-300"}`}
+                      >
+                        {lang === "KR" ? "복사" : lang === "EN" ? "Copy" : "コピー"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Sprite Sheet Action Frame */}
+                  <div className={`p-6 rounded-2xl border ${isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"}`}>
+                    <div className="flex justify-between items-start gap-4 mb-2">
+                      <h4 className="text-lg font-bold">
+                        ⚔️ {lang === "KR" ? "스프라이트 시트 동작 프레임" : lang === "EN" ? "Action Frame for Sprite Sheets" : "スプライトシート用の動作フレーム"}
+                      </h4>
+                      <span className="px-2 py-1 text-xs font-bold rounded bg-purple-500/10 text-purple-500">Sprite Sheet</span>
+                    </div>
+                    <p className={`text-sm mb-4 ${isDark ? "text-white/60" : "text-gray-500"}`}>
+                      {lang === "KR"
+                        ? "스프라이트 시트로 일관성 있게 정지/동작 프레임을 반복 생성하여 분할 가능 상태로 리소스를 출력합니다."
+                        : lang === "EN"
+                          ? "Generates clean frame sequences aligned in grid form for motion clipping in asset studio."
+                          : "スプライト画像として一貫した歩行・走行サイクルなどのフレームを出力します。"}
+                    </p>
+                    <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-black/5 dark:bg-white/5 font-mono text-xs">
+                      <p className="break-all text-blue-500 font-medium">
+                        Multiple poses sprite sheet of a fantasy knight, walking cycle, front view, cel-shaded animation style, pure solid white background, separate frames, no shadow --ar 16:9
+                      </p>
+                      <button
+                        onClick={() => copyToClipboard("Multiple poses sprite sheet of a fantasy knight, walking cycle, front view, cel-shaded animation style, pure solid white background, separate frames, no shadow --ar 16:9")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${isDark ? "bg-white/10 hover:bg-white/20" : "bg-gray-200 hover:bg-gray-300"}`}
+                      >
+                        {lang === "KR" ? "복사" : lang === "EN" ? "Copy" : "コピー"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </section>
             </div>

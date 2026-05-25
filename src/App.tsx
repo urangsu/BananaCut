@@ -90,7 +90,9 @@ function Layout({ children }: { children: React.ReactNode }) {
             <CutoutIcon className="w-5 h-5" />
             <div className="flex flex-col text-left">
               <span>REMOVE</span>
-              <span className="text-[10px] opacity-60">Background</span>
+              <span className="text-[10px] opacity-60">
+                {lang === "KR" ? "배경 제거" : lang === "JP" ? "背景" : "Background"}
+              </span>
             </div>
           </NavLink>
 
@@ -108,7 +110,9 @@ function Layout({ children }: { children: React.ReactNode }) {
             <RepairIcon className="w-5 h-5" />
             <div className="flex flex-col text-left">
               <span>RECOVER</span>
-              <span className="text-[10px] opacity-60">Edges</span>
+              <span className="text-[10px] opacity-60">
+                {lang === "KR" ? "가장자리 복구" : lang === "JP" ? "エッジ" : "Edges"}
+              </span>
             </div>
           </NavLink>
 
@@ -126,7 +130,9 @@ function Layout({ children }: { children: React.ReactNode }) {
             <SpriteSheetIcon className="w-5 h-5" />
             <div className="flex flex-col text-left">
               <span>ASSET</span>
-              <span className="text-[10px] opacity-60">Export</span>
+              <span className="text-[10px] opacity-60">
+                {lang === "KR" ? "에셋 내보내기" : lang === "JP" ? "エクスポート" : "Export"}
+              </span>
             </div>
           </NavLink>
         </nav>
@@ -143,7 +149,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             }
           >
             <HelpCircle className="w-4 h-4" strokeWidth={1} />
-            App Guide
+            {lang === 'KR' ? '앱 가이드' : lang === 'JP' ? 'アプリガイド' : 'App Guide'}
           </NavLink>
           <button 
             onClick={toggleTheme}
@@ -152,20 +158,28 @@ function Layout({ children }: { children: React.ReactNode }) {
             }`}
           >
             {isDark ? <Sun className="w-4 h-4" strokeWidth={1} /> : <Moon className="w-4 h-4" strokeWidth={1} />}
-            {isDark ? 'Light Mode' : 'Dark Mode'}
+            {isDark 
+              ? (lang === 'KR' ? '라이트 모드' : lang === 'JP' ? 'ライトモード' : 'Light Mode') 
+              : (lang === 'KR' ? '다크 모드' : lang === 'JP' ? 'ダークモード' : 'Dark Mode')}
           </button>
 
           <div className={`flex flex-col items-center gap-3 pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
               <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[11px] font-medium w-full text-center">
-                <Link to="/privacy" className="hover:text-blue-500 transition-colors">Privacy</Link>
-                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
+                <Link to="/privacy" className="hover:text-blue-500 transition-colors">
+                  {lang === 'KR' ? '개인정보' : lang === 'JP' ? 'プライバシー' : 'Privacy'}
+                </Link>
+                <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">
+                  {lang === 'KR' ? '피드백' : lang === 'JP' ? 'フィードバック' : 'Feedback'}
+                </a>
                 <button 
                   onClick={() => setShowSupport(true)} 
-                  className="flex items-center justify-center gap-1 text-[#FACC15] hover:text-yellow-400 transition-colors"
+                  className="flex items-center justify-center gap-1 text-[#FACC15] hover:text-yellow-400 transition-colors font-bold"
                 >
-                  {lang === 'KR' ? '후원하기' : lang === 'EN' ? 'Support' : '応援する'} 🍌
+                  🍌 {lang === 'KR' ? '후원하기' : lang === 'EN' ? 'Support Us' : '応援する'}
                 </button>
-                <button onClick={() => setShowMore(true)} className="hover:text-blue-500 transition-colors">More</button>
+                <button onClick={() => setShowMore(true)} className="hover:text-blue-500 transition-colors">
+                  {lang === 'KR' ? '더보기' : lang === 'JP' ? 'その他' : 'More'}
+                </button>
               </div>
               
               <div className={`text-[10px] text-center mt-1 ${isDark ? 'text-white/20' : 'text-gray-400'}`}>
@@ -246,21 +260,27 @@ function Layout({ children }: { children: React.ReactNode }) {
             ))}
           </div>
           <button onClick={toggleTheme} className="flex items-center gap-1 hover:text-blue-500 text-xs font-medium">
-            {isDark ? <Sun className="w-4 h-4" strokeWidth={1.5}/> : <Moon className="w-4 h-4" strokeWidth={1.5}/>} Theme
+            {isDark ? <Sun className="w-4 h-4" strokeWidth={1.5}/> : <Moon className="w-4 h-4" strokeWidth={1.5}/>} {lang === 'KR' ? '테마' : lang === 'JP' ? 'テーマ' : 'Theme'}
           </button>
         </div>
         
         <div className="flex flex-col items-center gap-2 mb-4 w-full px-4 text-[11px] font-medium">
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full text-center">
-            <Link to="/privacy" className="hover:text-blue-500 transition-colors">Privacy</Link>
-            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">Feedback</a>
+            <Link to="/privacy" className="hover:text-blue-500 transition-colors">
+              {lang === 'KR' ? '개인정보' : lang === 'JP' ? 'プライバシー' : 'Privacy'}
+            </Link>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">
+              {lang === 'KR' ? '피드백' : lang === 'JP' ? 'フィードバック' : 'Feedback'}
+            </a>
             <button 
               onClick={() => setShowSupport(true)} 
-              className="flex items-center justify-center gap-1 text-[#FACC15] hover:text-yellow-400 transition-colors"
+              className="flex items-center justify-center gap-1 text-[#FACC15] hover:text-yellow-400 transition-colors font-bold"
             >
-              {lang === 'KR' ? '후원하기' : lang === 'EN' ? 'Support' : '応援する'} 🍌
+              🍌 {lang === 'KR' ? '후원하기' : lang === 'EN' ? 'Support Us' : '応援하는'}
             </button>
-            <button onClick={() => setShowMore(true)} className="hover:text-blue-500 transition-colors">More</button>
+            <button onClick={() => setShowMore(true)} className="hover:text-blue-500 transition-colors">
+              {lang === 'KR' ? '더보기' : lang === 'JP' ? 'その他' : 'More'}
+            </button>
           </div>
         </div>
 
@@ -406,6 +426,22 @@ function Layout({ children }: { children: React.ReactNode }) {
               <li><strong>{lang === 'KR' ? '다중 선택' : lang === 'EN' ? 'Multi-select' : '複数選択'}:</strong> <kbd className="px-2 py-1 rounded-md border-2 text-xs font-mono font-bold shadow-sm bg-gray-200 border-gray-400 text-black dark:bg-gray-700 dark:border-gray-500 dark:text-white">Shift</kbd> + Click</li>
               <li><strong>{lang === 'KR' ? '전체 동시 적용' : lang === 'EN' ? 'Apply to All' : '全フレーム適用'}:</strong> <kbd className="px-2 py-1 rounded-md border-2 text-xs font-mono font-bold shadow-sm bg-gray-200 border-gray-400 text-black dark:bg-gray-700 dark:border-gray-500 dark:text-white">Shift</kbd> + <kbd className="px-2 py-1 rounded-md border-2 text-xs font-mono font-bold shadow-sm bg-gray-200 border-gray-400 text-black dark:bg-gray-700 dark:border-gray-500 dark:text-white">Ctrl/Cmd</kbd> + Paint</li>
             </ul>
+          </section>
+
+          <section className="pt-4 border-t border-gray-200 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-left">
+              <h4 className="font-bold text-sm text-yellow-500 flex items-center gap-1">💡 {lang === 'KR' ? '더 전문적인 에셋 생성을 원하시나요?' : lang === 'EN' ? 'Want to generate more professional assets?' : 'プロ仕様のアセットを生成したいですか？'}</h4>
+              <p className={`text-xs ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                {lang === 'KR' ? '그린스크린 키워드와 피해야 할 부정적 제어어를 프롬프트 가이드에서 확인하세요.' : lang === 'EN' ? 'Check green-screen keywords and negative keywords in our Prompt Guide.' : 'プロンプトガイドで境界線加工のヒントとなるキーワードとネガティブワードを確認してください。'}
+              </p>
+            </div>
+            <Link
+              to="/guide?tab=prompt"
+              onClick={() => setShowHelp(false)}
+              className="w-full sm:w-auto px-4 py-2 rounded-lg text-xs font-bold text-center bg-blue-600 hover:bg-blue-500 text-white transition-all whitespace-nowrap shadow-sm"
+            >
+              {lang === 'KR' ? '프롬프트 가이드 바로가기 ➔' : lang === 'EN' ? 'Go to Prompt Guide ➔' : 'プロンプトガイドへ ➔'}
+            </Link>
           </section>
         </div>
       </Modal>

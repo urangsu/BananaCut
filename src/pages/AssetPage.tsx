@@ -537,7 +537,7 @@ export default function AssetPage() {
 
   return (
     <div
-      className={`flex-1 overflow-y-auto p-4 lg:p-8 ${isDark ? "bg-[#121212] text-white" : "bg-gray-50 text-gray-900"}`}
+      className={`h-full min-h-0 overflow-y-auto w-full p-4 lg:p-8 ${isDark ? "bg-[#121212] text-white" : "bg-gray-50 text-gray-900"}`}
     >
       <div className="max-w-5xl mx-auto space-y-8">
         <header className="mb-8">

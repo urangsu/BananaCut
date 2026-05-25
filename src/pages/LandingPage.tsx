@@ -31,8 +31,16 @@ function ScratchOverlay({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasStarted, setHasStarted] = useState(false);
+  const [showSkip, setShowSkip] = useState(false);
   const isDrawing = useRef(false);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSkip(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const hintText =
     lang === "KR"
@@ -151,6 +159,22 @@ function ScratchOverlay({
           {hintText}
         </p>
       </div>
+
+      {showSkip && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onReveal();
+          }}
+          className={`absolute bottom-8 right-8 z-[100] px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all border pointer-events-auto hover:scale-105 active:scale-95 ${
+            isDark
+              ? "bg-white text-black border-white hover:bg-gray-100"
+              : "bg-black text-white border-black hover:bg-gray-800"
+          }`}
+        >
+          {lang === "KR" ? "건너뛰기" : lang === "EN" ? "Skip" : "スキップ"}
+        </button>
+      )}
     </div>
   );
 }
@@ -344,7 +368,7 @@ export default function LandingPage() {
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all border backdrop-blur-md ${isDark ? "bg-white/5 border-white/10 text-white/80 hover:bg-white/10" : "bg-white/70 border-gray-200 text-gray-700 hover:bg-gray-100"}`}
             >
               <Smartphone className="w-4 h-4" strokeWidth={1} />
-              GET APP
+              {lang === "KR" ? "앱 다운로드" : lang === "JP" ? "アプリ入手" : "GET APP"}
             </button>
           </div>
           <div className="flex flex-row gap-2 md:gap-4">
@@ -352,16 +376,18 @@ export default function LandingPage() {
               onClick={() => navigate("/remove")}
               className="px-3 md:px-6 py-1.5 md:py-2 rounded-full text-[9px] md:text-sm font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg whitespace-nowrap"
             >
-              <span className="md:hidden">STUDIO</span>
+              <span className="md:hidden">
+                {lang === "KR" ? "스튜디오" : lang === "JP" ? "スタジオ" : "STUDIO"}
+              </span>
               <span className="hidden md:inline">
-                {lang === "JP" ? "スタジオに入る" : "ENTER STUDIO"}
+                {lang === "KR" ? "스튜디오 들어하기" : lang === "JP" ? "スタジオに入る" : "ENTER STUDIO"}
               </span>
             </button>
             <button
               onClick={() => setShowGetApp(true)}
               className={`md:hidden px-3 py-1.5 rounded-full text-[9px] font-bold transition-all border backdrop-blur-md whitespace-nowrap ${isDark ? "bg-white/5 border-white/10 text-white/80 hover:bg-white/10" : "bg-white/70 border-gray-200 text-gray-700 hover:bg-gray-100"}`}
             >
-              GET APP
+              {lang === "KR" ? "앱 다운로드" : lang === "JP" ? "アプリ入手" : "GET APP"}
             </button>
           </div>
         </div>
@@ -381,7 +407,7 @@ export default function LandingPage() {
       )}
 
       <main
-        className={`flex-1 ${!isRevealed ? "overflow-hidden" : "overflow-y-auto"}`}
+        className="flex-1 overflow-y-auto"
       >
         <div className="max-w-6xl mx-auto px-6 py-16 lg:py-24 space-y-24">
           {/* Hero Section */}
@@ -406,7 +432,7 @@ export default function LandingPage() {
                 onClick={() => navigate("/remove")}
                 className="w-full sm:w-auto px-10 py-4 rounded-full text-lg font-bold transition-all bg-black text-white hover:bg-gray-800 hover:scale-105 shadow-xl uppercase tracking-tight"
               >
-                Start Cutting
+                {lang === "KR" ? "자르기 시작" : lang === "JP" ? "カット開始" : "Start Cutting"}
               </button>
               <button
                 onClick={() => {
@@ -415,7 +441,7 @@ export default function LandingPage() {
                 }}
                 className={`w-full sm:w-auto px-10 py-4 rounded-full text-lg font-bold transition-all border-2 ${isDark ? "border-white text-white hover:bg-white hover:text-black" : "border-black text-black hover:bg-black hover:text-white"} hover:scale-105 uppercase tracking-tight`}
               >
-                Try Sample
+                {lang === "KR" ? "샘플 시작" : lang === "JP" ? "サンプルを試す" : "Try Sample"}
               </button>
             </div>
           </section>
@@ -522,26 +548,36 @@ export default function LandingPage() {
           {/* Before/After Demo */}
           <section className="max-w-4xl mx-auto space-y-8">
             <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-center">
-              From raw frames to reusable assets
+              {lang === "KR"
+                ? "원본 프레임에서 재사용 가능한 에셋까지"
+                : lang === "JP"
+                  ? "生フレームから再利用可能なアセットまで"
+                  : "From raw frames to reusable assets"}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex flex-col items-center gap-2">
                 <div className={`w-full rounded-2xl overflow-hidden shadow-lg border ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-                  <SafeImage src="/images/examples/sample-before.png" alt="Original Frame" label="Original Frame" />
+                  <SafeImage src="/images/examples/sample-before.png" alt={lang === "KR" ? "원본 프레임" : lang === "JP" ? "オリジナルフレーム" : "Original Frame"} label={lang === "KR" ? "원본 프레임" : lang === "JP" ? "オリジナルフレーム" : "Original Frame"} />
                 </div>
-                <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Original Frame</span>
+                <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+                  {lang === "KR" ? "원본 프레임" : lang === "JP" ? "オリジナルフレーム" : "Original Frame"}
+                </span>
               </div>
               <div className="flex flex-col items-center gap-2">
                 <div className={`w-full rounded-2xl overflow-hidden shadow-lg border ${isDark ? 'border-white/10' : 'border-gray-200'} bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+CjxyZWN0IHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iI2ZmZiIgLz4KPHBhdGggZD0iTTAgMGgxMnYxMkgweiIgZmlsbD0iI2VlZSIgLz4KPHBhdGggZD0iTTEyIDEyaDEydjEySDEyeiIgZmlsbD0iI2VlZSIgLz4KPC9zdmc+')]`}>
-                  <SafeImage src="/images/examples/sample-after.png" alt="Cleaned Frame" label="Cleaned Frame" />
+                  <SafeImage src="/images/examples/sample-after.png" alt={lang === "KR" ? "정리된 프레임" : lang === "JP" ? "クリーニング後" : "Cleaned Frame"} label={lang === "KR" ? "정리된 프레임" : lang === "JP" ? "クリーニング後" : "Cleaned Frame"} />
                 </div>
-                <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Cleaned Frame</span>
+                <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+                  {lang === "KR" ? "정리된 프레임" : lang === "JP" ? "クリーニング後" : "Cleaned Frame"}
+                </span>
               </div>
               <div className="flex flex-col items-center gap-2">
                 <div className={`w-full rounded-2xl overflow-hidden shadow-lg border ${isDark ? 'border-white/10' : 'border-gray-200'} bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+CjxyZWN0IHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iI2ZmZiIgLz4KPHBhdGggZD0iTTAgMGgxMnYxMkgweiIgZmlsbD0iI2VlZSIgLz4KPHBhdGggZD0iTTEyIDEyaDEydjEySDEyeiIgZmlsbD0iI2VlZSIgLz4KPC9zdmc+')]`}>
-                  <SafeImage src="/images/examples/sample-sprite-sheet.png" alt="Sprite Sheet" label="Sprite Sheet" />
+                  <SafeImage src="/images/examples/sample-sprite-sheet.png" alt={lang === "KR" ? "스프라이트 시트" : lang === "JP" ? "スプライトシート" : "Sprite Sheet"} label={lang === "KR" ? "스프라이트 시트" : lang === "JP" ? "スプライトシート" : "Sprite Sheet"} />
                 </div>
-                <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Sprite Sheet</span>
+                <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+                  {lang === "KR" ? "스프라이트 시트" : lang === "JP" ? "スプライトシート" : "Sprite Sheet"}
+                </span>
               </div>
             </div>
             <p
@@ -553,6 +589,19 @@ export default function LandingPage() {
                   ? "Turn generated clips, green-screen animations, and frame sequences into reusable assets for apps, games, and websites."
                   : "生成動画、グリーンバックアニメーション、フレームシーケンスを、アプリ・ゲーム・Webで再利用できるアセットとして整理できます。"}
             </p>
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={() => navigate("/guide?tab=prompt")}
+                className={`inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold transition-all shadow-md group hover:scale-105 ${
+                  isDark
+                    ? "bg-white/10 hover:bg-white/20 border border-white/10 text-white"
+                    : "bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700"
+                }`}
+              >
+                <span>💡 {lang === "KR" ? "이용 가이드에서 핵심 프롬프트 팁 보기" : lang === "EN" ? "See Core Prompt Tips in Guide" : "ガイドでコアプロンプトのヒントを見る"}</span>
+                <span className="transition-transform group-hover:translate-x-1">➔</span>
+              </button>
+            </div>
           </section>
 
           {/* Below the Fold: SEO Optimized Editorial Layout */}
@@ -776,14 +825,26 @@ export default function LandingPage() {
           className={`w-full py-8 mt-12 border-t px-6 flex flex-col items-center justify-center gap-6 ${isDark ? "border-white/10 text-white/40" : "border-gray-200 text-gray-500"}`}
         >
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs font-medium max-w-2xl">
-            <Link to="/guides" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Articles</Link>
-            <Link to="/examples" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Examples</Link>
-            <Link to="/privacy" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Privacy</Link>
-            <Link to="/terms" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Terms</Link>
-            <Link to="/contact" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Contact</Link>
-            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Feedback</a>
-            <button onClick={() => setShowSupport(true)} className="flex items-center justify-center gap-1 text-[#FACC15] hover:text-yellow-400 transition-colors">
-              {lang === 'KR' ? '후원하기' : lang === 'EN' ? 'Support' : '応援する'} 🍌
+            <Link to="/guides" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
+              {lang === "KR" ? "가이드 아티클" : lang === "JP" ? "ガイド記事" : "Articles"}
+            </Link>
+            <Link to="/examples" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
+              {lang === "KR" ? "샘플 예시" : lang === "JP" ? "事例サンプル" : "Examples"}
+            </Link>
+            <Link to="/privacy" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
+              {lang === "KR" ? "개인정보" : lang === "JP" ? "プライバシー" : "Privacy"}
+            </Link>
+            <Link to="/terms" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
+              {lang === "KR" ? "이용 약관" : lang === "JP" ? "利用規約" : "Terms"}
+            </Link>
+            <Link to="/contact" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
+              {lang === "KR" ? "문의하기" : lang === "JP" ? "お問い合わせ" : "Contact"}
+            </Link>
+            <a href="https://tally.so/r/44vorO" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
+              {lang === "KR" ? "피드백" : lang === "JP" ? "フィードバック" : "Feedback"}
+            </a>
+            <button onClick={() => setShowSupport(true)} className="flex items-center justify-center gap-1 text-[#FACC15] hover:text-yellow-400 transition-colors font-bold">
+              🍌 {lang === 'KR' ? '후원하기' : lang === 'EN' ? 'Support Us' : '応援する'}
             </button>
           </div>
 

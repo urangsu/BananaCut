@@ -9,7 +9,7 @@ export default function PrivacyPage() {
   const { isDark } = useTheme();
 
   return (
-    <div className={`max-w-4xl mx-auto p-6 md:p-12 min-h-[calc(100vh-80px)] ${isDark ? 'text-white' : 'text-gray-900'}`}>
+    <div className={`h-full min-h-0 overflow-y-auto w-full max-w-4xl mx-auto p-6 md:p-12 ${isDark ? 'text-white' : 'text-gray-900'}`}>
       <SEO 
         title="Privacy Policy | BananaCut"
         description="Learn how BananaCut handles browser-side media processing, cookies, ads, and third-party services."

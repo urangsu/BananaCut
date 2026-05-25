@@ -755,7 +755,7 @@ const applyFillToImageData = (imageData: ImageData, mask: boolean[] | null, isEr
   const inputBg = theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-gray-50 border-gray-200';
 
   return (
-    <div className={`w-full max-w-6xl mx-auto p-4 md:p-8 flex flex-col min-h-full lg:h-screen overflow-x-hidden ${textPrimary}`}>
+    <div className={`h-full min-h-0 overflow-y-auto w-full max-w-6xl mx-auto p-4 md:p-8 flex flex-col ${textPrimary}`}>
       <header className={`hidden lg:flex mb-8 border-b pb-6 shrink-0 justify-between items-end ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">RECOVER <span className={`${textMuted} text-xl font-normal`}>{lang === 'KR' ? '(복구)' : lang === 'EN' ? '(Recover)' : '(復旧)'}</span></h1>
