@@ -84,8 +84,18 @@ export async function generateSampleFrames(totalFrames: number = 16): Promise<St
       width,
       height,
       name: `sample_frame_${String(i).padStart(3, '0')}.png`,
-      sourceIndex: i,
-      dirty: true // Mark as dirty to force processing
+      provenance: {
+        sourceIndex: i,
+        targetTimeMs: Math.round(i * (1000 / 12)),
+        captureMethod: 'image',
+        sourceWidth: width,
+        sourceHeight: height,
+        outputWidth: width,
+        outputHeight: height
+      },
+      keyDirty: true,
+      recoverDirty: true,
+      qualityFlags: []
     });
   }
 
@@ -97,8 +107,11 @@ export function revokeSampleFrames(frames: StudioFrame[]) {
     if (frame.rawUrl && frame.rawUrl.startsWith('blob:')) {
       URL.revokeObjectURL(frame.rawUrl);
     }
-    if (frame.processedUrl && frame.processedUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(frame.processedUrl);
+    if (frame.keyedUrl && frame.keyedUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(frame.keyedUrl);
+    }
+    if (frame.recoveredUrl && frame.recoveredUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(frame.recoveredUrl);
     }
   });
 }

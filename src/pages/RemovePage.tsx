@@ -30,8 +30,9 @@ import { ExportPreflightResult } from "../types/exportPreflight";
 import { useBatchJob } from "../hooks/useBatchJob";
 import { useMediaImport } from "../hooks/useMediaImport";
 import { useLanguage } from "../LanguageContext";
+import { useFFmpeg } from "../FFmpegContext";
 import { generateStrokeMask, applyChromaKeyAdvanced } from "../utils/chromaKey";
-import { normalizeChromaKeyParams } from "../utils/chromaKeyParams";
+import { normalizeChromaKeyParams } from "../types/mediaPipeline";
 import { PerfLogger } from "../utils/performanceLogger";
 import {
   generateSampleFrames,
@@ -240,6 +241,7 @@ export default function RemovePage() {
     extractionElapsedText,
     isExtracting,
     processFile,
+    extractFramesWithFFmpeg,
     cancelExtraction,
     importGuardModal
   } = useMediaImport({
@@ -254,6 +256,8 @@ export default function RemovePage() {
     setVideoFile,
     setIsProcessingLocal,
   });
+
+  const { ffmpeg, loadFFmpeg } = useFFmpeg();
 
   const isProcessing = isExtracting || isBatchProcessing || isProcessingLocal;
   const setIsProcessing = setIsProcessingLocal;
@@ -353,7 +357,7 @@ export default function RemovePage() {
           canvas.width,
           canvas.height,
           exclusionStrokes,
-          idx,
+          frame.id,
         );
 
         PerfLogger.start("processFramesForDownload_applyChromaKey");
@@ -689,7 +693,7 @@ export default function RemovePage() {
           img.width,
           img.height,
           exclusionStrokes,
-          currentFrame,
+          targetFrame.id,
         );
         if (
           activeStrokeRef.current &&
@@ -701,7 +705,7 @@ export default function RemovePage() {
             img.width,
             img.height,
             tempStrokes,
-            currentFrame,
+            targetFrame.id,
           );
         }
 
@@ -971,7 +975,7 @@ export default function RemovePage() {
   const handleFpsChange = async (newFps: number) => {
     setFps(newFps);
     if (videoFile && !videoFile.type.startsWith("image/")) {
-      await processFile(videoFile, newFps);
+      await processFile(videoFile);
     }
   };
 
@@ -1420,7 +1424,7 @@ export default function RemovePage() {
                           );
                           setFps(newFps);
                           if (videoFile) {
-                            await processFile(videoFile, newFps);
+                            await processFile(videoFile);
                           }
                         }}
                         className="rounded-lg bg-orange-50 hover:bg-orange-100 border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 transition-colors dark:bg-orange-500/10 dark:hover:bg-orange-500/20 dark:border-orange-500/20 dark:text-orange-400"
@@ -1467,7 +1471,7 @@ export default function RemovePage() {
                           );
                           setFps(newFps);
                           if (videoFile) {
-                            await processFile(videoFile, newFps);
+                            await processFile(videoFile);
                           }
                         }}
                         className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
@@ -1475,6 +1479,25 @@ export default function RemovePage() {
                         {lang === "KR"
                           ? `목표 FPS 낮추기 (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`
                           : `Lower FPS (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!videoFile) return;
+                          setNativeExtractError(null);
+                          setSkippedFramesWarning(false);
+                          const activeFFmpeg = ffmpeg || (await loadFFmpeg());
+                          if (activeFFmpeg) {
+                            await extractFramesWithFFmpeg(videoFile, fps, activeFFmpeg);
+                          }
+                        }}
+                        className="rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-2 text-xs font-semibold text-indigo-700 transition-colors dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 dark:border-indigo-500/20 dark:text-indigo-400"
+                      >
+                        {lang === "KR"
+                          ? "FFmpeg 엔진으로 디코딩하기 (로컬 권장)"
+                          : "Decode with FFmpeg Engine (Local Recommended)"}
                       </button>
                     </>
                   )}

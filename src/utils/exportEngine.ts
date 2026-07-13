@@ -7,7 +7,7 @@ import {
   PreparedExport, 
   PreparedExportFrame 
 } from "../types/export";
-import { StudioFrame } from "../StudioContext";
+import { StudioFrame, resolveFrameUrl } from "../types/mediaPipeline";
 
 async function getImageDimensionsFromBlob(blob: Blob): Promise<{ width: number; height: number }> {
     return new Promise((resolve, reject) => {
@@ -45,9 +45,10 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
         request.format === 'gifPreview';
 
     if (shouldFetchProcessed) {
-        if (frame.processedUrl && !frame.dirty) {
+        const finalUrl = resolveFrameUrl(frame, 'final');
+        if (finalUrl) {
             try {
-                const response = await fetch(frame.processedUrl);
+                const response = await fetch(finalUrl);
                 resultBlob = await response.blob();
             } catch {
                 warnings.push(`Frame ${i} processed image failed to load.`);
@@ -98,7 +99,7 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
     preparedFrames.push({
         index: i,
         name: `${i.toString().padStart(3, '0')}.png`,
-        resultUrl: frame.processedUrl,
+        resultUrl: resolveFrameUrl(frame, 'final') || undefined,
         rawUrl: frame.rawUrl,
         resultBlob,
         rawBlob,

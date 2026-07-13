@@ -12,8 +12,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useBatchJob } from "../hooks/useBatchJob";
-import { generateStrokeMask, applyChromaKeyAdvanced } from "../utils/chromaKey";
-import { normalizeChromaKeyParams } from "../utils/chromaKeyParams";
+import { processKeyedFrame, composeRecoveredFrame } from "../utils/chromaKey";
+import { normalizeChromaKeyParams } from "../types/mediaPipeline";
 import { PerfLogger } from "../utils/performanceLogger";
 import { getFrameDisplayUrl } from "../utils/frameUtils";
 import { analyzeFrameBounds, Box } from "../utils/boundingBox";
@@ -130,45 +130,37 @@ export default function AssetPage() {
         delayMs: 0,
         processItem: async (idx, resultIndex) => {
           const frame = newFrames[idx];
-          const img = new Image();
-          img.src = frame.rawUrl;
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-          });
-
-          const canvas = document.createElement("canvas");
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
-          ctx.drawImage(img, 0, 0);
-
-          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const mask = generateStrokeMask(
-            canvas.width,
-            canvas.height,
-            exclusionStrokes,
-            idx,
-          );
-          PerfLogger.start("AssetPage_applyChromaKeyAdvanced");
-          applyChromaKeyAdvanced(
-            imgData.data,
-            canvas.width,
-            canvas.height,
+          
+          PerfLogger.start("AssetPage_processKeyedFrame");
+          const { keyedUrl, qualityFlags } = await processKeyedFrame(
+            frame.rawUrl,
             params,
-            mask,
+            exclusionStrokes,
+            idx
           );
-          PerfLogger.end("AssetPage_applyChromaKeyAdvanced");
-          ctx.putImageData(imgData, 0, 0);
+          PerfLogger.end("AssetPage_processKeyedFrame");
 
-          const blob = await new Promise<Blob | null>((resolve) =>
-            canvas.toBlob(resolve, "image/png"),
-          );
-          if (blob) {
-            const newUrl = URL.createObjectURL(blob);
-            if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
-            newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
+          let finalRecoveredUrl = keyedUrl;
+          if (frame.recoverMaskUrl) {
+            finalRecoveredUrl = await composeRecoveredFrame(
+              frame.rawUrl,
+              keyedUrl,
+              frame.recoverMaskUrl,
+              localStorage.getItem('recover_fillColor') || '#ffffff'
+            );
           }
+
+          if (frame.keyedUrl) URL.revokeObjectURL(frame.keyedUrl);
+          if (frame.recoveredUrl) URL.revokeObjectURL(frame.recoveredUrl);
+
+          newFrames[idx] = {
+            ...frame,
+            keyedUrl,
+            recoveredUrl: finalRecoveredUrl,
+            keyDirty: false,
+            recoverDirty: false,
+            qualityFlags
+          };
         },
         onSuccess: () => {
           setFrames(newFrames);
@@ -234,7 +226,7 @@ export default function AssetPage() {
       // Write frames to FFmpeg FS
       for (let i = 0; i < frames.length; i++) {
         const frame = frames[i];
-        const url = getFrameDisplayUrl(frame, true);
+        const url = getFrameDisplayUrl(frame, 'final');
         const response = await fetch(url);
         const buffer = await response.arrayBuffer();
         await currentFFmpeg.writeFile(
@@ -330,7 +322,7 @@ export default function AssetPage() {
             const img = new Image();
             img.onload = () => resolve(img);
             img.onerror = reject;
-            img.src = getFrameDisplayUrl(frame, true);
+            img.src = getFrameDisplayUrl(frame, 'final');
           });
         }),
       );
@@ -1335,7 +1327,7 @@ export default function AssetPage() {
                 }}
               >
                 <img
-                  src={getFrameDisplayUrl(frames[0], true)}
+                  src={getFrameDisplayUrl(frames[0], 'final')}
                   alt="Frame preview"
                   className="absolute inset-0 w-full h-full object-contain"
                 />

@@ -2,18 +2,17 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
 import { extractFramesNative } from '../utils/nativeVideoExtract';
-import { StudioFrame } from '../StudioContext';
+import { probeVideoFile } from '../utils/videoProbe';
+import { StudioFrame, VideoProbeResult } from '../types/mediaPipeline';
 import { getMediaLimits } from '../utils/mediaLimits';
 
 export type UploadState = 'idle' | 'image-loading' | 'video-engine-loading' | 'video-extracting' | 'ready' | 'error';
 
 export type ImportGuardModalState = {
-  type: 'hard-limit' | 'soft-warning' | 'metadata-failed' | 'invalid-format';
-  estimatedFrames?: number;
-  estimatedMemoryMB?: number;
-  limits?: ReturnType<typeof getMediaLimits>;
-  onConfirm?: () => void;
-  onCancel?: () => void;
+  type: 'import-plan';
+  probeResult: VideoProbeResult;
+  onConfirm: (chosenFps: number, chosenMode: 'original' | 'balanced1080' | 'safe720') => void;
+  onCancel: () => void;
 } | null;
 
 export interface UseMediaImportProps {
@@ -50,7 +49,6 @@ export function useMediaImport({
   const [extractionElapsedText, setExtractionElapsedText] = useState('00:00');
   const [importGuardModal, setImportGuardModal] = useState<ImportGuardModalState>(null);
 
-  
   const abortControllerRef = useRef<AbortController | null>(null);
   const extractionRunIdRef = useRef(0);
   const extractionProgressRef = useRef({ current: 0, lastUpdated: 0 });
@@ -86,8 +84,15 @@ export function useMediaImport({
   }, [uploadState, extractionStartMs]);
 
   const revokeFrameUrls = useCallback((f: StudioFrame) => {
-    if (f.rawUrl?.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
-    if (f.processedUrl?.startsWith('blob:')) URL.revokeObjectURL(f.processedUrl);
+    if (f.rawUrl?.startsWith('blob:')) {
+      try { URL.revokeObjectURL(f.rawUrl); } catch (e) {}
+    }
+    if (f.keyedUrl?.startsWith('blob:')) {
+      try { URL.revokeObjectURL(f.keyedUrl); } catch (e) {}
+    }
+    if (f.recoveredUrl?.startsWith('blob:')) {
+      try { URL.revokeObjectURL(f.recoveredUrl); } catch (e) {}
+    }
   }, []);
 
   const cancelExtraction = useCallback(() => {
@@ -108,25 +113,7 @@ export function useMediaImport({
     setIsPlaying(false);
   }, [frames, setFrames, revokeFrameUrls, setIsPlaying]);
 
-const probeVideo = (file: File): Promise<{ width: number; height: number; duration: number }> => {
-  return new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    video.preload = 'metadata';
-    video.onloadedmetadata = () => {
-      URL.revokeObjectURL(video.src);
-      resolve({ width: video.videoWidth, height: video.videoHeight, duration: video.duration });
-    };
-    video.onerror = () => {
-      URL.revokeObjectURL(video.src);
-      reject(new Error('Failed to load video metadata'));
-    };
-    video.src = URL.createObjectURL(file);
-  });
-};
-
-  const processFile = async (file: File, overrideFps?: number) => {
-    const targetFps = overrideFps || fps;
-    
+  const processFile = async (file: File) => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -138,35 +125,54 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
     setImgDims(null);
     setExclusionStrokes([]);
     
+    // Revoke old frames before loading new ones (Atomic Replacement)
     if (frames.length > 0) {
       frames.forEach(revokeFrameUrls);
       setFrames([]);
     }
     
+    // 1. Handle Image Upload
     if (file.type.startsWith('image/')) {
-      // image loading logic remains same
       setUploadState('image-loading');
       const url = URL.createObjectURL(file);
       const img = new Image();
       try {
         await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = url;
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = url;
         });
         if (!isCurrentRun()) {
           URL.revokeObjectURL(url);
           return;
         }
-        setFrames([{
-            id: Math.random().toString(36).substring(7),
-            rawUrl: url,
-            width: img.naturalWidth,
-            height: img.naturalHeight,
-            name: file.name,
-            sourceIndex: 0
-        }]);
+        
+        const frameWidth = img.naturalWidth;
+        const frameHeight = img.naturalHeight;
+
+        const newFrame: StudioFrame = {
+          id: `frame-image-${Math.random().toString(36).substring(7)}`,
+          rawUrl: url,
+          width: frameWidth,
+          height: frameHeight,
+          name: file.name,
+          provenance: {
+            sourceIndex: 0,
+            targetTimeMs: 0,
+            captureMethod: 'image',
+            sourceWidth: frameWidth,
+            sourceHeight: frameHeight,
+            outputWidth: frameWidth,
+            outputHeight: frameHeight
+          },
+          keyDirty: true,
+          recoverDirty: true,
+          qualityFlags: []
+        };
+
+        setFrames([newFrame]);
         setCurrentFrame(0);
+        setImgDims({ w: frameWidth, h: frameHeight });
         setIsPlaying(false);
         setVideoFile(file);
         setUploadState('ready');
@@ -180,177 +186,154 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
         }
         URL.revokeObjectURL(url);
         setUploadState('error');
-        setNativeExtractError('[Image Error]\nFailed to load image');
+        setNativeExtractError('[Image Error]\n이미지 파일을 로드하지 못했습니다.');
         setIsPlaying(false);
       }
       return;
     }
     
-    if (file.type.includes('video/mp4') || file.type.includes('video/quicktime')) {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-      const limits = getMediaLimits(isMobile);
+    // 2. Handle Video Probe (Validation Phase)
+    try {
+      const probeResult = await probeVideoFile(file, fps);
 
-      try {
-        const meta = await probeVideo(file);
-        const estimatedFrames = Math.ceil(meta.duration * targetFps);
-        const estimatedMemoryMB = (meta.width * meta.height * 4 * estimatedFrames * 2.4) / 1024 / 1024;
-
-        if (estimatedFrames > limits.hardFrames || estimatedMemoryMB > limits.hardMemoryMB) {
-          setImportGuardModal({
-            type: 'hard-limit',
-            estimatedFrames,
-            estimatedMemoryMB,
-            limits,
-            onConfirm: () => {
-              setImportGuardModal(null);
-              setUploadState('idle');
-            }
-          });
-          return;
-        }
-
-        if (estimatedFrames > limits.softFrames || estimatedMemoryMB > limits.softMemoryMB) {
-          await new Promise<void>((resolve, reject) => {
-            setImportGuardModal({
-              type: 'soft-warning',
-              estimatedFrames,
-              estimatedMemoryMB,
-              limits,
-              onConfirm: () => {
-                setImportGuardModal(null);
-                resolve();
-              },
-              onCancel: () => {
-                setImportGuardModal(null);
-                setUploadState('idle');
-                reject(new Error('User cancelled'));
-              }
-            });
-          });
-        }
-      } catch (e) {
-        if (e instanceof Error && e.message === "User cancelled") return;
-        console.warn("Probe failed", e);
+      // Present the Import Plan modal to user
+      await new Promise<void>((resolve, reject) => {
         setImportGuardModal({
-          type: 'metadata-failed',
-          onConfirm: () => {
+          type: 'import-plan',
+          probeResult,
+          onConfirm: async (chosenFps, chosenMode) => {
             setImportGuardModal(null);
-            setUploadState("idle");
-            setIsPlaying(false);
-            setExtractionProgress({ current: 0, total: 0 });
-            setExtractionStartMs(null);
-            setExtractionStalled(false);
+            
+            // Re-calculate dimensions for the plan
+            let width = probeResult.sourceWidth;
+            let height = probeResult.sourceHeight;
+            if (chosenMode === 'balanced1080') {
+              const ratio = Math.min(1920 / width, 1080 / height);
+              width = Math.round(width * ratio);
+              height = Math.round(height * ratio);
+            } else if (chosenMode === 'safe720') {
+              const ratio = Math.min(1280 / width, 720 / height);
+              width = Math.round(width * ratio);
+              height = Math.round(height * ratio);
+            }
+            width = width - (width % 2);
+            height = height - (height % 2);
+
+            // Trigger extraction run
+            await startVideoExtraction(file, chosenFps, width, height, runId);
+            resolve();
+          },
+          onCancel: () => {
+            setImportGuardModal(null);
+            setUploadState('idle');
+            reject(new Error('User cancelled'));
           }
         });
+      });
+    } catch (e) {
+      if (e instanceof Error && e.message === "User cancelled") return;
+      console.warn("Import process error:", e);
+    }
+  };
+
+  const startVideoExtraction = async (
+    file: File,
+    chosenFps: number,
+    width: number,
+    height: number,
+    runId: number
+  ) => {
+    const isCurrentRun = () => extractionRunIdRef.current === runId;
+    abortControllerRef.current = new AbortController();
+    
+    setUploadState('video-extracting');
+    setNativeExtractError(null);
+    setSkippedFramesWarning(false);
+    setVideoFile(file);
+    setFrames([]);
+    setExtractionProgress({ current: 0, total: 0 });
+    setExtractionStartMs(Date.now());
+    extractionProgressRef.current = { current: 0, lastUpdated: Date.now() };
+    
+    const accumulatedFrames: StudioFrame[] = [];
+    activeImportFramesRef.current = [];
+
+    try {
+      const result = await extractFramesNative(file, {
+        fps: chosenFps,
+        plannedWidth: width,
+        plannedHeight: height,
+        signal: abortControllerRef.current?.signal,
+        onProgress: (current, total) => {
+          if (!isCurrentRun()) return;
+          setExtractionProgress({ current, total });
+          extractionProgressRef.current = { current, lastUpdated: Date.now() };
+        },
+        onChunk: (chunk) => {
+          if (!isCurrentRun()) {
+            chunk.forEach(revokeFrameUrls);
+            return;
+          }
+          // Avoid quadratic array duplication copies: push onto existing reference
+          accumulatedFrames.push(...chunk);
+          activeImportFramesRef.current = accumulatedFrames;
+          setFrames([...accumulatedFrames]);
+          
+          if (accumulatedFrames.length === chunk.length) {
+            setCurrentFrame(0);
+            setImgDims({ w: chunk[0].width, h: chunk[0].height });
+          }
+        }
+      });
+      
+      if (!isCurrentRun()) {
+        accumulatedFrames.forEach(revokeFrameUrls);
         return;
       }
-
-      abortControllerRef.current = new AbortController();
       
-      setUploadState('video-extracting');
-      setNativeExtractError(null);
-      setSkippedFramesWarning(false);
-      setVideoFile(file);
-      setFrames([]);
-      setExtractionProgress({ current: 0, total: 0 });
-      setExtractionStartMs(Date.now());
-      extractionProgressRef.current = { current: 0, lastUpdated: Date.now() };
-      let accumulatedFrames: StudioFrame[] = [];
-      try {
-        const maxRes = isMobile ? 720 : 1080;
-        const maxFramesLimit = limits.hardFrames;
-
-        const { frames: extractedFrames, skippedFrames } = await extractFramesNative(file, {
-          fps: targetFps,
-          maxWidth: maxRes === 1080 ? 1920 : 1280,
-          maxHeight: maxRes,
-          maxFrames: maxFramesLimit,
-          skipFailedFrames: true,
-          signal: abortControllerRef.current?.signal,
-          onProgress: (current, total) => {
-             if (!isCurrentRun()) return;
-             setExtractionProgress({ current, total });
-             extractionProgressRef.current = { current, lastUpdated: Date.now() };
-          },
-          onChunk: (chunk) => {
-             if (!isCurrentRun()) {
-               chunk.forEach(revokeFrameUrls);
-               return;
-             }
-             accumulatedFrames = [...accumulatedFrames, ...chunk];
-             activeImportFramesRef.current = accumulatedFrames;
-             setFrames(accumulatedFrames);
-             if (accumulatedFrames.length === chunk.length) {
-                setCurrentFrame(0);
-                setImgDims({ w: chunk[0].width, h: chunk[0].height });
-             }
-          }
-        });
-        
-        if (!isCurrentRun()) {
-          accumulatedFrames.forEach(revokeFrameUrls);
-          return;
-        }
-        
-        setFrames(extractedFrames);
-        setSkippedFramesWarning(skippedFrames && skippedFrames.length > 0);
-        
-        setIsPlaying(true);
-        console.log("Native extraction complete.");
-        setUploadState('ready');
-        setExtractionStartMs(null);
-        setExtractionStalled(false);
-        abortControllerRef.current = null;
-      } catch (err) {
-        if (!isCurrentRun()) {
-          accumulatedFrames.forEach(revokeFrameUrls);
-          return;
-        }
-        if (err instanceof Error && err.message === 'Aborted') {
-          console.log('Video extraction canceled.');
-          accumulatedFrames.forEach(revokeFrameUrls);
-          setFrames([]);
-          setUploadState('idle');
-          setExtractionStartMs(null);
-          setExtractionStalled(false);
-          abortControllerRef.current = null;
-          setIsPlaying(false);
-          return;
-        }
-        console.error("Browser video extraction failed:", err);
+      setFrames(result.frames);
+      setSkippedFramesWarning(result.skippedSlots.length > 0);
+      setIsPlaying(true);
+      setUploadState('ready');
+      setExtractionStartMs(null);
+      setExtractionStalled(false);
+      abortControllerRef.current = null;
+    } catch (err: any) {
+      if (!isCurrentRun()) {
+        accumulatedFrames.forEach(revokeFrameUrls);
+        return;
+      }
+      if (err instanceof Error && err.message === 'Aborted') {
         accumulatedFrames.forEach(revokeFrameUrls);
         setFrames([]);
-        setNativeExtractError(err instanceof Error ? `[Native Error]\n${err.message}` : `[Native Error]\nUnknown error`);
-        setExtractionProgress({ current: 0, total: 0 });
-        setUploadState('error');
-        setIsPlaying(false);
-      } finally {
-        if (isCurrentRun()) {
-          abortControllerRef.current = null;
-          setIsProcessingLocal(false);
-          setExtractionStartMs(null);
-          setExtractionStalled(false);
-        }
-      }
-      return;
-    }
-    
-    setImportGuardModal({
-      type: 'invalid-format',
-      onConfirm: () => {
-        setImportGuardModal(null);
         setUploadState('idle');
         setExtractionStartMs(null);
         setExtractionStalled(false);
-        setExtractionProgress({ current: 0, total: 0 });
+        abortControllerRef.current = null;
         setIsPlaying(false);
+        return;
       }
-    });
+
+      console.error("Browser video extraction failed, fallback triggered:", err);
+      accumulatedFrames.forEach(revokeFrameUrls);
+      setFrames([]);
+      setNativeExtractError(err instanceof Error ? err.message : '비디오 프레임 추출 중 에러가 발생했습니다.');
+      setExtractionProgress({ current: 0, total: 0 });
+      setUploadState('error'); // Trigger UI so user can choose FFmpeg Fallback
+      setIsPlaying(false);
+    } finally {
+      if (isCurrentRun()) {
+        abortControllerRef.current = null;
+        setIsProcessingLocal(false);
+        setExtractionStartMs(null);
+        setExtractionStalled(false);
+      }
+    }
   };
 
   const extractFramesWithFFmpeg = async (file: File, targetFps: number, engine: FFmpeg) => {
     if (!engine) {
-      console.warn("FFmpeg engine not provided.");
+      console.warn("FFmpeg engine not loaded.");
       setUploadState('error');
       return;
     }
@@ -364,7 +347,7 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
     extractionProgressRef.current = { current: 0, lastUpdated: Date.now() };
     
     try {
-      console.log("Starting frame extraction for:", file.name);
+      console.log("Starting FFmpeg extraction for:", file.name);
       await engine.writeFile('input.mp4', await fetchFile(file));
       setImgDims(null);
       
@@ -373,7 +356,7 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
       const maxRes = isMobile ? 720 : 1080;
       const maxFramesLimit = limits.hardFrames;
       
-      console.log(`Running FFmpeg command with scaling (Max ${maxRes}p, Device: ${isMobile ? 'Mobile' : 'Desktop'})...`);
+      console.log(`Running FFmpeg command with scaling (Max ${maxRes}p)...`);
       
       await engine.exec([
         '-i', 'input.mp4',
@@ -381,7 +364,7 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
         'frame_%04d.png'
       ]);
       
-      console.log("Reading file list...");
+      console.log("Reading FFmpeg frame files...");
       const fileList = await engine.listDir('/');
       const frameFiles = fileList.filter(f => f.name.startsWith('frame_') && f.name.endsWith('.png'));
       frameFiles.sort((a, b) => a.name.localeCompare(b.name));
@@ -391,11 +374,9 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
       }
 
       if (frameFiles.length > maxFramesLimit) {
-        console.warn(`Too many frames extracted, limiting to ${maxFramesLimit} for stability.`);
         frameFiles.splice(maxFramesLimit);
       }
 
-      console.log(`Extracted ${frameFiles.length} frames. Loading into memory...`);
       setExtractionProgress({ current: 0, total: frameFiles.length });
       extractionProgressRef.current = { current: 0, lastUpdated: Date.now() };
       
@@ -413,43 +394,55 @@ const probeVideo = (file: File): Promise<{ width: number; height: number; durati
         if (i === 0) {
           const img = new Image();
           await new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
-              img.src = url;
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = url;
           });
           frameWidth = img.naturalWidth;
           frameHeight = img.naturalHeight;
         }
 
         extractedFrames.push({
-          id: Math.random().toString(36).substring(7),
+          id: `frame-ffmpeg-${i}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           rawUrl: url,
           width: frameWidth,
           height: frameHeight,
           name: f.name,
-          sourceIndex: i
+          provenance: {
+            sourceIndex: i,
+            targetTimeMs: Math.round(i * (1000 / targetFps)),
+            captureMethod: 'ffmpeg',
+            sourceWidth: frameWidth,
+            sourceHeight: frameHeight,
+            outputWidth: frameWidth,
+            outputHeight: frameHeight
+          },
+          keyDirty: true,
+          recoverDirty: true,
+          qualityFlags: []
         });
         
         await engine.deleteFile(f.name);
 
         if (i === 0 || (i + 1) % CHUNK_SIZE === 0 || i === frameFiles.length - 1) {
-          const currentFrames = [...extractedFrames];
-          setFrames(currentFrames);
+          setFrames([...extractedFrames]);
           setExtractionProgress({ current: i + 1, total: frameFiles.length });
           extractionProgressRef.current = { current: i + 1, lastUpdated: Date.now() };
-          if (i === 0) setCurrentFrame(0);
+          if (i === 0) {
+            setCurrentFrame(0);
+            setImgDims({ w: frameWidth, h: frameHeight });
+          }
         }
       }
       
       await engine.deleteFile('input.mp4');
       
       setIsPlaying(true);
-      console.log("Extraction complete.");
       setExtractionStartMs(null);
       setExtractionStalled(false);
       setUploadState('ready');
     } catch (error) {
-      console.error("Error extracting frames:", error);
+      console.error("Error extracting frames with FFmpeg:", error);
       setExtractionStartMs(null);
       setExtractionStalled(false);
       setIsPlaying(false);

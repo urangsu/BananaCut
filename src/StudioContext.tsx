@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { StudioFrame } from './types/mediaPipeline';
+
+export type { StudioFrame };
 
 export interface Segment {
   name: string;
@@ -15,23 +18,12 @@ export interface Preset {
 
 export interface BrushStroke {
   id: string;
-  targetFrameIndexes: number[];
+  targetFrameIds: string[];
   tool: 'brush' | 'eraser';
   points: { x: number; y: number }[];
   brushSize: number;
   createdAt: number;
 }
-
-export type StudioFrame = {
-  id: string;
-  rawUrl: string;
-  processedUrl?: string;
-  width: number;
-  height: number;
-  name?: string;
-  sourceIndex: number;
-  dirty?: boolean;
-};
 
 const DEFAULT_PRESETS: Preset[] = [
   {

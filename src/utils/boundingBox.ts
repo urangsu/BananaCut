@@ -1,3 +1,5 @@
+import { getFrameDisplayUrl } from './frameUtils';
+
 export interface Box {
   x: number;
   y: number;
@@ -89,7 +91,7 @@ export async function analyzeFrameBounds(
   let firstFrameIdx = -1;
   let firstFrameUrl = "";
   for (let i = 0; i < frames.length; i++) {
-    const url = useProcessed ? frames[i].processedUrl || frames[i].base64 : frames[i].rawUrl;
+    const url = getFrameDisplayUrl(frames[i], useProcessed ? 'final' : 'raw');
     if (url) {
       firstFrameIdx = i;
       firstFrameUrl = url;
@@ -141,7 +143,7 @@ export async function analyzeFrameBounds(
       await yieldToBrowser();
     }
     const f = frames[idx];
-    const url = useProcessed ? f.processedUrl || f.base64 : f.rawUrl;
+    const url = getFrameDisplayUrl(f, useProcessed ? 'final' : 'raw');
     
     if (!url) {
         frameBoxes.push({ index: idx, box: null });

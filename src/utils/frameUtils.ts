@@ -1,8 +1,7 @@
-import { StudioFrame } from '../StudioContext';
+import { StudioFrame, resolveFrameUrl } from '../types/mediaPipeline';
 
-export function getFrameDisplayUrl(frame: StudioFrame, ignoreDirty = false): string {
-  if (!ignoreDirty && frame.dirty) {
-    return frame.rawUrl;
-  }
-  return frame.processedUrl || frame.rawUrl;
+export function getFrameDisplayUrl(frame: StudioFrame, requirement: 'raw' | 'keyed' | 'final' = 'final'): string {
+  const resolved = resolveFrameUrl(frame, requirement);
+  return resolved || frame.rawUrl;
 }
+

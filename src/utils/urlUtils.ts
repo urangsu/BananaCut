@@ -1,3 +1,5 @@
+import { StudioFrame } from '../types/mediaPipeline';
+
 export interface HistoryItem {
   frameId?: string;
   undoUrl?: string;
@@ -6,14 +8,15 @@ export interface HistoryItem {
 
 export const revokeUrlsSafely = (
   urlsToRevoke: string[], 
-  activeFrames: {rawUrl: string, processedUrl?: string}[], 
+  activeFrames: StudioFrame[], 
   activeHistory: HistoryItem[][] = []
 ) => {
   const activeSet = new Set<string>();
   
   activeFrames.forEach(f => {
     if (f.rawUrl) activeSet.add(f.rawUrl);
-    if (f.processedUrl) activeSet.add(f.processedUrl);
+    if (f.keyedUrl) activeSet.add(f.keyedUrl);
+    if (f.recoveredUrl) activeSet.add(f.recoveredUrl);
   });
   
   activeHistory.forEach(historyItem => {

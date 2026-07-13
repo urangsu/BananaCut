@@ -1,0 +1,25 @@
+import { useEffect } from 'react';
+
+export function useAdSense() {
+  useEffect(() => {
+    const src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6406237368816995";
+    
+    // Check if script already exists
+    let script = document.querySelector(`script[src*="adsbygoogle.js"]`) as HTMLScriptElement;
+    if (!script) {
+      script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      document.head.appendChild(script);
+    }
+    
+    return () => {
+      // Remove from head when leaving an allowed page to ensure 0 ads elements in forbidden pages
+      const existing = document.querySelector(`script[src*="adsbygoogle.js"]`);
+      if (existing && existing.parentNode) {
+        existing.parentNode.removeChild(existing);
+      }
+    };
+  }, []);
+}

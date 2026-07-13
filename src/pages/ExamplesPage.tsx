@@ -4,6 +4,7 @@ import { useTheme } from '../ThemeContext';
 import { Sparkles, Video, Grid } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SEO } from '../components/SEO';
+import { useAdSense } from '../hooks/useAdSense';
 
 function SafeImg({ src, alt, className }: { src: string; alt: string; className?: string }) {
   const [failed, setFailed] = React.useState(false);
@@ -26,6 +27,7 @@ function SafeImg({ src, alt, className }: { src: string; alt: string; className?
 }
 
 export default function ExamplesPage() {
+  useAdSense();
   const { lang } = useLanguage();
   const { isDark } = useTheme();
 
