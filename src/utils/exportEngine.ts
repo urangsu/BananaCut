@@ -46,30 +46,20 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
 
     if (shouldFetchProcessed) {
         const finalUrl = resolveFrameUrl(frame, 'final');
-        if (finalUrl) {
-            try {
-                const response = await fetch(finalUrl);
-                resultBlob = await response.blob();
-            } catch {
-                warnings.push(`Frame ${i} processed image failed to load.`);
-            }
+        if (!finalUrl) {
+            throw new Error(`FINAL_FRAME_UNAVAILABLE:${frame.id}`);
+        }
+        try {
+            const response = await fetch(finalUrl);
+            resultBlob = await response.blob();
+        } catch {
+            warnings.push(`Frame ${i} processed image failed to load.`);
         }
     }
     
-    // Policy A: zipResultOnly
-    if (request.format === 'zipResultOnly' || request.format === 'zipWithRaw') {
-        if (!resultBlob && request.format === 'zipResultOnly') {
-             failedIndices.push(i);
-             warnings.push(`Frame ${i} was skipped because it is not processed.`);
-             continue;
-        }
-    }
-
-    // Raw (for zipWithRaw OR gifPreview fallback)
-    const shouldFetchRaw =
-        request.format === 'zipWithRaw' ||
-        (request.format === 'gifPreview' && !resultBlob);
-
+    // Raw (for zipWithRaw)
+    const shouldFetchRaw = request.format === 'zipWithRaw';
+ 
     if (shouldFetchRaw) {
         if (frame.rawUrl) {
             try {
@@ -80,10 +70,6 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
             }
         } else {
              if (request.format === 'zipWithRaw') failedIndices.push(i);
-        }
-        
-        if (request.format === 'gifPreview' && !resultBlob && rawBlob) {
-            warnings.push(`Frame ${i} used raw frame fallback for GIF preview.`);
         }
     }
     
@@ -145,12 +131,13 @@ export const exportPngSequenceZip = async (request: DownloadRequest, frames: Stu
   
   const content = await zip.generateAsync({ type: "blob" });
   return {
-      ok: true,
+      ok: exportedResultCount > 0,
       format: request.format,
       blob: content,
       filename: request.format === 'zipWithRaw' ? 'bananacut_with_raw.zip' : 'bananacut_result_only.zip',
       failedIndices: prepared.failedIndices,
       warnings: prepared.warnings,
+      error: exportedResultCount === 0 ? "ZERO_EXPORT_RESULT" : undefined,
       report
   };
 };

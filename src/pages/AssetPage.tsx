@@ -136,7 +136,7 @@ export default function AssetPage() {
             frame.rawUrl,
             params,
             exclusionStrokes,
-            idx
+            frame.id
           );
           PerfLogger.end("AssetPage_processKeyedFrame");
 
@@ -180,8 +180,10 @@ export default function AssetPage() {
 
   const checkDirtyAndRun = (runAction: () => Promise<void>) => {
     const dirtyIndices = frames
-      .map((f, i) => (!f.processedUrl || f.dirty ? i : -1))
-      .filter((i) => i !== -1);
+      .map((frame, index) =>
+        frame.keyDirty || !frame.keyedUrl ? index : -1
+      )
+      .filter((index) => index >= 0);
     if (dirtyIndices.length > 0) {
       setDirtyAction(() => async () => {
         const failed = await processDirtyFrames(dirtyIndices);
@@ -227,6 +229,9 @@ export default function AssetPage() {
       for (let i = 0; i < frames.length; i++) {
         const frame = frames[i];
         const url = getFrameDisplayUrl(frame, 'final');
+        if (!url) {
+          throw new Error(`FINAL_FRAME_UNAVAILABLE:${frame.id}`);
+        }
         const response = await fetch(url);
         const buffer = await response.arrayBuffer();
         await currentFFmpeg.writeFile(
@@ -557,18 +562,18 @@ export default function AssetPage() {
                   className={`px-2 py-0.5 rounded text-xs ${isDark ? "bg-white/10 text-white/70" : "bg-gray-100 text-gray-600"}`}
                 >
                   {lang === "KR" ? "처리 완료: " : "Processed: "}
-                  {frames.filter((f) => f.processedUrl && !f.dirty).length} / {frames.length}
+                  {frames.filter((f) => f.keyedUrl && !f.keyDirty).length} / {frames.length}
                 </span>
-                {frames.some((f) => !f.processedUrl || f.dirty) && (
+                {frames.some((f) => !f.keyedUrl || f.keyDirty) && (
                   <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 font-semibold flex items-center gap-1 border border-yellow-500/20">
                     <AlertTriangle className="w-3 h-3" />
                     {lang === "KR" ? "아직 처리되지 않은 프레임 " : "Unprocessed frames: "}
-                    {frames.filter((f) => !f.processedUrl || f.dirty).length}
+                    {frames.filter((f) => !f.keyedUrl || f.keyDirty).length}
                     {lang === "KR" ? "개" : ""}
                   </span>
                 )}
               </p>
-              {frames.some((f) => !f.processedUrl || f.dirty) && (
+              {frames.some((f) => !f.keyedUrl || f.keyDirty) && (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 gap-4">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />

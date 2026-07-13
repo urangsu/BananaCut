@@ -667,6 +667,9 @@ export default function RecoverPage() {
 
       for (const frame of frames) {
         const sourceUrl = getFrameDisplayUrl(frame, 'final');
+        if (!sourceUrl) {
+          throw new Error(`FINAL_FRAME_UNAVAILABLE:${frame.id}`);
+        }
         const response = await fetch(sourceUrl);
         const blob = await response.blob();
 

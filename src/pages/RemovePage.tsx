@@ -31,7 +31,7 @@ import { useBatchJob } from "../hooks/useBatchJob";
 import { useMediaImport } from "../hooks/useMediaImport";
 import { useLanguage } from "../LanguageContext";
 import { useFFmpeg } from "../FFmpegContext";
-import { generateStrokeMask, applyChromaKeyAdvanced } from "../utils/chromaKey";
+import { generateStrokeMask, applyChromaKeyAdvanced, processKeyedFrame, composeRecoveredFrame } from "../utils/chromaKey";
 import { normalizeChromaKeyParams } from "../types/mediaPipeline";
 import { PerfLogger } from "../utils/performanceLogger";
 import {
@@ -332,67 +332,57 @@ export default function RemovePage() {
     const newFrames = [...frames];
     let failedIndices: number[] = [];
 
+    const params = normalizeChromaKeyParams({
+      keyingMode,
+      previewMode: "result",
+      tolerance,
+      softness,
+      enclosedTolerance,
+      chromaKeyColor,
+      pickedColor,
+      despill,
+      erode,
+      dilate,
+      feather,
+      alphaContrast,
+    });
+
     await startJob<number, void>({
       items: targetIndices,
       delayMs: 0,
       processItem: async (idx, resultIndex) => {
         const frame = newFrames[idx];
 
-        const img = new Image();
-        img.src = frame.rawUrl;
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-        });
-
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (!ctx) throw new Error("No context");
-
-        ctx.drawImage(img, 0, 0);
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const mask = generateStrokeMask(
-          canvas.width,
-          canvas.height,
+        PerfLogger.start("processFramesForDownload_processKeyedFrame");
+        const { keyedUrl, qualityFlags } = await processKeyedFrame(
+          frame.rawUrl,
+          params,
           exclusionStrokes,
-          frame.id,
+          frame.id
         );
+        PerfLogger.end("processFramesForDownload_processKeyedFrame");
 
-        PerfLogger.start("processFramesForDownload_applyChromaKey");
-        applyChromaKeyAdvanced(
-          imgData.data,
-          canvas.width,
-          canvas.height,
-          normalizeChromaKeyParams({
-            keyingMode,
-            previewMode: "result",
-            tolerance,
-            softness,
-            enclosedTolerance,
-            chromaKeyColor,
-            pickedColor,
-            despill,
-            erode,
-            dilate,
-            feather,
-            alphaContrast,
-          }),
-          mask,
-        );
-        PerfLogger.end("processFramesForDownload_applyChromaKey");
-
-        ctx.putImageData(imgData, 0, 0);
-
-        const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, "image/png"),
-        );
-        if (blob) {
-          const newUrl = URL.createObjectURL(blob);
-          if (frame.processedUrl) URL.revokeObjectURL(frame.processedUrl);
-          newFrames[idx] = { ...frame, processedUrl: newUrl, dirty: false };
+        let finalRecoveredUrl = keyedUrl;
+        if (frame.recoverMaskUrl) {
+          finalRecoveredUrl = await composeRecoveredFrame(
+            frame.rawUrl,
+            keyedUrl,
+            frame.recoverMaskUrl,
+            localStorage.getItem('recover_fillColor') || '#ffffff'
+          );
         }
+
+        if (frame.keyedUrl) URL.revokeObjectURL(frame.keyedUrl);
+        if (frame.recoveredUrl) URL.revokeObjectURL(frame.recoveredUrl);
+
+        newFrames[idx] = {
+          ...frame,
+          keyedUrl,
+          recoveredUrl: finalRecoveredUrl,
+          keyDirty: false,
+          recoverDirty: false,
+          qualityFlags
+        };
       },
       onSuccess: () => {
         setFrames(newFrames);
@@ -487,8 +477,8 @@ export default function RemovePage() {
     if (isExtracting) return;
     setFrames((prev) =>
       prev.map((f, i) => {
-        if (selectedFrames.has(i) && f.processedUrl && !f.dirty) {
-          return { ...f, dirty: true };
+        if (selectedFrames.has(i) && f.keyedUrl && !f.keyDirty) {
+          return { ...f, keyDirty: true };
         }
         return f;
       }),
@@ -676,7 +666,7 @@ export default function RemovePage() {
       const offsetX = (canvas.width - newW) / 2;
       const offsetY = (canvas.height - newH) / 2;
 
-      const useProcessed = targetFrame.processedUrl && !targetFrame.dirty;
+      const useProcessed = !!(targetFrame.keyedUrl && !targetFrame.keyDirty);
 
       const tempCanvas = document.createElement("canvas");
       tempCanvas.width = img.width;
@@ -697,7 +687,7 @@ export default function RemovePage() {
         );
         if (
           activeStrokeRef.current &&
-          activeStrokeRef.current.targetFrameIndexes.includes(currentFrame)
+          activeStrokeRef.current.targetFrameIds.includes(targetFrame.id)
         ) {
           // mix active stroke
           const tempStrokes = [...exclusionStrokes, activeStrokeRef.current];
@@ -740,7 +730,7 @@ export default function RemovePage() {
         ctx.stroke();
       }
     };
-    img.src = getFrameDisplayUrl(targetFrame);
+    img.src = getFrameDisplayUrl(targetFrame, 'final') || targetFrame.rawUrl;
   }, [
     currentFrame,
     frames,
@@ -836,16 +826,19 @@ export default function RemovePage() {
       lastPosRef.current = { x: ox, y: oy };
       setLastPos({ x: ox, y: oy });
 
-      let targetIndices: number[] = [];
+      let targetIds: string[] = [];
       if (applyToSelectedRef.current) {
-        targetIndices = Array.from(selectedFrames);
+        targetIds = Array.from(selectedFrames)
+          .map((idx) => frames[idx]?.id)
+          .filter(Boolean) as string[];
       } else {
-        targetIndices = [currentFrame];
+        const frameId = frames[currentFrame]?.id;
+        targetIds = frameId ? [frameId] : [];
       }
 
       activeStrokeRef.current = {
         id: Math.random().toString(36).substr(2, 9),
-        targetFrameIndexes: targetIndices,
+        targetFrameIds: targetIds,
         tool: activeTool,
         points: [{ x: ox, y: oy }],
         brushSize: brushSize / ratio, // actual brush size scaled to image
@@ -1641,18 +1634,20 @@ export default function RemovePage() {
                     </p>
                     <button
                       onClick={() => {
-                        const targetIndices = selectedFrames.has(currentFrame)
+                        const targetIds = selectedFrames.has(currentFrame)
                           ? Array.from(selectedFrames)
-                          : [currentFrame];
+                              .map((idx) => frames[idx]?.id)
+                              .filter(Boolean) as string[]
+                          : [frames[currentFrame]?.id].filter(Boolean) as string[];
                         setExclusionStrokes((prev) =>
                           prev
                             .map((s) => ({
                               ...s,
-                              targetFrameIndexes: s.targetFrameIndexes.filter(
-                                (idx) => !targetIndices.includes(idx),
+                              targetFrameIds: s.targetFrameIds.filter(
+                                (id) => !targetIds.includes(id),
                               ),
                             }))
-                            .filter((s) => s.targetFrameIndexes.length > 0),
+                            .filter((s) => s.targetFrameIds.length > 0),
                         );
                       }}
                       className={`mt-3 w-full py-1.5 text-[10px] font-bold uppercase tracking-wider rounded border transition-colors ${
@@ -2420,7 +2415,7 @@ export default function RemovePage() {
               onClick={async () => {
                 const dirtyIndices: number[] = [];
                 frames.forEach((f, i) => {
-                  if (!f.processedUrl || f.dirty) dirtyIndices.push(i);
+                  if (!f.keyedUrl || f.keyDirty) dirtyIndices.push(i);
                 });
 
                 if (dirtyIndices.length > 0) {
@@ -2669,8 +2664,8 @@ export default function RemovePage() {
                             console.warn(
                               `[RemovePage] thumbnail load error for frame ${idx}. Reverting to rawUrl.`,
                               {
-                                originalUrl: frame.processedUrl,
-                                dirty: frame.dirty,
+                                originalUrl: frame.keyedUrl,
+                                keyDirty: frame.keyDirty,
                               },
                             );
                             if (e.currentTarget.src !== frame.rawUrl)
@@ -2747,28 +2742,34 @@ export default function RemovePage() {
 
                   <button
                     onClick={() => {
+                      const currentFrameId = frames[currentFrame]?.id;
+                      if (!currentFrameId) return;
+                      const selectedFrameIds = Array.from(selectedFrames)
+                        .map((idx) => frames[idx]?.id)
+                        .filter(Boolean) as string[];
+
                       setExclusionStrokes((prev) => {
                         return prev
                           .map((s) => {
-                            if (s.targetFrameIndexes.includes(currentFrame)) {
+                            if (s.targetFrameIds.includes(currentFrameId)) {
                               const newTargets = new Set([
-                                ...s.targetFrameIndexes,
-                                ...selectedFrames,
+                                ...s.targetFrameIds,
+                                ...selectedFrameIds,
                               ]);
                               return {
                                 ...s,
-                                targetFrameIndexes: Array.from(newTargets),
+                                targetFrameIds: Array.from(newTargets),
                               };
                             } else {
                               return {
                                 ...s,
-                                targetFrameIndexes: s.targetFrameIndexes.filter(
-                                  (idx) => !selectedFrames.has(idx),
+                                targetFrameIds: s.targetFrameIds.filter(
+                                  (id) => !selectedFrameIds.includes(id),
                                 ),
                               };
                             }
                           })
-                          .filter((s) => s.targetFrameIndexes.length > 0);
+                          .filter((s) => s.targetFrameIds.length > 0);
                       });
                     }}
                     disabled={selectedFrames.size <= 1}
