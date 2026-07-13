@@ -8,6 +8,7 @@ import {
   PreparedExportFrame 
 } from "../types/export";
 import { StudioFrame, resolveFrameUrl } from "../types/mediaPipeline";
+import { fetchBlobStrict } from "./fetchBlobStrict";
 
 async function getImageDimensionsFromBlob(blob: Blob): Promise<{ width: number; height: number }> {
     return new Promise((resolve, reject) => {
@@ -50,8 +51,7 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
             throw new Error(`FINAL_FRAME_UNAVAILABLE:${frame.id}`);
         }
         try {
-            const response = await fetch(finalUrl);
-            resultBlob = await response.blob();
+            resultBlob = await fetchBlobStrict(finalUrl);
         } catch {
             warnings.push(`Frame ${i} processed image failed to load.`);
         }
@@ -63,8 +63,7 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
     if (shouldFetchRaw) {
         if (frame.rawUrl) {
             try {
-                const response = await fetch(frame.rawUrl);
-                rawBlob = await response.blob();
+                rawBlob = await fetchBlobStrict(frame.rawUrl);
             } catch {
                 if (request.format === 'zipWithRaw') failedIndices.push(i);
             }
@@ -161,8 +160,10 @@ export const exportGifPreview = async (request: DownloadRequest, frames: StudioF
 
     for (let i = 0; i < gifFrames.length; i++) {
         const frame = gifFrames[i];
-        const blob = frame.resultBlob || frame.rawBlob;
-        if (!blob) continue;
+        const blob = frame.resultBlob;
+        if (!blob) {
+            throw new Error("FINAL_FRAME_UNAVAILABLE");
+        }
         
         const imgBlobUrl = URL.createObjectURL(blob);
         try {

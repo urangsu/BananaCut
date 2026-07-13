@@ -68,7 +68,13 @@ export function resolveFrameUrl(
     return (!frame.keyDirty && frame.keyedUrl) ? frame.keyedUrl : null;
   }
   if (requirement === 'final') {
-    if (!frame.recoverDirty && frame.recoveredUrl) {
+    if (
+      !frame.keyDirty &&
+      !frame.recoverDirty &&
+      frame.recoveredUrl &&
+      frame.keyRevision &&
+      frame.recoverBaseKeyRevision === frame.keyRevision
+    ) {
       return frame.recoveredUrl;
     }
     if (!frame.keyDirty && frame.keyedUrl) {
@@ -182,3 +188,21 @@ export const normalizeChromaKeyParams = (params: Partial<ChromaKeyParams>): Chro
     removeEnclosed: !!params.removeEnclosed,
   };
 };
+
+export function invalidateKeyedFramesByIds(
+  frames: StudioFrame[],
+  targetIds: string[]
+): StudioFrame[] {
+  const targetSet = new Set(targetIds);
+  return frames.map((f) => {
+    if (targetSet.has(f.id)) {
+      return {
+        ...f,
+        keyDirty: true,
+        recoverDirty: !!f.recoverMaskUrl
+      };
+    }
+    return f;
+  });
+}
+

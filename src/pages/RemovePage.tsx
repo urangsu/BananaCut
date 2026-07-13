@@ -32,7 +32,7 @@ import { useMediaImport } from "../hooks/useMediaImport";
 import { useLanguage } from "../LanguageContext";
 import { useFFmpeg } from "../FFmpegContext";
 import { generateStrokeMask, applyChromaKeyAdvanced, processKeyedFrame, composeRecoveredFrame } from "../utils/chromaKey";
-import { normalizeChromaKeyParams } from "../types/mediaPipeline";
+import { normalizeChromaKeyParams, invalidateKeyedFramesByIds } from "../types/mediaPipeline";
 import { PerfLogger } from "../utils/performanceLogger";
 import {
   generateSampleFrames,
@@ -475,14 +475,10 @@ export default function RemovePage() {
 
   const markSelectedFramesDirty = () => {
     if (isExtracting) return;
-    setFrames((prev) =>
-      prev.map((f, i) => {
-        if (selectedFrames.has(i) && f.keyedUrl && !f.keyDirty) {
-          return { ...f, keyDirty: true };
-        }
-        return f;
-      }),
-    );
+    const targetIds = frames
+      .filter((_, i) => selectedFrames.has(i))
+      .map((f) => f.id);
+    setFrames((prev) => invalidateKeyedFramesByIds(prev, targetIds));
   };
 
   useEffect(() => {
@@ -1056,6 +1052,7 @@ export default function RemovePage() {
     if (preset) {
       setSegments(JSON.parse(JSON.stringify(preset.segments)));
       setSelectedPreset(presetId);
+      markSelectedFramesDirty();
     }
   };
 
@@ -1649,6 +1646,7 @@ export default function RemovePage() {
                             }))
                             .filter((s) => s.targetFrameIds.length > 0),
                         );
+                        setFrames((prev) => invalidateKeyedFramesByIds(prev, targetIds));
                       }}
                       className={`mt-3 w-full py-1.5 text-[10px] font-bold uppercase tracking-wider rounded border transition-colors ${
                         isDark
@@ -2771,6 +2769,7 @@ export default function RemovePage() {
                           })
                           .filter((s) => s.targetFrameIds.length > 0);
                       });
+                      setFrames((prev) => invalidateKeyedFramesByIds(prev, selectedFrameIds));
                     }}
                     disabled={selectedFrames.size <= 1}
                     className={`text-[9px] px-2 py-0.5 rounded border transition-all flex items-center gap-1 ${

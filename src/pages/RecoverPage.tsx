@@ -9,6 +9,7 @@ import { trackEvent } from '../lib/analytics';
 import { revokeUrlsSafely } from '../utils/urlUtils';
 import { getFrameDisplayUrl } from '../utils/frameUtils';
 import { composeRecoveredFrame } from '../utils/chromaKey';
+import { fetchBlobStrict } from '../utils/fetchBlobStrict';
 
 interface Point {
   x: number;
@@ -670,8 +671,7 @@ export default function RecoverPage() {
         if (!sourceUrl) {
           throw new Error(`FINAL_FRAME_UNAVAILABLE:${frame.id}`);
         }
-        const response = await fetch(sourceUrl);
-        const blob = await response.blob();
+        const blob = await fetchBlobStrict(sourceUrl);
 
         const nameParts = (frame.name || 'frame.png').split('.');
         const ext = nameParts.pop();

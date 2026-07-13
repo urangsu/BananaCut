@@ -10,6 +10,7 @@
     "clean": "rm -rf dist",
     "postinstall": "npx shx mkdir -p public/ffmpeg && npx shx cp -R node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.* public/ffmpeg/",
     "lint": "tsc --noEmit",
+    "test": "vitest run",
     "check:live": "node scripts/check-live.mjs",
     "check:release": "node scripts/sample-release-gate.mjs"
   },
@@ -41,6 +42,7 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vitest": "^4.1.10"
   }
 }

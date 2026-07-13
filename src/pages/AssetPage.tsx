@@ -16,6 +16,7 @@ import { processKeyedFrame, composeRecoveredFrame } from "../utils/chromaKey";
 import { normalizeChromaKeyParams } from "../types/mediaPipeline";
 import { PerfLogger } from "../utils/performanceLogger";
 import { getFrameDisplayUrl } from "../utils/frameUtils";
+import { fetchBlobStrict } from "../utils/fetchBlobStrict";
 import { analyzeFrameBounds, Box } from "../utils/boundingBox";
 import { Modal } from "../components/Modal";
 import { Copy, Scan, Maximize, Target } from "lucide-react";
@@ -232,8 +233,8 @@ export default function AssetPage() {
         if (!url) {
           throw new Error(`FINAL_FRAME_UNAVAILABLE:${frame.id}`);
         }
-        const response = await fetch(url);
-        const buffer = await response.arrayBuffer();
+        const blob = await fetchBlobStrict(url);
+        const buffer = await blob.arrayBuffer();
         await currentFFmpeg.writeFile(
           `frame_${i.toString().padStart(4, "0")}.png`,
           new Uint8Array(buffer),

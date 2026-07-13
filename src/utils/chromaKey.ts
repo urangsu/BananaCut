@@ -1,67 +1,168 @@
 import { ChromaKeyParams, StudioFrame, FrameQualityFlag } from '../types/mediaPipeline';
 import { BrushStroke } from '../StudioContext';
+import { processChromaCore, getChromaDistance, ChromaCoreParams } from './chromaCore';
 
-// 1. Dominant Key Color Estimator
-export function estimateKeyColor(imageData: ImageData): 'Green' | 'White' {
-  const data = imageData.data;
-  const width = imageData.width;
-  const height = imageData.height;
+export interface KeyColorEstimate {
+  rgb: { r: number; g: number; b: number };
+  kind: 'green' | 'white' | 'custom';
+  confidence: number;
+  variance: number;
+  sampledFrameIds: string[];
+  warnings: string[];
+}
 
-  let greenCount = 0;
-  let whiteCount = 0;
-  let sampleCount = 0;
+export function createKeyRevision(input: {
+  frameId: string;
+  params: any;
+  strokes: any[];
+  rawSourceIdentity?: string;
+}): string {
+  const serializedStrokes = input.strokes.map(s => ({
+    tool: s.tool,
+    brushSize: s.brushSize,
+    points: s.points,
+    targetFrameIds: s.targetFrameIds
+  }));
 
-  // Sample outer 10% border pixels where background usually is
-  const borderY = Math.max(1, Math.round(height * 0.1));
-  const borderX = Math.max(1, Math.round(width * 0.1));
-
-  const checkPixel = (idx: number) => {
-    const r = data[idx * 4];
-    const g = data[idx * 4 + 1];
-    const b = data[idx * 4 + 2];
-    sampleCount++;
-
-    // Green dominant: g is significantly larger than r and b
-    if (g > r + 30 && g > b + 30) {
-      greenCount++;
-    }
-    // White: high luminance, low saturation
-    const maxVal = Math.max(r, g, b);
-    const minVal = Math.min(r, g, b);
-    const sat = maxVal === 0 ? 0 : (maxVal - minVal) / maxVal;
-    if (maxVal > 200 && sat < 0.15) {
-      whiteCount++;
-    }
+  const payload = {
+    frameId: input.frameId,
+    params: input.params,
+    strokes: serializedStrokes,
+    rawSourceIdentity: input.rawSourceIdentity || ''
   };
 
-  // Top and bottom borders
-  for (let y = 0; y < borderY; y++) {
-    for (let x = 0; x < width; x += 10) {
-      checkPixel(y * width + x);
-    }
+  const jsonStr = JSON.stringify(payload);
+  let hash = 5381;
+  for (let i = 0; i < jsonStr.length; i++) {
+    hash = (hash * 33) ^ jsonStr.charCodeAt(i);
   }
-  for (let y = height - borderY; y < height; y++) {
-    for (let x = 0; x < width; x += 10) {
-      checkPixel(y * width + x);
-    }
+  return `rev_${(hash >>> 0).toString(16)}`;
+}
+
+// 1. Dominant Key Color Estimator
+export function estimateKeyColor(
+  framesData: { id: string; imageData: ImageData }[]
+): KeyColorEstimate {
+  if (framesData.length === 0) {
+    return {
+      rgb: { r: 0, g: 255, b: 0 },
+      kind: 'green',
+      confidence: 1.0,
+      variance: 0,
+      sampledFrameIds: [],
+      warnings: ['No frames provided for estimation.']
+    };
   }
-  // Left and right borders
-  for (let y = borderY; y < height - borderY; y += 10) {
-    for (let x = 0; x < borderX; x++) {
-      checkPixel(y * width + x);
+
+  let totalR = 0;
+  let totalG = 0;
+  let totalB = 0;
+  let count = 0;
+  const sampledFrameIds = framesData.map(f => f.id);
+  const warnings: string[] = [];
+  const samples: { r: number; g: number; b: number }[] = [];
+
+  for (const { imageData } of framesData) {
+    const data = imageData.data;
+    const w = imageData.width;
+    const h = imageData.height;
+
+    // Outer 2% to 4% sampling
+    const borderY = Math.max(1, Math.round(h * 0.03));
+    const borderX = Math.max(1, Math.round(w * 0.03));
+
+    const samplePixel = (x: number, y: number) => {
+      const idx = (y * w + x) * 4;
+      if (idx < 0 || idx + 2 >= data.length) return;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+      totalR += r;
+      totalG += g;
+      totalB += b;
+      count++;
+      samples.push({ r, g, b });
+    };
+
+    // Sample top border
+    for (let y = 0; y < borderY; y++) {
+      for (let x = 0; x < w; x += 10) {
+        samplePixel(x, y);
+      }
     }
-    for (let x = width - borderX; x < width; x++) {
-      checkPixel(y * width + x);
+    // Sample bottom border
+    for (let y = h - borderY; y < h; y++) {
+      for (let x = 0; x < w; x += 10) {
+        samplePixel(x, y);
+      }
+    }
+    // Sample left border
+    for (let y = borderY; y < h - borderY; y += 10) {
+      for (let x = 0; x < borderX; x++) {
+        samplePixel(x, y);
+      }
+    }
+    // Sample right border
+    for (let y = borderY; y < h - borderY; y += 10) {
+      for (let x = w - borderX; x < w; x++) {
+        samplePixel(x, y);
+      }
     }
   }
 
-  if (greenCount > whiteCount && greenCount > sampleCount * 0.1) {
-    return 'Green';
+  if (count === 0) {
+    return {
+      rgb: { r: 0, g: 255, b: 0 },
+      kind: 'green',
+      confidence: 0,
+      variance: 0,
+      sampledFrameIds,
+      warnings: ['No pixels sampled.']
+    };
   }
-  if (whiteCount > greenCount && whiteCount > sampleCount * 0.1) {
-    return 'White';
+
+  const avgR = totalR / count;
+  const avgG = totalG / count;
+  const avgB = totalB / count;
+
+  let sumSqDev = 0;
+  for (const s of samples) {
+    const devR = s.r - avgR;
+    const devG = s.g - avgG;
+    const devB = s.b - avgB;
+    sumSqDev += devR * devR + devG * devG + devB * devB;
   }
-  return 'Green'; // safe fallback default
+  const variance = sumSqDev / (count * 3);
+
+  let kind: 'green' | 'white' | 'custom' = 'custom';
+  if (avgG > avgR + 30 && avgG > avgB + 30) {
+    kind = 'green';
+  } else {
+    const maxVal = Math.max(avgR, avgG, avgB);
+    const minVal = Math.min(avgR, avgG, avgB);
+    const sat = maxVal === 0 ? 0 : (maxVal - minVal) / maxVal;
+    if (maxVal > 180 && sat < 0.2) {
+      kind = 'white';
+    }
+  }
+
+  let confidence = 1.0 - Math.min(1.0, Math.sqrt(variance) / 128);
+  if (kind === 'custom') {
+    confidence *= 0.5;
+  }
+
+  if (confidence < 0.4) {
+    warnings.push('Low estimation confidence. High background color variation detected. Manual Picker is highly recommended.');
+  }
+
+  return {
+    rgb: { r: Math.round(avgR), g: Math.round(avgG), b: Math.round(avgB) },
+    kind,
+    confidence: parseFloat(confidence.toFixed(3)),
+    variance: parseFloat(variance.toFixed(2)),
+    sampledFrameIds,
+    warnings
+  };
 }
 
 // 2. Generate Brush Stroke Mask based on Frame ID (strictly string based)
@@ -115,239 +216,13 @@ export function generateStrokeMask(
 
 // 3. Web Worker Script for off-thread heavy chroma operations
 const workerCode = `
+${getChromaDistance.toString()}
+${processChromaCore.toString()}
+
 self.onmessage = function(e) {
   const { data, width, height, params, exclusionMask } = e.data;
-  const {
-    keyingMode, previewMode, tolerance, softness, enclosedTolerance, 
-    chromaKeyColor, pickedColor, despill, erode, dilate, feather, alphaContrast,
-    removeEnclosed
-  } = params;
-
-  let alphaMap = new Float32Array(width * height);
-  alphaMap.fill(1.0);
-
-  const getDist = (r, g, b) => {
-    if (chromaKeyColor === 'Green') {
-      if (keyingMode === 'rgb') {
-        return Math.sqrt((0 - r)**2 + (255 - g)**2 + (0 - b)**2) * (100 / 441);
-      } else if (keyingMode === 'hsv') {
-        const rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
-        const max = Math.max(rNorm, gNorm, bNorm), min = Math.min(rNorm, gNorm, bNorm);
-        const d = max - min;
-        let h = 0;
-        if (max !== min) {
-          switch (max) {
-            case rNorm: h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0); break;
-            case gNorm: h = (bNorm - rNorm) / d + 2; break;
-            case bNorm: h = (rNorm - gNorm) / d + 4; break;
-          }
-          h /= 6;
-        }
-        let hDist = Math.abs(h - 1/3);
-        if (hDist > 0.5) hDist = 1 - hDist;
-        const s = max === 0 ? 0 : d / max;
-        const v = max;
-        return (hDist * 3 * 255) + ((1 - s) * 100) + ((1 - v) * 50);
-      } else if (keyingMode === 'luma') {
-        const dist = Math.abs(g - ((r + b) / 2));
-        return (255 - dist * 2) * (100 / 255);
-      } else {
-        // greenAdvanced (default)
-        const dist = Math.sqrt(r * r + (255 - g) * (255 - g) + b * b) * (100 / 441);
-        const greennessPenalty = Math.max(0, Math.max(r, b) - g + 30) * 8;
-        return dist + (greennessPenalty * 0.1);
-      }
-    } else if (chromaKeyColor === 'Picker') {
-      return Math.sqrt((pickedColor.r - r) ** 2 + (pickedColor.g - g) ** 2 + (pickedColor.b - b) ** 2) * (100 / 441);
-    } else {
-      // White keying
-      return Math.sqrt((255 - r) ** 2 + (255 - g) ** 2 + (255 - b) ** 2) * (100 / 441);
-    }
-  };
-
-  const visited = new Uint8Array(width * height);
-
-  // If removeEnclosed is false (default), start flood fill from the borders (Contiguous Mode)
-  if (!removeEnclosed) {
-    const queue = [];
-    const pushQueue = (idx) => {
-      if (idx < 0 || idx >= width * height) return;
-      if (visited[idx]) return;
-      if (exclusionMask && exclusionMask[idx] === 1) return;
-      visited[idx] = 1;
-      
-      const r = data[idx * 4], g = data[idx * 4 + 1], b = data[idx * 4 + 2];
-      const dist = getDist(r, g, b);
-      if (dist <= tolerance) {
-        alphaMap[idx] = 0;
-        queue.push(idx);
-      } else if (dist <= tolerance + softness) {
-        alphaMap[idx] = (dist - tolerance) / Math.max(1, softness);
-      }
-    };
-
-    // Push outer edges
-    for (let x = 0; x < width; x++) {
-      pushQueue(x); // Top border
-      pushQueue((height - 1) * width + x); // Bottom border
-    }
-    for (let y = 1; y < height - 1; y++) {
-      pushQueue(y * width); // Left border
-      pushQueue(y * width + (width - 1)); // Right border
-    }
-
-    // Process queue
-    let head = 0;
-    while (head < queue.length) {
-      const idx = queue[head++];
-      const x = idx % width;
-      const y = Math.floor(idx / width);
-
-      if (y > 0) pushQueue(idx - width);
-      if (y < height - 1) pushQueue(idx + width);
-      if (x > 0) pushQueue(idx - 1);
-      if (x < width - 1) pushQueue(idx + 1);
-    }
-  } else {
-    // Global Mode (Remove Enclosed Background is ON)
-    for (let i = 0; i < data.length; i += 4) {
-      const idx = i / 4;
-      if (exclusionMask && exclusionMask[idx] === 1) continue;
-      const r = data[i], g = data[i + 1], b = data[i + 2];
-      const dist = getDist(r, g, b);
-
-      if (dist <= tolerance) {
-        alphaMap[idx] = 0;
-      } else if (dist <= tolerance + softness) {
-        alphaMap[idx] = (dist - tolerance) / Math.max(1, softness);
-      }
-    }
-  }
-
-  // Despill Color Operation
-  if (despill > 0) {
-    for (let i = 0; i < data.length; i += 4) {
-      const idx = i / 4;
-      if (alphaMap[idx] < 1) {
-        const r = data[i], g = data[i + 1], b = data[i + 2];
-        if (chromaKeyColor === 'Green') {
-          const maxRB = Math.max(r, b);
-          if (g > maxRB) {
-            const reduction = (g - maxRB) * (despill / 100);
-            data[i + 1] = Math.max(maxRB, g - reduction);
-          }
-        }
-      }
-    }
-  }
-
-  // Morphological operations (Erode, Dilate, Feather, Alpha Contrast)
-  if (erode > 0 || dilate > 0 || feather > 0 || alphaContrast > 0) {
-    let tempAlpha = new Float32Array(alphaMap);
-
-    if (erode > 0) {
-      const eRadius = Math.ceil(erode);
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          let maxA = 0;
-          for (let dy = -eRadius; dy <= eRadius; dy++) {
-            for (let dx = -eRadius; dx <= eRadius; dx++) {
-              const nx = x + dx, ny = y + dy;
-              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                maxA = Math.max(maxA, alphaMap[ny * width + nx]);
-              }
-            }
-          }
-          tempAlpha[y * width + x] = maxA;
-        }
-      }
-      alphaMap.set(tempAlpha);
-    }
-
-    if (dilate > 0) {
-      const dRadius = Math.ceil(dilate);
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          let minA = 1;
-          for (let dy = -dRadius; dy <= dRadius; dy++) {
-            for (let dx = -dRadius; dx <= dRadius; dx++) {
-              const nx = x + dx, ny = y + dy;
-              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                minA = Math.min(minA, alphaMap[ny * width + nx]);
-              }
-            }
-          }
-          tempAlpha[y * width + x] = minA;
-        }
-      }
-      alphaMap.set(tempAlpha);
-    }
-
-    if (feather > 0) {
-      const passes = Math.ceil(feather / 2);
-      for (let p = 0; p < passes; p++) {
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            let sum = 0, count = 0;
-            for (let dy = -1; dy <= 1; dy++) {
-              for (let dx = -1; dx <= 1; dx++) {
-                const nx = x + dx, ny = y + dy;
-                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                  sum += alphaMap[ny * width + nx];
-                  count++;
-                }
-              }
-            }
-            tempAlpha[y * width + x] = sum / count;
-          }
-        }
-        alphaMap.set(tempAlpha);
-      }
-    }
-
-    if (alphaContrast > 0) {
-      const factor = (259 * (alphaContrast + 255)) / (255 * (259 - alphaContrast));
-      for (let i = 0; i < alphaMap.length; i++) {
-        let a = alphaMap[i];
-        a = factor * (a - 0.5) + 0.5;
-        alphaMap[i] = Math.max(0, Math.min(1, a));
-      }
-    }
-  }
-
-  // Preview Mode Application
-  for (let i = 0; i < data.length; i += 4) {
-    const idx = i / 4;
-    const alpha = alphaMap[idx];
-    switch (previewMode) {
-      case 'alpha':
-        data[i] = data[i + 1] = data[i + 2] = alpha * 255;
-        data[i + 3] = 255;
-        break;
-      case 'black':
-        data[i] *= alpha;
-        data[i + 1] *= alpha;
-        data[i + 2] *= alpha;
-        data[i + 3] = 255;
-        break;
-      case 'white':
-        data[i] = data[i] * alpha + 255 * (1 - alpha);
-        data[i + 1] = data[i + 1] * alpha + 255 * (1 - alpha);
-        data[i + 2] = data[i + 2] * alpha + 255 * (1 - alpha);
-        data[i + 3] = 255;
-        break;
-      case 'original':
-        data[i + 3] = 255;
-        break;
-      case 'result':
-      case 'checkerboard':
-      default:
-        data[i + 3] = alpha * 255;
-        break;
-    }
-  }
-
-  self.postMessage({ data, alphaMap }, [data.buffer]);
+  const result = processChromaCore(data, width, height, params, exclusionMask);
+  self.postMessage({ data: result.data, alphaMap: result.alphaMap }, [result.data.buffer]);
 };
 `;
 
@@ -666,66 +541,19 @@ export function applyChromaKeyAdvanced(
   params: ChromaKeyParams,
   exclusionMask?: Uint8Array
 ) {
-  const {
-    keyingMode,
-    tolerance,
-    softness,
-    chromaKeyColor,
-    pickedColor,
-    despill = 0,
-    alphaContrast = 0
-  } = params;
-
-  const keyR = chromaKeyColor === 'Green' ? 0 : chromaKeyColor === 'Picker' ? pickedColor.r : 255;
-  const keyG = chromaKeyColor === 'Green' ? 255 : chromaKeyColor === 'Picker' ? pickedColor.g : 255;
-  const keyB = chromaKeyColor === 'Green' ? 0 : chromaKeyColor === 'Picker' ? pickedColor.b : 255;
-
-  for (let i = 0; i < width * height; i++) {
-    if (exclusionMask && exclusionMask[i] === 1) {
-      continue;
-    }
-
-    const r = data[i * 4];
-    const g = data[i * 4 + 1];
-    const b = data[i * 4 + 2];
-
-    let dist = 0;
-    if (chromaKeyColor === 'Green') {
-      if (keyingMode === 'rgb') {
-        dist = Math.sqrt((r - 0) ** 2 + (g - 255) ** 2 + (b - 0) ** 2) * (100 / 441);
-      } else if (keyingMode === 'luma') {
-        dist = (255 - Math.abs(g - (r + b) / 2) * 2) * (100 / 255);
-      } else {
-        dist = Math.sqrt(r * r + (255 - g) * (255 - g) + b * b) * (100 / 441);
-        const penalty = Math.max(0, Math.max(r, b) - g + 30) * 8;
-        dist += penalty * 0.1;
-      }
-    } else {
-      dist = Math.sqrt((keyR - r) ** 2 + (keyG - g) ** 2 + (keyB - b) ** 2) * (100 / 441);
-    }
-
-    let alpha = 1.0;
-    if (dist <= tolerance) {
-      alpha = 0;
-    } else if (dist <= tolerance + softness) {
-      alpha = (dist - tolerance) / Math.max(1, softness);
-    }
-
-    // Apply alpha contrast
-    if (alphaContrast > 0 && alpha > 0 && alpha < 1) {
-      const shift = alphaContrast / 100;
-      alpha = 1 / (1 + Math.exp(-((alpha - 0.5) * (12 * shift))));
-    }
-
-    // Apply Despill
-    if (despill > 0 && chromaKeyColor === 'Green') {
-      const maxRB = Math.max(r, b);
-      if (g > maxRB) {
-        const factor = despill / 100;
-        data[i * 4 + 1] = g - (g - maxRB) * factor;
-      }
-    }
-
-    data[i * 4 + 3] = Math.round(alpha * 255);
-  }
+  processChromaCore(data, width, height, {
+    keyingMode: params.keyingMode || 'greenAdvanced',
+    previewMode: params.previewMode || 'result',
+    tolerance: params.tolerance,
+    softness: params.softness,
+    enclosedTolerance: params.enclosedTolerance,
+    chromaKeyColor: params.chromaKeyColor,
+    pickedColor: params.pickedColor,
+    despill: params.despill || 0,
+    erode: params.erode || 0,
+    dilate: params.dilate || 0,
+    feather: params.feather || 0,
+    alphaContrast: params.alphaContrast || 0,
+    removeEnclosed: params.removeEnclosed
+  }, exclusionMask);
 }
