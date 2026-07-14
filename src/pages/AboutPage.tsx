@@ -4,6 +4,7 @@ import { useTheme } from '../ThemeContext';
 import { Info } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { useAdSense } from '../hooks/useAdSense';
+import { AdSlot } from '../components/ads/AdSlot';
 
 export default function AboutPage() {
   useAdSense();
@@ -59,6 +60,8 @@ export default function AboutPage() {
           </section>
         </div>
       </div>
+
+      <AdSlot slotId="8472910483" className="mt-8" />
     </div>
   );
 }

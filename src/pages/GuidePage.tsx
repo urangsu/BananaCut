@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTheme } from "../ThemeContext";
 import { useLanguage } from "../LanguageContext";
+import { AdSlot } from "../components/ads/AdSlot";
 
 export default function GuidePage() {
   const { theme } = useTheme();
@@ -862,6 +863,9 @@ export default function GuidePage() {
                   </div>
                 </div>
               </section>
+
+              <AdSlot slotId="5678901234" className="mt-12" />
+
             </div>
           </div>
         </div>

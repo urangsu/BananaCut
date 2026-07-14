@@ -5,6 +5,7 @@ import { Sparkles, Video, Grid } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SEO } from '../components/SEO';
 import { useAdSense } from '../hooks/useAdSense';
+import { AdSlot } from '../components/ads/AdSlot';
 
 function SafeImg({ src, alt, className }: { src: string; alt: string; className?: string }) {
   const [failed, setFailed] = React.useState(false);
@@ -174,6 +175,8 @@ export default function ExamplesPage() {
             </div>
           </div>
         </section>
+
+        <AdSlot slotId="3456789012" className="mt-12" />
 
       </div>
     </div>

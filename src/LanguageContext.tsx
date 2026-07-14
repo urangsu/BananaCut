@@ -16,6 +16,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem('bananacut_lang', lang);
+    const langMap = { KR: 'ko', EN: 'en', JP: 'ja' };
+    document.documentElement.lang = langMap[lang] || 'en';
   }, [lang]);
 
   return (

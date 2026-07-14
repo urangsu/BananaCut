@@ -4,7 +4,7 @@ test.describe('BananaCut P0.2.1 E2E - Chroma Worker Parity & State Integrity Gat
   
   test.beforeEach(async ({ page }) => {
     // Navigate to local development server
-    await page.goto('http://localhost:3000/');
+    await page.goto('/');
   });
 
   test('1. Remove and Recover UI interaction workflow', async ({ page }) => {
@@ -20,7 +20,7 @@ test.describe('BananaCut P0.2.1 E2E - Chroma Worker Parity & State Integrity Gat
 
   test('2. Fail-Closed Stale Revision Block', async ({ page }) => {
     // If we are on the recover page directly, it should block processing if key is dirty or revision is missing
-    await page.goto('http://localhost:3000/#/recover');
+    await page.goto('/#/recover');
     
     // Verify that empty state or warning message is shown when trying to recover without processed keys
     const alertText = page.locator('text=No processed frames available');
@@ -31,7 +31,7 @@ test.describe('BananaCut P0.2.1 E2E - Chroma Worker Parity & State Integrity Gat
 
   test('3. Partial Export Preflight Block', async ({ page }) => {
     // Navigate to export page
-    await page.goto('http://localhost:3000/#/export');
+    await page.goto('/#/export');
 
     // Confirm that the export button is disabled or blocks partial exports when frames are incomplete
     const exportBtn = page.locator('button:has-text("Export")');

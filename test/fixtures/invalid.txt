@@ -1,0 +1,2 @@
+THIS IS AN INVALID TEXT FILE TO TEST PIPELINE REJECTION.
+It should not be parsed as a valid video or image.

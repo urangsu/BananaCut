@@ -148,17 +148,52 @@ export function processChromaCore(
 
   // Despill Color Operation
   if (despill > 0) {
+    let kR = 0, kG = 255, kB = 0;
+    if (chromaKeyColor === 'Picker') {
+      kR = pickedColor.r;
+      kG = pickedColor.g;
+      kB = pickedColor.b;
+    } else if (chromaKeyColor === 'White') {
+      kR = 255;
+      kG = 255;
+      kB = 255;
+    }
+
+    const factor = despill / 100;
     for (let i = 0; i < data.length; i += 4) {
       const idx = i / 4;
-      if (alphaMap[idx] < 1) {
+      if (alphaMap[idx] < 1.0) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
-        if (chromaKeyColor === 'Green') {
+
+        if (chromaKeyColor === 'Green' || (kG > kR && kG > kB && chromaKeyColor === 'Picker')) {
           const maxRB = Math.max(r, b);
           if (g > maxRB) {
-            const reduction = (g - maxRB) * (despill / 100);
-            data[i + 1] = Math.max(maxRB, g - reduction);
+            const targetG = maxRB;
+            data[i + 1] = Math.round(g * (1 - factor) + targetG * factor);
+          }
+        } else if (chromaKeyColor === 'White') {
+          // White despill: dim down overbright edge pixels to blend better
+          const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+          if (luma > 200) {
+            const dimFactor = 1 - (factor * 0.2);
+            data[i] = Math.round(r * dimFactor);
+            data[i + 1] = Math.round(g * dimFactor);
+            data[i + 2] = Math.round(b * dimFactor);
+          }
+        } else {
+          // General picked color despill
+          const keySq = kR * kR + kG * kG + kB * kB;
+          if (keySq > 0) {
+            const dot = r * kR + g * kG + b * kB;
+            const proj = dot / keySq;
+            if (proj > 0.5) {
+              const avg = (r + g + b) / 3;
+              data[i] = Math.round(r * (1 - factor) + avg * factor);
+              data[i + 1] = Math.round(g * (1 - factor) + avg * factor);
+              data[i + 2] = Math.round(b * (1 - factor) + avg * factor);
+            }
           }
         }
       }
@@ -173,16 +208,16 @@ export function processChromaCore(
       const eRadius = Math.ceil(erode);
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-          let maxA = 0;
+          let minA = 1.0;
           for (let dy = -eRadius; dy <= eRadius; dy++) {
             for (let dx = -eRadius; dx <= eRadius; dx++) {
               const nx = x + dx, ny = y + dy;
               if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                maxA = Math.max(maxA, alphaMap[ny * width + nx]);
+                minA = Math.min(minA, alphaMap[ny * width + nx]);
               }
             }
           }
-          tempAlpha[y * width + x] = maxA;
+          tempAlpha[y * width + x] = minA;
         }
       }
       alphaMap.set(tempAlpha);
@@ -192,16 +227,16 @@ export function processChromaCore(
       const dRadius = Math.ceil(dilate);
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-          let minA = 1;
+          let maxA = 0.0;
           for (let dy = -dRadius; dy <= dRadius; dy++) {
             for (let dx = -dRadius; dx <= dRadius; dx++) {
               const nx = x + dx, ny = y + dy;
               if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                minA = Math.min(minA, alphaMap[ny * width + nx]);
+                maxA = Math.max(maxA, alphaMap[ny * width + nx]);
               }
             }
           }
-          tempAlpha[y * width + x] = minA;
+          tempAlpha[y * width + x] = maxA;
         }
       }
       alphaMap.set(tempAlpha);

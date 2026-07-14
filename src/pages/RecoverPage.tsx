@@ -47,6 +47,9 @@ export default function RecoverPage() {
   // Brush Settings
   const [fillColor, setFillColor] = useState(() => localStorage.getItem('recover_fillColor') || '#ffffff');
   const [brushSize, setBrushSize] = useState(() => Number(localStorage.getItem('recover_brushSize')) || 25);
+  const [brushOpacity, setBrushOpacity] = useState(() => Number(localStorage.getItem('recover_brushOpacity')) || 100);
+  const [brushHardness, setBrushHardness] = useState(() => Number(localStorage.getItem('recover_brushHardness')) || 80);
+  const [brushFeather, setBrushFeather] = useState(() => Number(localStorage.getItem('recover_brushFeather')) || 0);
 
   // History State
   type HistoryEntry = {
@@ -111,7 +114,10 @@ export default function RecoverPage() {
     localStorage.setItem('recover_canvasHeight', canvasHeight.toString());
     localStorage.setItem('recover_fillColor', fillColor);
     localStorage.setItem('recover_brushSize', brushSize.toString());
-  }, [canvasWidth, canvasHeight, fillColor, brushSize]);
+    localStorage.setItem('recover_brushOpacity', brushOpacity.toString());
+    localStorage.setItem('recover_brushHardness', brushHardness.toString());
+    localStorage.setItem('recover_brushFeather', brushFeather.toString());
+  }, [canvasWidth, canvasHeight, fillColor, brushSize, brushOpacity, brushHardness, brushFeather]);
 
   // Helper: auto-detect resolution
   useEffect(() => {
@@ -264,18 +270,17 @@ export default function RecoverPage() {
         const scaleX = frameW / canvasWidth;
         const scaleY = frameH / canvasHeight;
 
-        if (op === 'clear_mask') {
-          mCtx.globalCompositeOperation = 'destination-out';
-        } else {
-          mCtx.globalCompositeOperation = 'source-over';
-          if (op === 'restore') mCtx.fillStyle = mCtx.strokeStyle = 'rgb(255, 0, 0)';
-          else if (op === 'fill') mCtx.fillStyle = mCtx.strokeStyle = 'rgb(0, 255, 0)';
-          else if (op === 'erase') mCtx.fillStyle = mCtx.strokeStyle = 'rgb(0, 0, 255)';
-        }
-
         const scaledBrushSize = currentSize * ((scaleX + scaleY) / 2);
 
         if (method === 'lasso') {
+          if (op === 'clear_mask') {
+            mCtx.globalCompositeOperation = 'destination-out';
+          } else {
+            mCtx.globalCompositeOperation = 'source-over';
+            if (op === 'restore') mCtx.fillStyle = 'rgb(255, 0, 0)';
+            else if (op === 'fill') mCtx.fillStyle = 'rgb(0, 255, 0)';
+            else if (op === 'erase') mCtx.fillStyle = 'rgb(0, 0, 255)';
+          }
           if (points.length > 0) {
             mCtx.beginPath();
             mCtx.moveTo(points[0].x * scaleX, points[0].y * scaleY);
@@ -286,23 +291,66 @@ export default function RecoverPage() {
             mCtx.fill();
           }
         } else {
-          // Brush / Eraser stroke
-          mCtx.lineCap = 'round';
-          mCtx.lineJoin = 'round';
-          mCtx.lineWidth = scaledBrushSize;
+          // Soft / Hardness / Opacity / Feathered Brush Stroke
+          const r = scaledBrushSize / 2;
+          const innerR = r * (brushHardness / 100);
+          const opVal = brushOpacity / 100;
+
+          let colorStr = '255, 0, 0';
+          if (op === 'fill') colorStr = '0, 255, 0';
+          else if (op === 'erase') colorStr = '0, 0, 255';
+
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = frameW;
+          tempCanvas.height = frameH;
+          const tempCtx = tempCanvas.getContext('2d')!;
+
+          const drawPoint = (px: number, py: number) => {
+            tempCtx.save();
+            const grad = tempCtx.createRadialGradient(px, py, innerR, px, py, r);
+            grad.addColorStop(0, `rgba(${colorStr}, ${opVal})`);
+            grad.addColorStop(1, `rgba(${colorStr}, 0)`);
+            tempCtx.fillStyle = grad;
+            tempCtx.beginPath();
+            tempCtx.arc(px, py, r, 0, Math.PI * 2);
+            tempCtx.fill();
+            tempCtx.restore();
+          };
+
+          const drawSegment = (p1: Point, p2: Point) => {
+            const dx = p2.x * scaleX - p1.x * scaleX;
+            const dy = p2.y * scaleY - p1.y * scaleY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const steps = Math.ceil(dist / Math.max(1, scaledBrushSize * 0.05));
+            for (let s = 0; s <= steps; s++) {
+              const t = steps === 0 ? 0 : s / steps;
+              const ix = p1.x * scaleX + dx * t;
+              const iy = p1.y * scaleY + dy * t;
+              drawPoint(ix, iy);
+            }
+          };
 
           if (points.length === 1) {
-            mCtx.beginPath();
-            mCtx.arc(points[0].x * scaleX, points[0].y * scaleY, scaledBrushSize / 2, 0, Math.PI * 2);
-            mCtx.fill();
+            drawPoint(points[0].x * scaleX, points[0].y * scaleY);
           } else if (points.length > 1) {
-            mCtx.beginPath();
-            mCtx.moveTo(points[0].x * scaleX, points[0].y * scaleY);
-            for (let i = 1; i < points.length; i++) {
-              mCtx.lineTo(points[i].x * scaleX, points[i].y * scaleY);
+            for (let i = 0; i < points.length - 1; i++) {
+              drawSegment(points[i], points[i + 1]);
             }
-            mCtx.stroke();
           }
+
+          // Composite onto mask canvas
+          if (op === 'clear_mask') {
+            mCtx.globalCompositeOperation = 'destination-out';
+          } else {
+            mCtx.globalCompositeOperation = 'source-over';
+          }
+
+          if (brushFeather > 0) {
+            const blurPx = brushFeather * ((scaleX + scaleY) / 2);
+            mCtx.filter = `blur(${blurPx}px)`;
+          }
+
+          mCtx.drawImage(tempCanvas, 0, 0);
         }
         mCtx.restore();
 
@@ -423,21 +471,54 @@ export default function RecoverPage() {
       }
 
       if (inputMethod === 'brush' && isDrawing && lassoPoints.length > 0) {
-        ctx.beginPath();
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = brushSize;
+        // Render a gorgeous soft brush preview on screen
+        const r = brushSize / 2;
+        const innerR = r * (brushHardness / 100);
+        const opVal = (brushOpacity / 100) * 0.4; // scale down preview opacity slightly so they can see background
 
-        if (activeOp === 'restore') ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
-        else if (activeOp === 'fill') ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
-        else if (activeOp === 'erase') ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
-        else ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+        let colorStr = '239, 68, 68';
+        if (activeOp === 'fill') colorStr = '16, 185, 129';
+        else if (activeOp === 'erase') colorStr = '59, 130, 246';
+        else if (activeOp === 'clear_mask') colorStr = '245, 158, 11';
 
-        ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
-        for (let i = 1; i < lassoPoints.length; i++) {
-          ctx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+        const drawLivePoint = (px: number, py: number) => {
+          ctx.save();
+          const grad = ctx.createRadialGradient(px, py, innerR, px, py, r);
+          grad.addColorStop(0, `rgba(${colorStr}, ${opVal})`);
+          grad.addColorStop(1, `rgba(${colorStr}, 0)`);
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(px, py, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        };
+
+        const drawLiveSegment = (p1: Point, p2: Point) => {
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const steps = Math.ceil(dist / Math.max(1, brushSize * 0.05));
+          for (let s = 0; s <= steps; s++) {
+            const t = steps === 0 ? 0 : s / steps;
+            const ix = p1.x + dx * t;
+            const iy = p1.y + dy * t;
+            drawLivePoint(ix, iy);
+          }
+        };
+
+        ctx.save();
+        if (brushFeather > 0) {
+          ctx.filter = `blur(${brushFeather}px)`;
         }
-        ctx.stroke();
+
+        if (lassoPoints.length === 1) {
+          drawLivePoint(lassoPoints[0].x, lassoPoints[0].y);
+        } else {
+          for (let i = 0; i < lassoPoints.length - 1; i++) {
+            drawLiveSegment(lassoPoints[i], lassoPoints[i + 1]);
+          }
+        }
+        ctx.restore();
       }
 
       if (inputMethod === 'brush' && hoverPos && !isDrawing) {
@@ -997,20 +1078,70 @@ export default function RecoverPage() {
             )}
 
             {inputMethod === 'brush' && (
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className={`text-[10px] ${textMuted} uppercase tracking-tighter font-medium`}>{lang === 'KR' ? '브러시 크기' : 'Brush Size'}</label>
-                  <span className="text-xs font-mono font-semibold text-blue-500">{brushSize}px</span>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className={`text-[10px] ${textMuted} uppercase tracking-tighter font-medium`}>{lang === 'KR' ? '브러시 크기' : 'Brush Size'}</label>
+                    <span className="text-xs font-mono font-semibold text-blue-500">{brushSize}px</span>
+                  </div>
+                  <input 
+                    id="recover_size_range"
+                    type="range" 
+                    min="2" 
+                    max="120" 
+                    value={brushSize}
+                    onChange={(e) => setBrushSize(Number(e.target.value))}
+                    className="w-full accent-blue-500 cursor-pointer bg-gray-200 dark:bg-white/10 h-1 rounded-lg appearance-none"
+                  />
                 </div>
-                <input 
-                  id="recover_size_range"
-                  type="range" 
-                  min="2" 
-                  max="120" 
-                  value={brushSize}
-                  onChange={(e) => setBrushSize(Number(e.target.value))}
-                  className="w-full accent-blue-500 cursor-pointer bg-gray-200 dark:bg-white/10 h-1 rounded-lg appearance-none"
-                />
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className={`text-[10px] ${textMuted} uppercase tracking-tighter font-medium`}>{lang === 'KR' ? '브러시 불투명도' : 'Brush Opacity'}</label>
+                    <span className="text-xs font-mono font-semibold text-blue-500">{brushOpacity}%</span>
+                  </div>
+                  <input 
+                    id="recover_opacity_range"
+                    type="range" 
+                    min="10" 
+                    max="100" 
+                    value={brushOpacity}
+                    onChange={(e) => setBrushOpacity(Number(e.target.value))}
+                    className="w-full accent-blue-500 cursor-pointer bg-gray-200 dark:bg-white/10 h-1 rounded-lg appearance-none"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className={`text-[10px] ${textMuted} uppercase tracking-tighter font-medium`}>{lang === 'KR' ? '브러시 경도 (단단함)' : 'Brush Hardness'}</label>
+                    <span className="text-xs font-mono font-semibold text-blue-500">{brushHardness}%</span>
+                  </div>
+                  <input 
+                    id="recover_hardness_range"
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={brushHardness}
+                    onChange={(e) => setBrushHardness(Number(e.target.value))}
+                    className="w-full accent-blue-500 cursor-pointer bg-gray-200 dark:bg-white/10 h-1 rounded-lg appearance-none"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className={`text-[10px] ${textMuted} uppercase tracking-tighter font-medium`}>{lang === 'KR' ? '브러시 페더 (경계 흐림)' : 'Brush Feather'}</label>
+                    <span className="text-xs font-mono font-semibold text-blue-500">{brushFeather}px</span>
+                  </div>
+                  <input 
+                    id="recover_feather_range"
+                    type="range" 
+                    min="0" 
+                    max="40" 
+                    value={brushFeather}
+                    onChange={(e) => setBrushFeather(Number(e.target.value))}
+                    className="w-full accent-blue-500 cursor-pointer bg-gray-200 dark:bg-white/10 h-1 rounded-lg appearance-none"
+                  />
+                </div>
               </div>
             )}
 
