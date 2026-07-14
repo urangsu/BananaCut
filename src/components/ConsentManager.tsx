@@ -29,19 +29,14 @@ export const ConsentManager: React.FC = () => {
 
   const texts = {
     title: {
-      KR: '쿠키 및 개인정보 보호 설정 (Consent Mode v2)',
-      EN: 'Cookie & Privacy Consent (Consent Mode v2)',
-      JP: 'クッキーとプライバシーの同意 (Consent Mode v2)'
+      KR: '쿠키 및 개인정보 설정',
+      EN: 'Cookie & Privacy Settings',
+      JP: 'Cookie・プライバシー設定'
     },
     desc: {
-      KR: 'BananaCut은 개인 정보 및 미디어를 서버에 업로드하지 않습니다. 단, 서비스 개선을 위한 분석(Google Analytics) 및 광고 지원(Google AdSense)을 위해 브라우저 쿠키를 사용할 수 있습니다. 아래 설정에서 동의 여부를 제어할 수 있습니다.',
-      EN: 'BananaCut does not upload or store your media on servers. However, we use cookies to analyze traffic (Google Analytics) and display non-intrusive ads (Google AdSense) to keep this tool free. Configure your preferences below.',
-      JP: 'BananaCutは個人のメディアやデータをサーバーにアップロードしません。ただし、統計分析(Google Analytics)および広告表示(Google AdSense)のためにクッキーを使用する場合があります。下記にて設定を変更できます。'
-    },
-    eeaNotice: {
-      KR: '본 쿠키 제어 시스템은 EEA/UK/Switzerland 지역 규정 및 Google CMP(동의 관리 플랫폼) 인증 가이드를 완전히 준수하여, 동의 전 모든 마케팅/분석 식별자를 안전하게 차단합니다.',
-      EN: 'This cookie consent manager fully complies with EEA, UK, and Switzerland regulations, blocking all marketing and tracking identifiers before explicit consent is granted.',
-      JP: '当クッキー制御システムは、EEA/UK/スイスの規則を遵守し、事前の同意がない限りトラッキングおよびマーケ팅識別子を完全にブロックします。'
+      KR: 'BananaCut은 미디어 파일을 서버에 업로드하거나 저장하지 않습니다. 분석 및 광고 기능은 선택한 동의 설정에 따라 활성화될 수 있습니다. 설정은 언제든 변경할 수 있습니다.',
+      EN: 'BananaCut does not upload or store your media files. Analytics and advertising features may be enabled based on your consent choices. You can change these settings at any time.',
+      JP: 'BananaCutは個人のメディアやデータをサーバーにアップロードしません。統計分析および広告表示のためにクッキーを使用する場合があります。設定はいつでも変更できます。'
     },
     analyticsTitle: {
       KR: '분석용 쿠키 (Google Analytics)',
@@ -82,28 +77,13 @@ export const ConsentManager: React.FC = () => {
       KR: '선택 저장',
       EN: 'Save Choices',
       JP: '選択を保存'
-    },
-    vendorTitle: {
-      KR: '인증된 벤더 및 목적',
-      EN: 'Certified Vendors & Purposes',
-      JP: '認定ベンダーおよび目的'
-    },
-    vendorDesc: {
-      KR: 'Google Ad Technology Providers 및 파트너사는 데이터 보안 및 프라이버시 원칙을 준수합니다.',
-      EN: 'Google Ad Technology Providers and partners adhering to strict safety and privacy standards.',
-      JP: 'Google認定ベンダーおよびパートナー企業は、データプライバシーポリシーに準拠します。'
-    },
-    close: {
-      KR: '닫기',
-      EN: 'Close',
-      JP: '閉じる'
     }
   };
 
   const t = (key: keyof typeof texts) => texts[key][lang] || texts[key]['EN'];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+    <div data-testid="consent-modal" className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
       <div className={`w-full max-w-lg rounded-2xl border p-6 shadow-2xl transition-all ${
         isDark ? 'bg-[#1a1a1a] border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
       }`}>
@@ -113,7 +93,6 @@ export const ConsentManager: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-lg leading-tight">{t('title')}</h3>
-            <span className="text-[10px] text-blue-500 font-semibold tracking-wider uppercase">Google Certified CMP Standards</span>
           </div>
           {hasPrompted && (
             <button 
@@ -126,10 +105,6 @@ export const ConsentManager: React.FC = () => {
         </div>
 
         <p className="text-xs leading-relaxed opacity-80 mb-4">{t('desc')}</p>
-
-        <div className="p-3 mb-4 rounded-xl text-[11px] leading-relaxed bg-blue-500/5 text-blue-500 border border-blue-500/10">
-          {t('eeaNotice')}
-        </div>
 
         {isManaging ? (
           <div className="space-y-4 mb-6 pt-2 border-t border-gray-200 dark:border-white/5">
@@ -170,18 +145,6 @@ export const ConsentManager: React.FC = () => {
                 }`} />
               </button>
             </div>
-
-            {/* Vendor info */}
-            <div className="p-3 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5">
-              <h5 className="text-[11px] font-bold flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
-                <Settings className="w-3.5 h-3.5" />
-                {t('vendorTitle')}
-              </h5>
-              <p className="text-[10px] opacity-60 mt-1 leading-normal">{t('vendorDesc')}</p>
-              <div className="mt-2 text-[9px] opacity-40 font-mono">
-                EEA ID: G-CMP-378829 | Release Date: 2026-07-13
-              </div>
-            </div>
           </div>
         ) : null}
 
@@ -189,6 +152,7 @@ export const ConsentManager: React.FC = () => {
           {!isManaging ? (
             <>
               <button
+                data-testid="consent-manage"
                 onClick={() => setIsManaging(true)}
                 className={`mr-auto px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
                   isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
@@ -197,6 +161,7 @@ export const ConsentManager: React.FC = () => {
                 {t('manageBtn')}
               </button>
               <button
+                data-testid="consent-deny-all"
                 onClick={denyAll}
                 className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
                   isDark ? 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20' : 'bg-red-50 border-red-100 text-red-600 hover:bg-red-100'
@@ -205,6 +170,7 @@ export const ConsentManager: React.FC = () => {
                 {t('denyAllBtn')}
               </button>
               <button
+                data-testid="consent-accept-all"
                 onClick={acceptAll}
                 className="px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-sm"
               >
@@ -222,6 +188,7 @@ export const ConsentManager: React.FC = () => {
                 {lang === 'KR' ? '이전' : lang === 'JP' ? '戻る' : 'Back'}
               </button>
               <button
+                data-testid="consent-save"
                 onClick={handleSave}
                 className="px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-sm flex items-center gap-1.5"
               >

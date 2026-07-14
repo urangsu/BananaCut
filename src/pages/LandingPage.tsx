@@ -19,7 +19,6 @@ import { Modal } from "../components/Modal";
 import { BrandLogo } from "../components/BrandLogo";
 import { trackEvent } from "../lib/analytics";
 import { SEO } from "../components/SEO";
-import { useAdSense } from "../hooks/useAdSense";
 
 function ScratchOverlay({
   isDark,
@@ -250,7 +249,6 @@ const DEMO_TIMELINE = [
 ];
 
 export default function LandingPage() {
-  useAdSense();
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
   const { lang, setLang } = useLanguage();

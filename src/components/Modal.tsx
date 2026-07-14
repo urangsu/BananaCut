@@ -12,9 +12,10 @@ interface ModalProps {
   children: ReactNode;
   maxWidthClass?: string;
   showLanguageToggle?: boolean;
+  dataTestId?: string;
 }
 
-export function Modal({ isOpen, onClose, title, icon: Icon, lang, setLang, children, maxWidthClass = 'max-w-2xl', showLanguageToggle = false }: ModalProps) {
+export function Modal({ isOpen, onClose, title, icon: Icon, lang, setLang, children, maxWidthClass = 'max-w-2xl', showLanguageToggle = false, dataTestId }: ModalProps) {
   const { isDark } = useTheme();
 
   if (!isOpen) return null;
@@ -25,6 +26,7 @@ export function Modal({ isOpen, onClose, title, icon: Icon, lang, setLang, child
       onClick={onClose}
     >
       <div 
+        data-testid={dataTestId}
         className={`relative w-full ${maxWidthClass} max-h-[90dvh] md:max-h-[85vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden ${
           isDark ? 'bg-[#1c1c1e] border border-white/10' : 'bg-white border border-gray-200'
         }`}

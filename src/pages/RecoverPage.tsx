@@ -10,6 +10,7 @@ import { revokeUrlsSafely } from '../utils/urlUtils';
 import { getFrameDisplayUrl } from '../utils/frameUtils';
 import { composeRecoveredFrame } from '../utils/chromaKey';
 import { fetchPngBlobStrict } from '../utils/fetchBlobStrict';
+import { generateSampleFrames } from '../utils/sampleProject';
 
 interface Point {
   x: number;
@@ -118,6 +119,15 @@ export default function RecoverPage() {
     localStorage.setItem('recover_brushHardness', brushHardness.toString());
     localStorage.setItem('recover_brushFeather', brushFeather.toString());
   }, [canvasWidth, canvasHeight, fillColor, brushSize, brushOpacity, brushHardness, brushFeather]);
+
+  // Autoload sample frames if the workspace is empty on mount
+  useEffect(() => {
+    if (frames.length === 0) {
+      generateSampleFrames(16).then(sampleFrames => {
+        setFrames(sampleFrames);
+      });
+    }
+  }, []);
 
   // Helper: auto-detect resolution
   useEffect(() => {
@@ -1086,6 +1096,7 @@ export default function RecoverPage() {
                   </div>
                   <input 
                     id="recover_size_range"
+                    data-testid="recover-brush-size"
                     type="range" 
                     min="2" 
                     max="120" 
@@ -1102,6 +1113,7 @@ export default function RecoverPage() {
                   </div>
                   <input 
                     id="recover_opacity_range"
+                    data-testid="recover-brush-opacity"
                     type="range" 
                     min="10" 
                     max="100" 
@@ -1118,6 +1130,7 @@ export default function RecoverPage() {
                   </div>
                   <input 
                     id="recover_hardness_range"
+                    data-testid="recover-brush-hardness"
                     type="range" 
                     min="0" 
                     max="100" 
@@ -1134,6 +1147,7 @@ export default function RecoverPage() {
                   </div>
                   <input 
                     id="recover_feather_range"
+                    data-testid="recover-brush-feather"
                     type="range" 
                     min="0" 
                     max="40" 
@@ -1201,6 +1215,7 @@ export default function RecoverPage() {
           {/* Main download export btn */}
           <button 
             id="recover_export_zip_btn"
+            data-testid="recover-export-zip-btn"
             onClick={exportZip}
             disabled={frames.length === 0 || isProcessing}
             className={`order-5 mb-24 lg:mb-0 w-full font-semibold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg ${
@@ -1308,6 +1323,7 @@ export default function RecoverPage() {
                 >
                   <canvas 
                     ref={canvasRef}
+                    data-testid="recover-canvas"
                     width={canvasWidth}
                     height={canvasHeight}
                     className="w-full h-full cursor-crosshair touch-none absolute inset-0"

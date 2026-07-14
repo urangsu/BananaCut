@@ -5,6 +5,7 @@ import { useLanguage } from '../LanguageContext';
 import { useConsent } from '../ConsentContext';
 import { BrandLogo } from '../components/BrandLogo';
 import { Sun, Moon, Shield } from 'lucide-react';
+import { ContentAdProvider } from '../components/ads/ContentAdProvider';
 
 interface ContentLayoutProps {
   children: React.ReactNode;
@@ -16,19 +17,11 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({ children }) => {
   const { setShowCMP } = useConsent();
   const location = useLocation();
 
-  // Route matches for manual AdSlot allowance
-  const allowAdSenseRoutes = [
-    '/',
-    '/guides',
-    '/examples',
-    '/about'
-  ];
-  const isAdSenseAllowed = allowAdSenseRoutes.includes(location.pathname) || location.pathname.startsWith('/guides/');
-
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
-      isDark ? 'bg-[#121212] text-white' : 'bg-gray-50 text-gray-900'
-    }`}>
+    <ContentAdProvider>
+      <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
+        isDark ? 'bg-[#121212] text-white' : 'bg-gray-50 text-gray-900'
+      }`}>
       {/* Public Site Header */}
       <header className={`sticky top-0 z-50 border-b backdrop-blur-md transition-colors ${
         isDark ? 'bg-[#121212]/80 border-white/10' : 'bg-white/80 border-gray-200'
@@ -146,5 +139,6 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({ children }) => {
         </div>
       </footer>
     </div>
+    </ContentAdProvider>
   );
 };

@@ -267,28 +267,51 @@ export async function runChromaKeyWorker(
 ): Promise<{ data: Uint8ClampedArray; alphaMap: Float32Array }> {
   return new Promise((resolve, reject) => {
     if (!workerBlobUrl) {
-      return reject(new Error("Worker code failed to initialize."));
+      console.warn("No workerBlobUrl, falling back to main-thread processing.");
+      try {
+        const result = processChromaCore(data, width, height, params, exclusionMask);
+        return resolve({ data: result.data, alphaMap: result.alphaMap });
+      } catch (e) {
+        return reject(e);
+      }
     }
-    const worker = new Worker(workerBlobUrl);
-    
-    worker.onmessage = (e) => {
-      worker.terminate();
-      resolve(e.data);
-    };
 
-    worker.onerror = (err) => {
-      worker.terminate();
-      reject(err);
-    };
+    try {
+      const worker = new Worker(workerBlobUrl);
+      
+      worker.onmessage = (e) => {
+        worker.terminate();
+        resolve(e.data);
+      };
 
-    // Transferrable buffer for super high performance
-    worker.postMessage({
-      data,
-      width,
-      height,
-      params,
-      exclusionMask
-    }, [data.buffer]);
+      worker.onerror = (err) => {
+        worker.terminate();
+        console.warn("Worker error, falling back to main-thread processing:", err);
+        try {
+          const result = processChromaCore(data, width, height, params, exclusionMask);
+          resolve({ data: result.data, alphaMap: result.alphaMap });
+        } catch (e) {
+          reject(e);
+        }
+      };
+
+      // Post message to worker without transfer list to keep original data intact for fallback
+      worker.postMessage({
+        data,
+        width,
+        height,
+        params,
+        exclusionMask
+      });
+    } catch (workerError) {
+      console.warn("Worker execution failed, falling back to main-thread processing:", workerError);
+      try {
+        const result = processChromaCore(data, width, height, params, exclusionMask);
+        resolve({ data: result.data, alphaMap: result.alphaMap });
+      } catch (mainThreadError) {
+        reject(mainThreadError);
+      }
+    }
   });
 }
 

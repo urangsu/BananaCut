@@ -1188,6 +1188,7 @@ export default function RemovePage() {
                   onDrop={handleDrop}
                 >
                   <input
+                    data-testid="remove-file-input"
                     type="file"
                     accept="video/mp4,video/quicktime,image/png"
                     onChange={handleFileUpload}
@@ -1230,15 +1231,23 @@ export default function RemovePage() {
                             ? "비디오 엔진 로딩 중..."
                             : "Loading video engine..."
                           : uploadState === "video-extracting"
-                            ? lang === "KR"
-                              ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과`
-                              : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`
+                            ? (
+                              <span data-testid="extraction-progress">
+                                {lang === "KR"
+                                  ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과`
+                                  : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`}
+                              </span>
+                            )
                             : uploadState === "error"
                               ? lang === "KR"
                                 ? "브라우저 추출 실패. PNG를 사용하세요."
                                 : "Browser extraction failed. Try PNG sequence instead."
                               : uploadState === "ready"
-                                ? `${frames.length} frames ready`
+                                ? (
+                                  <span data-testid="extraction-complete">
+                                    {`${frames.length} frames ready`}
+                                  </span>
+                                )
                                 : lang === "KR"
                                   ? "파일 선택"
                                   : "Select File"}
@@ -1248,6 +1257,7 @@ export default function RemovePage() {
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 flex justify-center">
                   <button
+                    data-testid="try-sample-button"
                     type="button"
                     onClick={handleLoadSampleProject}
                     className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
@@ -1302,6 +1312,7 @@ export default function RemovePage() {
               >
                 <label className="absolute inset-0 w-full h-full cursor-pointer">
                   <input
+                    data-testid="remove-file-input"
                     type="file"
                     className="hidden"
                     accept="video/mp4,video/quicktime,image/png"
@@ -1344,15 +1355,23 @@ export default function RemovePage() {
                           ? "비디오 엔진 로딩 중..."
                           : "Loading video engine..."
                         : uploadState === "video-extracting"
-                          ? lang === "KR"
-                            ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과`
-                            : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`
+                          ? (
+                            <span data-testid="extraction-progress">
+                              {lang === "KR"
+                                ? `프레임 추출 중... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} 경과`
+                                : `Extracting frames... ${extractionProgress.current} / ${extractionProgress.total} · ${extractionElapsedText} elapsed`}
+                            </span>
+                          )
                           : uploadState === "error"
                             ? lang === "KR"
                               ? "브라우저 추출 실패. PNG를 사용하세요."
                               : "Browser extraction failed. Try PNG sequence instead."
                             : uploadState === "ready"
-                              ? `${frames.length} frames ready`
+                              ? (
+                                <span data-testid="extraction-complete">
+                                  {`${frames.length} frames ready`}
+                                </span>
+                              )
                               : lang === "KR"
                                 ? "파일 업로드 (클릭 또는 드래그)"
                                 : "Click to upload or drag and drop"}
@@ -1372,6 +1391,7 @@ export default function RemovePage() {
               {frames.length === 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 flex justify-center">
                   <button
+                    data-testid="try-sample-button"
                     type="button"
                     onClick={handleLoadSampleProject}
                     className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
@@ -2068,6 +2088,7 @@ export default function RemovePage() {
                           : `選択を適用 (${selectedFrames.size})`}
                     </button>
                     <button
+                      data-testid="process-key-button"
                       onClick={() =>
                         processFramesForDownload(
                           Array.from({ length: frames.length }, (_, i) => i),
@@ -2085,6 +2106,10 @@ export default function RemovePage() {
                           ? `Process All (${frames.length})`
                           : `すべて適用 (${frames.length})`}
                     </button>
+
+                    {batchProgress === 100 && (
+                      <div data-testid="process-complete" className="hidden" />
+                    )}
 
                     {batchProgress >= 0 && (
                       <div className="mt-2 text-sm border hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20 p-3 rounded flex flex-col gap-2">
@@ -2450,6 +2475,7 @@ export default function RemovePage() {
                 setShowDownloadModal(true);
               }}
               disabled={frames.length === 0 || isProcessing}
+              data-testid="download-modal-open"
               className={`order-5 border-2 ${primaryBtnClass}`}
             >
               {isProcessing ? (
@@ -2493,6 +2519,7 @@ export default function RemovePage() {
                         : "プレビュー"}
                   </h2>
                   <span
+                    data-testid="frame-count"
                     className={`text-[10px] lg:text-xs font-mono px-2 py-1 rounded-md ${isDark ? "bg-white/10 text-white/70" : "bg-gray-200 text-gray-700"}`}
                   >
                     {frames.length > 0
@@ -2820,72 +2847,20 @@ export default function RemovePage() {
     />
           
           {exportStatus !== 'idle' && (
-            <div className={`fixed bottom-4 right-4 p-4 rounded-xl shadow-lg ${isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+            <div data-testid="export-download-status" className={`fixed bottom-4 right-4 p-4 rounded-xl shadow-lg ${isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
               {exportStatus === 'preparing' && (lang === 'KR' ? '내보내기를 준비 중입니다...' : lang === 'EN' ? 'Preparing export...' : '書き出し準備中...')}
               {exportStatus === 'encoding' && (lang === 'KR' ? 'GIF 미리보기를 생성 중입니다...' : lang === 'EN' ? 'Creating GIF preview...' : 'GIFプレビューを作成中...')}
               {exportStatus === 'fallbackZip' && (lang === 'KR' ? 'GIF 생성에 실패해 PNG ZIP으로 대체했습니다.' : lang === 'EN' ? 'GIF failed. PNG ZIP fallback was generated.' : 'GIFの作成に失敗したため、PNG ZIPで代替しました。')}
               {exportStatus === 'complete' && (lang === 'KR' ? '다운로드가 준비되었습니다.' : lang === 'EN' ? 'Download is ready.' : 'ダウンロードの準備ができました。')}
-              {exportStatus === 'failed' && (lang === 'KR' ? '내보내기에 실패했습니다.' : lang === 'EN' ? 'Export failed.' : '書き出しに失敗しました。')}
-            </div>
-          )}
-
-          {localAlert && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-              <div className={`w-full max-w-sm p-6 rounded-2xl shadow-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {lang === 'KR' ? '알림' : lang === 'EN' ? 'Notice' : '通知'}
-                </h3>
-                <p className={`text-sm mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                  {localAlert}
-                </p>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setLocalAlert(null)}
-                    className="px-4 py-2 text-sm font-semibold rounded-xl bg-yellow-400 text-black hover:bg-yellow-500 transition-all"
-                  >
-                    OK
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {localConfirm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-              <div className={`w-full max-w-sm p-6 rounded-2xl shadow-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {lang === 'KR' ? '확인' : lang === 'EN' ? 'Confirm' : '確認'}
-                </h3>
-                <p className={`text-sm mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                  {localConfirm.message}
-                </p>
-                <div className="flex justify-end gap-2 mt-6">
-                  <button
-                    onClick={() => localConfirm.onCancel?.()}
-                    className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
-                      isDark 
-                        ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-                    }`}
-                  >
-                    {lang === 'KR' ? '취소' : lang === 'EN' ? 'Cancel' : 'キャンセル'}
-                  </button>
-                  <button
-                    onClick={() => localConfirm.onConfirm()}
-                    className="px-4 py-2 text-sm font-semibold rounded-xl bg-yellow-400 text-black hover:bg-yellow-500 transition-all"
-                  >
-                    OK
-                  </button>
-                </div>
-              </div>
+              {exportStatus === 'failed' && (lang === 'KR' ? '내보내기에 실패했습니다.' : lang === 'EN' ? 'Export failed.' : '書き出し에 실패했습니다.')}
             </div>
           )}
 
           {importGuardModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div data-testid="import-plan-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
               <div className={`w-full max-w-sm p-6 rounded-2xl shadow-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
                 <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {lang === 'KR' ? '영상 가져오기 알림' : lang === 'EN' ? 'Video Import Notice' : '動画インポートの通知'}
+                  {lang === 'KR' ? '영상 가져오기 알림' : lang === 'EN' ? 'Video Import Notice' : '動画インポート의通知'}
                 </h3>
                 
                 <p className={`text-sm mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -2922,6 +2897,7 @@ export default function RemovePage() {
                 <div className="flex justify-end gap-2 mt-6">
                   {importGuardModal.type === 'soft-warning' && (
                     <button
+                      data-testid="import-plan-cancel"
                       onClick={() => importGuardModal.onCancel?.()}
                       className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
                         isDark 
@@ -2933,6 +2909,7 @@ export default function RemovePage() {
                     </button>
                   )}
                   <button
+                    data-testid="import-plan-confirm"
                     onClick={() => importGuardModal.onConfirm?.()}
                     className="px-4 py-2 text-sm font-semibold rounded-xl bg-yellow-400 text-black hover:bg-yellow-500 transition-all"
                   >

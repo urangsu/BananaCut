@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { initGA } from './lib/analytics';
+import { initGA, setAnalyticsEnabled } from './lib/analytics';
 
 export type ConsentState = {
   analytics: boolean;
@@ -20,17 +20,26 @@ const ConsentContext = createContext<ConsentContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY = 'bananacut_consent_v1';
 
+function parseStoredConsent(value: string | null): ConsentState {
+  if (!value) {
+    return { analytics: false, ads: false };
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return {
+      analytics: parsed?.analytics === true,
+      ads: parsed?.ads === true
+    };
+  } catch {
+    return { analytics: false, ads: false };
+  }
+}
+
 export function ConsentProvider({ children }: { children: React.ReactNode }) {
   const [consent, setConsentState] = useState<ConsentState>(() => {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (stored) {
-      try {
-        return JSON.parse(stored) as ConsentState;
-      } catch (e) {
-        // ignore
-      }
-    }
-    return { analytics: false, ads: false };
+    return parseStoredConsent(stored);
   });
 
   const [hasPrompted, setHasPrompted] = useState<boolean>(() => {
@@ -52,33 +61,14 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
+    setAnalyticsEnabled(consent.analytics);
+
     if (consent.analytics) {
       // Initialize GA if allowed and not already initialized
       try {
         initGA();
       } catch (e) {
         console.warn('GA Init failed/blocked:', e);
-      }
-    }
-
-    // Handle AdSense script loading based on consent and page route
-    const adsScriptId = 'adsense-global-script';
-    const existing = document.getElementById(adsScriptId);
-
-    if (consent.ads) {
-      // We will allow AdSense script to load on allowed routes (managed in Layout/AdSlot)
-      if (!existing) {
-        const script = document.createElement('script');
-        script.id = adsScriptId;
-        script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6406237368816995";
-        script.async = true;
-        script.crossOrigin = "anonymous";
-        document.head.appendChild(script);
-      }
-    } else {
-      // Remove AdSense if denied
-      if (existing && existing.parentNode) {
-        existing.parentNode.removeChild(existing);
       }
     }
   }, [consent]);

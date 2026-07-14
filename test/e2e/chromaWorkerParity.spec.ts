@@ -5,11 +5,15 @@ test.describe('BananaCut P0.2.1 E2E - Chroma Worker Parity & State Integrity Gat
   test.beforeEach(async ({ page }) => {
     // Navigate to local development server
     await page.goto('/');
+    const consentBtn = page.locator('[data-testid="consent-accept-all"]');
+    if (await consentBtn.count() > 0 && await consentBtn.isVisible()) {
+      await consentBtn.click();
+    }
   });
 
   test('1. Remove and Recover UI interaction workflow', async ({ page }) => {
     // Verify application title
-    await expect(page.locator('h1')).toContainText('BananaCut');
+    await expect(page).toHaveTitle(/BananaCut/);
 
     // Check if the file uploader or empty state exists
     const uploadInput = page.locator('input[type="file"]');

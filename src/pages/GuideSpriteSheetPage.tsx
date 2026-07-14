@@ -4,10 +4,8 @@ import { useTheme } from '../ThemeContext';
 import { BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SEO } from '../components/SEO';
-import { useAdSense } from '../hooks/useAdSense';
 
 export default function GuideSpriteSheetPage() {
-  useAdSense();
   const { lang } = useLanguage();
   const { isDark } = useTheme();
 

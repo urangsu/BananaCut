@@ -3,11 +3,9 @@ import { useLanguage } from '../LanguageContext';
 import { useTheme } from '../ThemeContext';
 import { Info } from 'lucide-react';
 import { SEO } from '../components/SEO';
-import { useAdSense } from '../hooks/useAdSense';
 import { AdSlot } from '../components/ads/AdSlot';
 
 export default function AboutPage() {
-  useAdSense();
   const { lang } = useLanguage();
   const { isDark } = useTheme();
 

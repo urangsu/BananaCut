@@ -122,6 +122,23 @@ export function useMediaImport({
     const runId = ++extractionRunIdRef.current;
     const isCurrentRun = () => extractionRunIdRef.current === runId;
 
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const allowedExtensions = ['mp4', 'mov', 'png', 'jpg', 'jpeg', 'webm'];
+    if (!allowedExtensions.includes(ext)) {
+      setImportGuardModal({
+        type: 'invalid-format',
+        onConfirm: () => {
+          setImportGuardModal(null);
+          setUploadState('idle');
+        },
+        onCancel: () => {
+          setImportGuardModal(null);
+          setUploadState('idle');
+        }
+      });
+      return;
+    }
+
     setImgDims(null);
     setExclusionStrokes([]);
     
@@ -201,7 +218,7 @@ export function useMediaImport({
         setImportGuardModal({
           type: 'import-plan',
           probeResult,
-          onConfirm: async (chosenFps, chosenMode) => {
+          onConfirm: async (chosenFps = probeResult.requestedFps, chosenMode = probeResult.qualityMode) => {
             setImportGuardModal(null);
             
             // Re-calculate dimensions for the plan

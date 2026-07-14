@@ -1,63 +1,60 @@
-# BananaCut Release Gate Result
+# BananaCut Release Gate Results (P0 Compliance)
 
-## Build & Lint Gates
-- **Build**: PASS (Verified via `npm run build`)
-- **Lint**: PASS (Verified via `npm run lint` / `tsc --noEmit`)
+This file tracks the verified results of the fail-safe automated release gate for BananaCut. Every status recorded here is backed by real, automated tests (Vitest unit tests and Playwright E2E tests) run via the release gate script.
 
-## Functional & Export Gates (Verified Test Details)
-- **Sample Load**: PASS (Fully verified on canvas load and off-thread worker initialization)
-- **Result Only ZIP**: PASS (Fully verified; strict non-partial preflight check applied)
-- **With RAW ZIP**: PASS (Fully verified; strict raw frame availability preflight check applied)
-- **GIF Preview**: PASS (Fully verified; data-preflight is run outside of catch block to separate data contract failure from encoder failures)
-- **GIF Fallback ZIP**: PASS (Fully verified; fails over correctly to PNG ZIP fallback on encoder-only failure)
-- **Sprite Sheet**: PASS (Verified export and layout logic)
-
-## Security & Privacy Gates
-- **Network No Media Upload**: PASS (All heavy video/chroma processing runs 100% client-side in the browser via off-thread Web Workers)
-
-## Release Gate Details
-- **Release Gate**: PASSED (ALL LINT AND TESTING GATES 100% PASSING)
+## Automated Verification Command
+To run the full suite of static analysis, compiler checks, unit tests, and browser E2E tests locally:
+```bash
+npm run check:release
+```
 
 ---
 
-### Specific Test Run Details:
-- **Command**: `npm run test:unit`
-- **Date**: 2026-07-13
-- **Test Suites Run**: 3
-- **Total Tests Passed**: 21 / 21 (100% Success Rate)
+## 1. Release Gate Summary
 
-1. **`test/finalResolver.test.ts` (7 / 7 Passed)**
-   - Returns recoveredUrl when revisions match and neither is dirty.
-   - Returns keyedUrl when keyRevision !== recoverBaseKeyRevision but keyedUrl is valid.
-   - Returns null for final when keyRevision !== recoverBaseKeyRevision and keyedUrl is missing/dirty.
-   - Returns null when keyDirty === true.
-   - Returns null when recoverDirty === true and recoveredUrl would have been resolved.
-   - Returns null for keyed URL when keyDirty === true.
-   - Throws FINAL_FRAME_UNAVAILABLE if final frame resolver returns null during prepare (GIF preflight blocking).
-
-2. **`test/staleRecoverRevision.test.ts` (7 / 7 Passed)**
-   - Sets keyDirty to true and recoverDirty to true when recoverMaskUrl exists.
-   - Sets keyDirty to true and recoverDirty to false when recoverMaskUrl is missing.
-   - Ignores frames that are not in targetIds.
-   - Generates the exact same revision string for identical inputs (deterministic).
-   - Generates different revision strings for different chroma params.
-   - Generates different revision strings for different strokes.
-   - Never uses Math.random or Date.now (stable across runs).
-
-3. **`test/chromaCoreWrapperParity.test.ts` (7 / 7 Passed)**
-   - **Deterministic hash**: Generates identical stable hashes regardless of strokes order or selected UI state properties.
-   - **Object argument contract**: Verifies `processKeyedFrame` takes an object and returns the state-integrity `KeyedFrameResult`.
-   - **Memory safety**: Verifies `commitKeyedFrameResult` revokes previous blob URLs to prevent memory leaks.
-   - **Non-binary blending**: Verifies mathematical correct alpha compositions for recovery masks.
-   - **Fail-closed security**: Verifies errors are thrown on invalid files or empty blobs.
-   - **Pixel consistency**: Guarantees alpha channel pixel difference of exactly 0 for main-thread vs worker-thread functional paths.
+| Gate | Status | Verification Method |
+| :--- | :---: | :--- |
+| **Vite Production Build** | **PASS** | `npm run build` compiles without warnings or errors |
+| **TypeScript Static Linter** | **PASS** | `npm run lint` (`tsc --noEmit`) passes with zero type errors |
+| **Studio AdSense Isolation** | **PASS** | `test/e2e/studioAdIsolation.spec.ts` verifies zero ad scripts/elements on `/remove`, `/recover`, and `/asset` |
+| **CMP / Consent Honesty** | **PASS** | `scripts/p0-ads-e2e-gate.mjs` audits `ConsentManager.tsx` and blocks false "Google-certified" claims |
+| **MP4 Pipeline E2E** | **PASS** | `test/e2e/mediaPipeline.spec.ts` uploads `green-screen-2s.mp4`, asserts frame extraction progress, processing, and download modal options |
+| **Recover Brush Controls** | **PASS** | `test/e2e/mediaPipeline.spec.ts` validates canvas interaction and brush size/opacity slider adjustments |
+| **Partial Export Blocking** | **PASS** | `test/finalResolver.test.ts` throws `FINAL_FRAME_UNAVAILABLE` when frames are dirty or unprocessed |
+| **Error Format Containment** | **PASS** | `test/e2e/mediaPipeline.spec.ts` verifies that uploading non-media (`invalid.txt`) triggers the warning modal gracefully without crashing the UI |
 
 ---
 
-### E2E Test Suite Setup:
-- **Suite**: `test/e2e/chromaWorkerParity.spec.ts`
-- **Scenarios**:
-  - Main user interface navigation and frame upload interactions.
-  - Fail-closed stale revision blocking.
-  - Partial export blocking.
+## 2. Unit Test Suite (Vitest)
+Unit tests verify the core algorithmic invariants, state revisions, and pixel parity between main and worker threads.
 
+### 1. `test/finalResolver.test.ts` (7 / 7 Passed)
+- Correctly resolves recovered frame URL when revision hashes match and are clean.
+- Correctly returns chromakeyed frame URL when key parameters change but recovery mask is not dirty.
+- Safeguards partial exports by returning `null` when key states or recovery stroke layers are dirty.
+- Triggers `FINAL_FRAME_UNAVAILABLE` on invalid frames to block preflight.
+
+### 2. `test/staleRecoverRevision.test.ts` (7 / 7 Passed)
+- Dynamically sets `keyDirty` and `recoverDirty` based on file mutations.
+- Generates fully deterministic and stable revision strings for chroma parameters and brush strokes.
+- Ensures identical inputs yield identical revisions across runs without relying on unsafe side effects (`Math.random` or `Date.now`).
+
+### 3. `test/chromaCoreWrapperParity.test.ts` (7 / 7 Passed)
+- Validates the parameter contracts for `processKeyedFrame` and `KeyedFrameResult`.
+- Ensures memory safety by explicitly revoking outdated frame blob URLs.
+- Guarantees complete rendering pixel parity (0-pixel delta) between the main thread and background web workers.
+
+---
+
+## 3. Playwright Browser E2E Test Suite
+E2E tests use deterministic `data-testid` selectors to simulate complete, real-browser workflows on standard, clean routes.
+
+### 1. `test/e2e/mediaPipeline.spec.ts`
+- **Scenario A & B**: Uploads `green-screen-2s.mp4`, verifies extraction progress, processes all 20 frames, and verifies that the Download modal opens with proper format options.
+- **Scenario C**: Navigates to `/recover`, verifies the presence of the drawing canvas, and modifies brush parameter sliders (size, opacity).
+- **Scenario H**: Uploads a text file to `/remove` and verifies that the application remains stable and displays an appropriate format warning modal.
+
+### 2. `test/e2e/studioAdIsolation.spec.ts`
+- Intercepts all outgoing network requests on `/remove`, `/recover`, and `/asset` routes to ensure no requests are made to DoubleClick or AdSense.
+- Verifies that zero Google AdSense scripts (`googlesyndication.com`, `pagead`) exist in the DOM on these routes.
+- Verifies that no Google ad slots (`.adsbygoogle`) are present.

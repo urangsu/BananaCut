@@ -4,11 +4,9 @@ import { useTheme } from '../ThemeContext';
 import { BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SEO } from '../components/SEO';
-import { useAdSense } from '../hooks/useAdSense';
 import { AdSlot } from '../components/ads/AdSlot';
 
 export default function GuidesIndexPage() {
-  useAdSense();
   const { lang } = useLanguage();
   const { isDark } = useTheme();
 

@@ -25,6 +25,7 @@ export const ExportPreflightModal: React.FC<ExportPreflightModalProps> = ({
             title={t("내보내기 전 확인", "Preflight Check", "書き出し前確認")}
             lang={lang}
             setLang={() => {}}
+            dataTestId="export-preflight-modal"
         >
             <div className="flex flex-col gap-4 text-sm">
                 <div className={`${isDark ? 'bg-white/5' : 'bg-gray-100'} p-3 rounded-lg`}>
@@ -32,13 +33,14 @@ export const ExportPreflightModal: React.FC<ExportPreflightModalProps> = ({
                     <p>{t(`처리 완료: ${result.processedFrames}`, `Processed: ${result.processedFrames}`, `処理完了: ${result.processedFrames}`)}</p>
                 </div>
                 {result.issues.map((issue, idx) => (
-                    <div key={idx} className={`p-2 rounded ${issue.severity === 'error' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                    <div key={idx} data-testid={issue.severity === 'error' ? 'export-preflight-error' : undefined} className={`p-2 rounded ${issue.severity === 'error' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
                         {issue.message}
                     </div>
                 ))}
                 <div className="flex justify-end gap-2 mt-4">
                     <button onClick={onCancel} className={`px-4 py-2 ${isDark ? 'bg-white/10' : 'bg-gray-200'} rounded`}>{t("취소", "Cancel", "キャンセル")}</button>
                     <button 
+                        data-testid="export-confirm"
                         onClick={onConfirm} 
                         disabled={result.issues.some(i => i.severity === 'error')}
                         className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"

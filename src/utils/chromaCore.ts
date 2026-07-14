@@ -76,7 +76,8 @@ export function processChromaCore(
     feather,
     alphaContrast,
     previewMode,
-    chromaKeyColor
+    chromaKeyColor,
+    pickedColor
   } = params;
 
   const alphaMap = new Float32Array(width * height);
