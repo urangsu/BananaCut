@@ -11,22 +11,46 @@ export interface KeyColorEstimate {
   warnings: string[];
 }
 
+export function canonicalizeStroke(s: any) {
+  return {
+    id: s.id || '',
+    tool: s.tool,
+    brushSize: s.brushSize,
+    targetFrameIds: [...(s.targetFrameIds || [])].sort(),
+    points: (s.points || []).map((p: any) => ({ x: p.x, y: p.y }))
+  };
+}
+
+export function canonicalizeKeyParams(params: any): any {
+  return {
+    keyingMode: params.keyingMode || 'greenAdvanced',
+    tolerance: params.tolerance ?? 30,
+    softness: params.softness ?? 10,
+    enclosedTolerance: params.enclosedTolerance ?? 20,
+    chromaKeyColor: params.chromaKeyColor || 'Green',
+    pickedColor: params.pickedColor ? { r: params.pickedColor.r, g: params.pickedColor.g, b: params.pickedColor.b } : { r: 0, g: 255, b: 0 },
+    despill: params.despill ?? 5,
+    erode: params.erode ?? 1,
+    dilate: params.dilate ?? 1,
+    feather: params.feather ?? 1,
+    alphaContrast: params.alphaContrast ?? 5,
+    removeEnclosed: !!params.removeEnclosed
+  };
+}
+
 export function createKeyRevision(input: {
   frameId: string;
   params: any;
   strokes: any[];
   rawSourceIdentity?: string;
 }): string {
-  const serializedStrokes = input.strokes.map(s => ({
-    tool: s.tool,
-    brushSize: s.brushSize,
-    points: s.points,
-    targetFrameIds: s.targetFrameIds
-  }));
+  const serializedStrokes = (input.strokes || [])
+    .map(canonicalizeStroke)
+    .sort((a, b) => a.id.localeCompare(b.id));
 
   const payload = {
     frameId: input.frameId,
-    params: input.params,
+    params: canonicalizeKeyParams(input.params),
     strokes: serializedStrokes,
     rawSourceIdentity: input.rawSourceIdentity || ''
   };
@@ -339,17 +363,43 @@ export function analyzeAlphaMask(
   };
 }
 
+export type KeyedFrameResult = {
+  keyedUrl: string;
+  keyRevision: string;
+  qualityFlags: FrameQualityFlag[];
+};
+
 // 6. SINGLE UNIFIED CHROMA PROCESSING FUNCTION
-export async function processKeyedFrame(
-  rawUrl: string,
-  params: ChromaKeyParams,
-  strokes: BrushStroke[],
-  frameId: string
-): Promise<{ keyedUrl: string; qualityFlags: FrameQualityFlag[] }> {
+export async function processKeyedFrame(input: {
+  frame: StudioFrame;
+  params: ChromaKeyParams;
+  strokes: BrushStroke[];
+}): Promise<KeyedFrameResult> {
+  const { frame, params, strokes } = input;
+
+  const applicableStrokes = strokes
+    .filter(s => s.targetFrameIds.includes(frame.id))
+    .map(canonicalizeStroke)
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  const keyRevision = createKeyRevision({
+    frameId: frame.id,
+    params: canonicalizeKeyParams(params),
+    strokes: applicableStrokes,
+    rawSourceIdentity:
+      frame.provenance.contentHash ??
+      [
+        frame.provenance.sourceIndex,
+        frame.provenance.targetTimeMs,
+        frame.width,
+        frame.height
+      ].join(':')
+  });
+
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.src = rawUrl;
+    img.src = frame.rawUrl;
 
     img.onload = async () => {
       try {
@@ -368,7 +418,7 @@ export async function processKeyedFrame(
         const imgData = ctx.getImageData(0, 0, width, height);
 
         // Generate exclusion mask
-        const exclusionMask = generateStrokeMask(width, height, strokes, frameId);
+        const exclusionMask = generateStrokeMask(width, height, strokes, frame.id);
 
         // Run off-thread chroma key
         const { data: keyedBytes, alphaMap } = await runChromaKeyWorker(
@@ -397,6 +447,7 @@ export async function processKeyedFrame(
           if (blob) {
             resolve({
               keyedUrl: URL.createObjectURL(blob),
+              keyRevision,
               qualityFlags
             });
           } else {
@@ -413,6 +464,47 @@ export async function processKeyedFrame(
       reject(new Error(`Failed to load raw frame image for chroma key processing.`));
     };
   });
+}
+
+export function commitKeyedFrameResult(input: {
+  previousFrame: StudioFrame;
+  keyedResult: KeyedFrameResult;
+  recoveredUrl?: string;
+}): StudioFrame {
+  const { previousFrame, keyedResult, recoveredUrl } = input;
+
+  const urlsToRevoke = new Set<string>();
+  if (previousFrame.keyedUrl) urlsToRevoke.add(previousFrame.keyedUrl);
+  if (previousFrame.recoveredUrl) urlsToRevoke.add(previousFrame.recoveredUrl);
+
+  for (const url of urlsToRevoke) {
+    if (url && url !== keyedResult.keyedUrl && url !== recoveredUrl) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.warn('Failed to revoke url:', url, e);
+      }
+    }
+  }
+
+  const updatedFrame: StudioFrame = {
+    ...previousFrame,
+    keyedUrl: keyedResult.keyedUrl,
+    keyRevision: keyedResult.keyRevision,
+    qualityFlags: keyedResult.qualityFlags,
+    keyDirty: false,
+    recoverDirty: false,
+  };
+
+  if (previousFrame.recoverMaskUrl && recoveredUrl) {
+    updatedFrame.recoveredUrl = recoveredUrl;
+    updatedFrame.recoverBaseKeyRevision = keyedResult.keyRevision;
+  } else {
+    updatedFrame.recoveredUrl = undefined;
+    updatedFrame.recoverBaseKeyRevision = undefined;
+  }
+
+  return updatedFrame;
 }
 
 export async function composeRecoveredFrame(
@@ -474,27 +566,54 @@ export async function composeRecoveredFrame(
           const fillRGB = hexToRgb(fillColorHex);
 
           for (let i = 0; i < maskData.length; i += 4) {
-            const alpha = maskData[i + 3];
-            if (alpha > 128) {
-              const r = maskData[i];
-              const g = maskData[i + 1];
-              const b = maskData[i + 2];
+            const mr = maskData[i];
+            const mg = maskData[i + 1];
+            const mb = maskData[i + 2];
+            const ma = maskData[i + 3];
+            const coverage = ma / 255.0;
 
-              if (r > 128) {
-                // Restore Original: copy pixel from raw, set alpha 255
-                outData[i] = rawData[i];
-                outData[i + 1] = rawData[i + 1];
-                outData[i + 2] = rawData[i + 2];
-                outData[i + 3] = 255;
-              } else if (g > 128) {
-                // Color Fill: copy fillColor, set alpha 255
-                outData[i] = fillRGB.r;
-                outData[i + 1] = fillRGB.g;
-                outData[i + 2] = fillRGB.b;
-                outData[i + 3] = 255;
-              } else if (b > 128) {
-                // Erase: alpha 0
-                outData[i + 3] = 0;
+            if (coverage > 0) {
+              const maxVal = Math.max(mr, mg, mb);
+              if (maxVal > 0) {
+                const keyedR = outData[i];
+                const keyedG = outData[i + 1];
+                const keyedB = outData[i + 2];
+                const keyedAlpha = outData[i + 3];
+
+                if (mr === maxVal) {
+                  // Restore Original:
+                  // outRgb = keyedRgb * (1 - coverage) + rawRgb * coverage
+                  // outAlpha = keyedAlpha * (1 - coverage) + rawAlpha * coverage
+                  const rawR = rawData[i];
+                  const rawG = rawData[i + 1];
+                  const rawB = rawData[i + 2];
+                  const rawAlpha = rawData[i + 3];
+
+                  outData[i] = Math.round(keyedR * (1 - coverage) + rawR * coverage);
+                  outData[i + 1] = Math.round(keyedG * (1 - coverage) + rawG * coverage);
+                  outData[i + 2] = Math.round(keyedB * (1 - coverage) + rawB * coverage);
+                  outData[i + 3] = Math.round(keyedAlpha * (1 - coverage) + rawAlpha * coverage);
+                } else if (mg === maxVal) {
+                  // Color Fill:
+                  // outRgb = keyedRgb * (1 - coverage) + fillRgb * coverage
+                  // outAlpha = max(keyedAlpha, coverage * 255)
+                  outData[i] = Math.round(keyedR * (1 - coverage) + fillRGB.r * coverage);
+                  outData[i + 1] = Math.round(keyedG * (1 - coverage) + fillRGB.g * coverage);
+                  outData[i + 2] = Math.round(keyedB * (1 - coverage) + fillRGB.b * coverage);
+                  outData[i + 3] = Math.round(Math.max(keyedAlpha, coverage * 255));
+                } else {
+                  // Erase:
+                  // outAlpha = keyedAlpha * (1 - coverage)
+                  outData[i + 3] = Math.round(keyedAlpha * (1 - coverage));
+                }
+
+                // If outAlpha === 0, set all to 0
+                if (outData[i + 3] === 0) {
+                  outData[i] = 0;
+                  outData[i + 1] = 0;
+                  outData[i + 2] = 0;
+                  outData[i + 3] = 0;
+                }
               }
             }
           }
@@ -510,7 +629,7 @@ export async function composeRecoveredFrame(
         };
 
         maskImg.onerror = () => {
-          resolve(keyedUrl); // Fallback on mask error
+          reject(new Error('RECOVER_MASK_LOAD_FAILED'));
         };
       };
 

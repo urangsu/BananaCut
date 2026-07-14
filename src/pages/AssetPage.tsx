@@ -12,11 +12,11 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useBatchJob } from "../hooks/useBatchJob";
-import { processKeyedFrame, composeRecoveredFrame } from "../utils/chromaKey";
+import { processKeyedFrame, composeRecoveredFrame, commitKeyedFrameResult, KeyedFrameResult } from "../utils/chromaKey";
 import { normalizeChromaKeyParams } from "../types/mediaPipeline";
 import { PerfLogger } from "../utils/performanceLogger";
 import { getFrameDisplayUrl } from "../utils/frameUtils";
-import { fetchBlobStrict } from "../utils/fetchBlobStrict";
+import { fetchPngBlobStrict } from "../utils/fetchBlobStrict";
 import { analyzeFrameBounds, Box } from "../utils/boundingBox";
 import { Modal } from "../components/Modal";
 import { Copy, Scan, Maximize, Target } from "lucide-react";
@@ -131,37 +131,43 @@ export default function AssetPage() {
         delayMs: 0,
         processItem: async (idx, resultIndex) => {
           const frame = newFrames[idx];
-          
-          PerfLogger.start("AssetPage_processKeyedFrame");
-          const { keyedUrl, qualityFlags } = await processKeyedFrame(
-            frame.rawUrl,
-            params,
-            exclusionStrokes,
-            frame.id
-          );
-          PerfLogger.end("AssetPage_processKeyedFrame");
+          let keyedUrl: string | undefined;
+          let recoveredUrl: string | undefined;
 
-          let finalRecoveredUrl = keyedUrl;
-          if (frame.recoverMaskUrl) {
-            finalRecoveredUrl = await composeRecoveredFrame(
-              frame.rawUrl,
-              keyedUrl,
-              frame.recoverMaskUrl,
-              localStorage.getItem('recover_fillColor') || '#ffffff'
-            );
+          try {
+            PerfLogger.start("AssetPage_processKeyedFrame");
+            const keyedResult = await processKeyedFrame({
+              frame,
+              params,
+              strokes: exclusionStrokes
+            });
+            keyedUrl = keyedResult.keyedUrl;
+            PerfLogger.end("AssetPage_processKeyedFrame");
+
+            if (frame.recoverMaskUrl) {
+              recoveredUrl = await composeRecoveredFrame(
+                frame.rawUrl,
+                keyedUrl,
+                frame.recoverMaskUrl,
+                localStorage.getItem('recover_fillColor') || '#ffffff'
+              );
+            }
+
+            const updatedFrame = commitKeyedFrameResult({
+              previousFrame: frame,
+              keyedResult,
+              recoveredUrl
+            });
+            newFrames[idx] = updatedFrame;
+          } catch (err) {
+            if (keyedUrl) {
+              try { URL.revokeObjectURL(keyedUrl); } catch {}
+            }
+            if (recoveredUrl) {
+              try { URL.revokeObjectURL(recoveredUrl); } catch {}
+            }
+            throw err;
           }
-
-          if (frame.keyedUrl) URL.revokeObjectURL(frame.keyedUrl);
-          if (frame.recoveredUrl) URL.revokeObjectURL(frame.recoveredUrl);
-
-          newFrames[idx] = {
-            ...frame,
-            keyedUrl,
-            recoveredUrl: finalRecoveredUrl,
-            keyDirty: false,
-            recoverDirty: false,
-            qualityFlags
-          };
         },
         onSuccess: () => {
           setFrames(newFrames);
@@ -233,7 +239,7 @@ export default function AssetPage() {
         if (!url) {
           throw new Error(`FINAL_FRAME_UNAVAILABLE:${frame.id}`);
         }
-        const blob = await fetchBlobStrict(url);
+        const blob = await fetchPngBlobStrict(url);
         const buffer = await blob.arrayBuffer();
         await currentFFmpeg.writeFile(
           `frame_${i.toString().padStart(4, "0")}.png`,

@@ -16,23 +16,50 @@ export function buildExportPreflight(
   let canProceed = true;
   let requiresConfirmation = false;
 
-  if (request.format === 'zipResultOnly') {
-    const problematicIndices = frames
-      .map((f, i) => (resolveFrameUrl(f, 'final') === null || f.keyDirty || f.recoverDirty) ? i : -1)
+  // Problematic indices for final results: any frames that lack final URL or are dirty
+  const problematicIndices = frames
+    .map((f, i) => (resolveFrameUrl(f, 'final') === null || f.keyDirty || f.recoverDirty) ? i : -1)
+    .filter(i => i !== -1);
+      
+  if (problematicIndices.length > 0) {
+      issues.push({
+          severity: 'error',
+          code: 'UNPROCESSED_FRAMES',
+          message: 'Some frames are not fully processed or are dirty.',
+          frameIndices: problematicIndices
+      });
+      canProceed = false;
+  }
+
+  // If format is zipWithRaw, we also need rawUrl for all frames
+  if (request.format === 'zipWithRaw') {
+    const missingRawIndices = frames
+      .map((f, i) => !f.rawUrl ? i : -1)
       .filter(i => i !== -1);
       
-    if (problematicIndices.length > 0) {
-        issues.push({
-            severity: 'error',
-            code: 'UNPROCESSED_FRAMES',
-            message: 'Some frames are not fully processed or are dirty.',
-            frameIndices: problematicIndices
-        });
-        canProceed = false;
+    if (missingRawIndices.length > 0) {
+      issues.push({
+        severity: 'error',
+        code: 'UNPROCESSED_FRAMES',
+        message: 'Some frames are missing raw source images.',
+        frameIndices: missingRawIndices
+      });
+      canProceed = false;
     }
   }
 
   const exportableFrames = processedFrames;
+  
+  let estimatedOutput: ExportPreflightResult['estimatedOutput'] = 'resultZip';
+  if (request.format === 'zipWithRaw') {
+    estimatedOutput = 'withRawZip';
+  } else if (request.format === 'gifPreview') {
+    estimatedOutput = 'gif';
+  } else if (request.format === 'spriteSheet') {
+    estimatedOutput = 'spriteSheet';
+  } else if (request.format === 'transparentWebM') {
+    estimatedOutput = 'webm';
+  }
   
   return {
     request,
@@ -41,7 +68,7 @@ export function buildExportPreflight(
     dirtyFrames,
     unprocessedFrames,
     exportableFrames,
-    estimatedOutput: 'resultZip',
+    estimatedOutput,
     sizeMode: request.sizeMode,
     format: request.format,
     canProceed,

@@ -8,7 +8,7 @@ import {
   PreparedExportFrame 
 } from "../types/export";
 import { StudioFrame, resolveFrameUrl } from "../types/mediaPipeline";
-import { fetchBlobStrict } from "./fetchBlobStrict";
+import { fetchPngBlobStrict, fetchRawImageBlobStrict } from "./fetchBlobStrict";
 
 async function getImageDimensionsFromBlob(blob: Blob): Promise<{ width: number; height: number }> {
     return new Promise((resolve, reject) => {
@@ -51,9 +51,12 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
             throw new Error(`FINAL_FRAME_UNAVAILABLE:${frame.id}`);
         }
         try {
-            resultBlob = await fetchBlobStrict(finalUrl);
+            resultBlob = await fetchPngBlobStrict(finalUrl);
         } catch {
             warnings.push(`Frame ${i} processed image failed to load.`);
+            if (!failedIndices.includes(i)) {
+                failedIndices.push(i);
+            }
         }
     }
     
@@ -63,12 +66,16 @@ export const prepareFramesForExport = async (request: DownloadRequest, frames: S
     if (shouldFetchRaw) {
         if (frame.rawUrl) {
             try {
-                rawBlob = await fetchBlobStrict(frame.rawUrl);
+                rawBlob = await fetchRawImageBlobStrict(frame.rawUrl);
             } catch {
-                if (request.format === 'zipWithRaw') failedIndices.push(i);
+                if (!failedIndices.includes(i)) {
+                    failedIndices.push(i);
+                }
             }
         } else {
-             if (request.format === 'zipWithRaw') failedIndices.push(i);
+             if (!failedIndices.includes(i)) {
+                 failedIndices.push(i);
+             }
         }
     }
     
@@ -100,6 +107,7 @@ export const exportPngSequenceZip = async (request: DownloadRequest, frames: Stu
   const zip = new JSZip();
   const prepared = await prepareFramesForExport(request, frames);
   
+  const allowPartial = !!request.allowPartial;
   const resultFolder = zip.folder("result");
   const rawFolder = zip.folder("raw");
   
@@ -115,6 +123,32 @@ export const exportPngSequenceZip = async (request: DownloadRequest, frames: Stu
           rawFolder.file(frame.name.replace('.png', '_raw.png'), frame.rawBlob);
           exportedRawCount++;
       }
+  }
+
+  const isComplete =
+    exportedResultCount === frames.length &&
+    (!request.includeRaw || exportedRawCount === frames.length) &&
+    prepared.failedIndices.length === 0;
+
+  if (!isComplete && !allowPartial) {
+    const report = createExportReport(
+        request,
+        frames.length,
+        0,
+        prepared.failedIndices,
+        prepared.warnings,
+        0
+    );
+    return {
+        ok: false,
+        format: request.format,
+        blob: undefined,
+        filename: undefined,
+        failedIndices: prepared.failedIndices,
+        warnings: prepared.warnings,
+        error: 'PARTIAL_RESULT_EXPORT_BLOCKED',
+        report
+    };
   }
   
   const report = createExportReport(
@@ -142,9 +176,29 @@ export const exportPngSequenceZip = async (request: DownloadRequest, frames: Stu
 };
 
 export const exportGifPreview = async (request: DownloadRequest, frames: StudioFrame[]): Promise<ExportResult> => {
-  let prepared: PreparedExport;
+  const prepared = await prepareFramesForExport(request, frames);
+  const allowPartial = !!request.allowPartial;
+  
+  if (prepared.failedIndices.length > 0 && !allowPartial) {
+    const report = createExportReport(
+        request, 
+        frames.length, 
+        0, 
+        prepared.failedIndices, 
+        prepared.warnings,
+        0
+    );
+    return {
+        ok: false,
+        format: request.format,
+        failedIndices: prepared.failedIndices,
+        warnings: prepared.warnings,
+        error: 'PARTIAL_RESULT_EXPORT_BLOCKED',
+        report
+    };
+  }
+
   try {
-    prepared = await prepareFramesForExport(request, frames);
     const MAX_GIF_FRAMES = 120;
     const gifFrames = prepared.frames.slice(0, MAX_GIF_FRAMES);
     const fps = request.fps || 12;

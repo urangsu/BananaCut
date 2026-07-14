@@ -9,7 +9,7 @@ import { trackEvent } from '../lib/analytics';
 import { revokeUrlsSafely } from '../utils/urlUtils';
 import { getFrameDisplayUrl } from '../utils/frameUtils';
 import { composeRecoveredFrame } from '../utils/chromaKey';
-import { fetchBlobStrict } from '../utils/fetchBlobStrict';
+import { fetchPngBlobStrict } from '../utils/fetchBlobStrict';
 
 interface Point {
   x: number;
@@ -222,13 +222,22 @@ export default function RecoverPage() {
     currentSize: number,
     currentColor: string
   ) => {
-    await startJob<string, { id: string; url: string; maskUrl: string }>({
+    await startJob<string, { id: string; url: string; maskUrl: string; startKeyRevision: string }>({
       items: targetFrameIds,
       delayMs: 0,
       processItem: async (frameId) => {
         const frame = frames.find(f => f.id === frameId);
         if (!frame) throw new Error("Frame not found");
 
+        if (
+          !frame.keyedUrl ||
+          frame.keyDirty ||
+          !frame.keyRevision
+        ) {
+          throw new Error(`KEYED_FRAME_REQUIRED:${frame.id}`);
+        }
+
+        const startKeyRevision = frame.keyRevision;
         const frameW = frame.width;
         const frameH = frame.height;
 
@@ -303,15 +312,14 @@ export default function RecoverPage() {
         const nextMaskUrl = URL.createObjectURL(maskBlob);
 
         // 4. Compose Recovered Display Frame over Keyed Base
-        const baseKeyedUrl = frame.keyedUrl || frame.rawUrl;
         const composedUrl = await composeRecoveredFrame(
           frame.rawUrl,
-          baseKeyedUrl,
+          frame.keyedUrl,
           nextMaskUrl,
           currentColor
         );
 
-        return { id: frameId, url: composedUrl, maskUrl: nextMaskUrl };
+        return { id: frameId, url: composedUrl, maskUrl: nextMaskUrl, startKeyRevision };
       },
       onSuccess: (results: any) => {
         const updates = new Map((results as any[]).map(r => [r.id, r]));
@@ -331,10 +339,31 @@ export default function RecoverPage() {
         setFrames(prev => prev.map(f => {
           const u = updates.get(f.id);
           if (u) {
+            if (u.startKeyRevision !== f.keyRevision) {
+              if (u.url) {
+                try { URL.revokeObjectURL(u.url); } catch {}
+              }
+              if (u.maskUrl) {
+                try { URL.revokeObjectURL(u.maskUrl); } catch {}
+              }
+              throw new Error('KEY_REVISION_CHANGED_DURING_RECOVER');
+            }
+
+            const urlsToRevoke = new Set<string>();
+            if (f.recoveredUrl) urlsToRevoke.add(f.recoveredUrl);
+            if (f.recoverMaskUrl) urlsToRevoke.add(f.recoverMaskUrl);
+
+            for (const url of urlsToRevoke) {
+              if (url && url !== u.url && url !== u.maskUrl && url !== f.keyedUrl) {
+                try { URL.revokeObjectURL(url); } catch {}
+              }
+            }
+
             return {
               ...f,
               recoveredUrl: u.url,
               recoverMaskUrl: u.maskUrl,
+              recoverBaseKeyRevision: f.keyRevision,
               recoverDirty: false
             };
           }
@@ -671,7 +700,7 @@ export default function RecoverPage() {
         if (!sourceUrl) {
           throw new Error(`FINAL_FRAME_UNAVAILABLE:${frame.id}`);
         }
-        const blob = await fetchBlobStrict(sourceUrl);
+        const blob = await fetchPngBlobStrict(sourceUrl);
 
         const nameParts = (frame.name || 'frame.png').split('.');
         const ext = nameParts.pop();

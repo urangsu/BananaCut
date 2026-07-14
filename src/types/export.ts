@@ -22,6 +22,7 @@ export type DownloadRequest = {
   fps: number;
   includeRaw?: boolean;
   fallback?: 'pngSequenceZip';
+  allowPartial?: boolean;
 };
 
 export type ExportReport = {

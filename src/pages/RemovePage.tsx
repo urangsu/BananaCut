@@ -31,7 +31,7 @@ import { useBatchJob } from "../hooks/useBatchJob";
 import { useMediaImport } from "../hooks/useMediaImport";
 import { useLanguage } from "../LanguageContext";
 import { useFFmpeg } from "../FFmpegContext";
-import { generateStrokeMask, applyChromaKeyAdvanced, processKeyedFrame, composeRecoveredFrame } from "../utils/chromaKey";
+import { generateStrokeMask, applyChromaKeyAdvanced, processKeyedFrame, composeRecoveredFrame, commitKeyedFrameResult, KeyedFrameResult } from "../utils/chromaKey";
 import { normalizeChromaKeyParams, invalidateKeyedFramesByIds } from "../types/mediaPipeline";
 import { PerfLogger } from "../utils/performanceLogger";
 import {
@@ -352,37 +352,43 @@ export default function RemovePage() {
       delayMs: 0,
       processItem: async (idx, resultIndex) => {
         const frame = newFrames[idx];
+        let keyedUrl: string | undefined;
+        let recoveredUrl: string | undefined;
 
-        PerfLogger.start("processFramesForDownload_processKeyedFrame");
-        const { keyedUrl, qualityFlags } = await processKeyedFrame(
-          frame.rawUrl,
-          params,
-          exclusionStrokes,
-          frame.id
-        );
-        PerfLogger.end("processFramesForDownload_processKeyedFrame");
+        try {
+          PerfLogger.start("processFramesForDownload_processKeyedFrame");
+          const keyedResult = await processKeyedFrame({
+            frame,
+            params,
+            strokes: exclusionStrokes
+          });
+          keyedUrl = keyedResult.keyedUrl;
+          PerfLogger.end("processFramesForDownload_processKeyedFrame");
 
-        let finalRecoveredUrl = keyedUrl;
-        if (frame.recoverMaskUrl) {
-          finalRecoveredUrl = await composeRecoveredFrame(
-            frame.rawUrl,
-            keyedUrl,
-            frame.recoverMaskUrl,
-            localStorage.getItem('recover_fillColor') || '#ffffff'
-          );
+          if (frame.recoverMaskUrl) {
+            recoveredUrl = await composeRecoveredFrame(
+              frame.rawUrl,
+              keyedUrl,
+              frame.recoverMaskUrl,
+              localStorage.getItem('recover_fillColor') || '#ffffff'
+            );
+          }
+
+          const updatedFrame = commitKeyedFrameResult({
+            previousFrame: frame,
+            keyedResult,
+            recoveredUrl
+          });
+          newFrames[idx] = updatedFrame;
+        } catch (err) {
+          if (keyedUrl) {
+            try { URL.revokeObjectURL(keyedUrl); } catch {}
+          }
+          if (recoveredUrl) {
+            try { URL.revokeObjectURL(recoveredUrl); } catch {}
+          }
+          throw err;
         }
-
-        if (frame.keyedUrl) URL.revokeObjectURL(frame.keyedUrl);
-        if (frame.recoveredUrl) URL.revokeObjectURL(frame.recoveredUrl);
-
-        newFrames[idx] = {
-          ...frame,
-          keyedUrl,
-          recoveredUrl: finalRecoveredUrl,
-          keyDirty: false,
-          recoverDirty: false,
-          qualityFlags
-        };
       },
       onSuccess: () => {
         setFrames(newFrames);
