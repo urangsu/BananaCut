@@ -33,7 +33,7 @@ export function DownloadModal({ isOpen, onClose, lang, onDownload, isDark, defau
           <span>{lang === 'KR' ? 'RAW 포함 (ZIP)' : lang === 'EN' ? 'With RAW (ZIP)' : 'RAW 含む (ZIP)'}</span>
         </button>
         <button
-          data-testid="export-result-only"
+          data-testid="export-zip"
           onClick={() => onDownload({ format: 'zipResultOnly', sizeMode: defaultSizeMode, fps: defaultFps, includeRaw: false })}
           className={`w-full p-4 rounded-xl font-medium transition-all text-left flex justify-between items-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-900'}`}
         >

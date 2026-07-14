@@ -224,6 +224,7 @@ export default function RemovePage() {
   } = useBatchJob();
   const [isProcessingLocal, setIsProcessingLocal] = useState(false);
   const [failedItems, setFailedItems] = useState<number[]>([]);
+  const [isBatchJobDone, setIsBatchJobDone] = useState(false);
 
   const [currentFrame, setCurrentFrame] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -329,6 +330,7 @@ export default function RemovePage() {
     if (targetIndices.length === 0)
       return { frames: frames, failedCount: 0, failedIndices: [] };
     setFailedItems([]);
+    setIsBatchJobDone(false);
     const newFrames = [...frames];
     let failedIndices: number[] = [];
 
@@ -392,11 +394,13 @@ export default function RemovePage() {
       },
       onSuccess: () => {
         setFrames(newFrames);
+        setIsBatchJobDone(true);
       },
       onPartialSuccess: (_, failed) => {
         setFrames(newFrames);
         setFailedItems(failed);
         failedIndices = failed;
+        setIsBatchJobDone(true);
       },
     });
 
@@ -2107,7 +2111,7 @@ export default function RemovePage() {
                           : `すべて適用 (${frames.length})`}
                     </button>
 
-                    {batchProgress === 100 && (
+                    {isBatchJobDone && (
                       <div data-testid="process-complete" className="hidden" />
                     )}
 

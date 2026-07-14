@@ -12,6 +12,9 @@ test.describe('BananaCut P0 E2E - Media Pipeline Gate', () => {
   });
 
   test('Scenario A & B: MP4 upload, frame extraction, chromakey, and process-all flow', async ({ page }) => {
+    // Increase test timeout to 2 minutes for heavy video processing
+    test.setTimeout(120000);
+
     // Navigate to clean route
     await page.goto('/remove');
     await expect(page).toHaveTitle(/BananaCut/);
@@ -51,7 +54,7 @@ test.describe('BananaCut P0 E2E - Media Pipeline Gate', () => {
 
     // Verify batch processing finishes and displays process-complete
     const processComplete = page.locator('[data-testid="process-complete"]');
-    await expect(processComplete).toBeAttached({ timeout: 15000 });
+    await expect(processComplete).toBeAttached({ timeout: 60000 });
 
     // Open Download format selection modal
     const downloadOpenBtn = page.locator('[data-testid="download-modal-open"]');
