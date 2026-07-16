@@ -364,32 +364,14 @@ export default function LandingPage() {
             )}
           </button>
 
-          <div className="hidden md:flex items-center gap-4">
-            <button
-              onClick={() => setShowGetApp(true)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all border backdrop-blur-md ${isDark ? "bg-white/5 border-white/10 text-white/80 hover:bg-white/10" : "bg-white/70 border-gray-200 text-gray-700 hover:bg-gray-100"}`}
-            >
-              <Smartphone className="w-4 h-4" strokeWidth={1} />
-              {lang === "KR" ? "앱 다운로드" : lang === "JP" ? "アプリ入手" : "GET APP"}
-            </button>
-          </div>
           <div className="flex flex-row gap-2 md:gap-4">
             <button
               onClick={() => navigate("/remove")}
               className="px-3 md:px-6 py-1.5 md:py-2 rounded-full text-[9px] md:text-sm font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg whitespace-nowrap"
             >
-              <span className="md:hidden">
+              <span>
                 {lang === "KR" ? "스튜디오 열기" : lang === "JP" ? "スタジオを開く" : "Open Studio"}
               </span>
-              <span className="hidden md:inline">
-                {lang === "KR" ? "스튜디오 열기" : lang === "JP" ? "スタジオを開く" : "Open Studio"}
-              </span>
-            </button>
-            <button
-              onClick={() => setShowGetApp(true)}
-              className={`md:hidden px-3 py-1.5 rounded-full text-[9px] font-bold transition-all border backdrop-blur-md whitespace-nowrap ${isDark ? "bg-white/5 border-white/10 text-white/80 hover:bg-white/10" : "bg-white/70 border-gray-200 text-gray-700 hover:bg-gray-100"}`}
-            >
-              {lang === "KR" ? "앱 다운로드" : lang === "JP" ? "アプリ入手" : "GET APP"}
             </button>
           </div>
         </div>
@@ -858,84 +840,6 @@ export default function LandingPage() {
           </div>
         </footer>
       </main>
-
-      {/* GET APP Modal */}
-      <Modal
-        isOpen={showGetApp}
-        onClose={() => setShowGetApp(false)}
-        title="GET APP"
-        icon={Smartphone}
-        lang={lang}
-        setLang={setLang}
-      >
-        <div className="flex flex-col items-center justify-center text-center space-y-6 py-4">
-          <div className="w-full bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative min-h-[200px]">
-            {!imgError ? (
-              <img
-                src="/images/team.jpg"
-                alt="Dalgrac Studio Team"
-                className="max-w-full h-auto object-contain"
-                referrerPolicy="no-referrer"
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center text-gray-400 p-8">
-                <Smartphone className="w-12 h-12 mb-2 opacity-20" />
-                <span className="text-sm font-medium">Coming Soon</span>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-xl font-bold">
-              {lang === "KR"
-                ? "아직 어플 준비 중입니다."
-                : lang === "EN"
-                  ? "App is under development."
-                  : "アプリは準備中です。"}
-            </h3>
-            <p
-              className={`text-sm ${isDark ? "text-white/60" : "text-gray-500"}`}
-            >
-              {lang === "KR"
-                ? "반응이 좋으면 준비해볼게요! 🍌"
-                : lang === "EN"
-                  ? "We'll prepare it if there's good feedback! 🍌"
-                  : "反響が良ければ準備します！ 🍌"}
-            </p>
-          </div>
-
-          <div
-            className={`w-full p-4 rounded-xl text-sm ${isDark ? "bg-white/5 text-white/70" : "bg-gray-50 text-gray-600"}`}
-          >
-            {lang === "KR" ? (
-              <>
-                지금은 이런 작업을 준비 중이에요.
-                <br />
-                여정에 함께 해주세요.
-              </>
-            ) : lang === "EN" ? (
-              <>
-                We are preparing this kind of work now.
-                <br />
-                Join us on our journey.
-              </>
-            ) : (
-              <>
-                現在、このような作業を準備中です。
-                <br />
-                私たちの旅に参加してください。
-              </>
-            )}
-          </div>
-
-          <div
-            className={`text-xs font-medium tracking-widest uppercase mt-4 ${isDark ? "text-white/40" : "text-gray-400"}`}
-          >
-            BY. DALGRACSTUDIO
-          </div>
-        </div>
-      </Modal>
 
       {/* Support Modal */}
       <Modal
