@@ -23,6 +23,7 @@ import { ConsentProvider } from './ConsentContext';
 import { ConsentManager } from './components/ConsentManager';
 import { ContentLayout } from './layouts/ContentLayout';
 import { StudioLayout } from './layouts/StudioLayout';
+import { ContentAdProvider } from './components/ads/ContentAdProvider';
 import { trackPageView } from './lib/analytics';
 
 function ScrollToTop() {
@@ -47,7 +48,7 @@ function App() {
                 <ScrollToTop />
                 <ConsentManager />
                 <Routes>
-                  <Route path="/" element={<ContentLayout><LandingPage /></ContentLayout>} />
+                  <Route path="/" element={<ContentAdProvider><LandingPage /></ContentAdProvider>} />
                   <Route path="/remove" element={<StudioLayout><RemovePage /></StudioLayout>} />
                   <Route path="/recover" element={<StudioLayout><RecoverPage /></StudioLayout>} />
                   <Route path="/asset" element={<StudioLayout><AssetPage /></StudioLayout>} />

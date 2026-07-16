@@ -1259,6 +1259,72 @@ export default function RemovePage() {
                     <span className="text-xs opacity-60">MP4, MOV, PNG</span>
                   </label>
                 </div>
+                {uploadState === "error" && (
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                    {nativeExtractError && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setNativeExtractError(null);
+                            setSkippedFramesWarning(false);
+                            if (videoFile) await processFile(videoFile);
+                          }}
+                          className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
+                        >
+                          {lang === "KR"
+                            ? "재시도 (브라우저)"
+                            : "Retry (Browser Decoder)"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setNativeExtractError(null);
+                            setSkippedFramesWarning(false);
+                            const currentFps = fps;
+                            const newFps = Math.max(
+                              4,
+                              Math.floor(currentFps / 2),
+                            );
+                            setFps(newFps);
+                            if (videoFile) {
+                              await processFile(videoFile);
+                            }
+                          }}
+                          className="rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-300"
+                        >
+                          {lang === "KR"
+                            ? `목표 FPS 낮추기 (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`
+                            : `Lower FPS (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`}
+                        </button>
+                        <button
+                          data-testid="ffmpeg-fallback-btn"
+                          type="button"
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!videoFile) return;
+                            setNativeExtractError(null);
+                            setSkippedFramesWarning(false);
+                            const activeFFmpeg = ffmpeg || (await loadFFmpeg());
+                            if (activeFFmpeg) {
+                              await extractFramesWithFFmpeg(videoFile, fps, activeFFmpeg);
+                            }
+                          }}
+                          className="rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-2 text-xs font-semibold text-indigo-700 transition-colors dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 dark:border-indigo-500/20 dark:text-indigo-400"
+                        >
+                          {lang === "KR"
+                            ? "FFmpeg 엔진으로 디코딩하기 (로컬 권장)"
+                            : "Decode with FFmpeg Engine (Local Recommended)"}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 flex justify-center">
                   <button
                     data-testid="try-sample-button"
@@ -1501,6 +1567,7 @@ export default function RemovePage() {
                           : `Lower FPS (${fps} -> ${Math.max(4, Math.floor(fps / 2))})`}
                       </button>
                       <button
+                        data-testid="ffmpeg-fallback-btn"
                         type="button"
                         onClick={async (e) => {
                           e.preventDefault();

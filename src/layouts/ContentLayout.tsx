@@ -23,9 +23,13 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({ children }) => {
         isDark ? 'bg-[#121212] text-white' : 'bg-gray-50 text-gray-900'
       }`}>
       {/* Public Site Header */}
-      <header className={`sticky top-0 z-50 border-b backdrop-blur-md transition-colors ${
-        isDark ? 'bg-[#121212]/80 border-white/10' : 'bg-white/80 border-gray-200'
-      }`}>
+      <header 
+        data-testid="content-header"
+        data-layout="content"
+        className={`sticky top-0 z-50 border-b backdrop-blur-md transition-colors ${
+          isDark ? 'bg-[#121212]/80 border-white/10' : 'bg-white/80 border-gray-200'
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <BrandLogo size="sm" />
@@ -49,13 +53,13 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({ children }) => {
               to="/about" 
               className={({ isActive }) => `text-sm font-medium hover:text-blue-500 transition-colors ${isActive ? 'text-blue-500' : 'opacity-70'}`}
             >
-              About
+              {lang === 'KR' ? '소개' : lang === 'JP' ? '概要' : 'About'}
             </NavLink>
             <NavLink 
               to="/contact" 
               className={({ isActive }) => `text-sm font-medium hover:text-blue-500 transition-colors ${isActive ? 'text-blue-500' : 'opacity-70'}`}
             >
-              Contact
+              {lang === 'KR' ? '문의' : lang === 'JP' ? 'お問い合わせ' : 'Contact'}
             </NavLink>
           </nav>
 
@@ -99,14 +103,21 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({ children }) => {
       </header>
 
       {/* Main Content Body */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main 
+        data-testid="content-main"
+        className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
         {children}
       </main>
 
       {/* Content Footer */}
-      <footer className={`border-t transition-colors mt-auto ${
-        isDark ? 'bg-[#181818] border-white/10 text-white/40' : 'bg-white border-gray-200 text-gray-500'
-      }`}>
+      <footer 
+        data-testid="content-footer"
+        data-layout="content"
+        className={`border-t transition-colors mt-auto ${
+          isDark ? 'bg-[#181818] border-white/10 text-white/40' : 'bg-white border-gray-200 text-gray-500'
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
           <div>
             © 2026 BananaCut | BY. DALGRACSTUDIO
@@ -117,10 +128,10 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({ children }) => {
               {lang === 'KR' ? '가이드' : lang === 'JP' ? 'ガイド' : 'Guides'}
             </Link>
             <Link to="/about" className="hover:text-blue-500 transition-colors">
-              About
+              {lang === 'KR' ? '소개' : lang === 'JP' ? '概要' : 'About'}
             </Link>
             <Link to="/contact" className="hover:text-blue-500 transition-colors">
-              Contact
+              {lang === 'KR' ? '문의' : lang === 'JP' ? 'お問い合わせ' : 'Contact'}
             </Link>
             <Link to="/privacy" className="hover:text-blue-500 transition-colors font-semibold text-blue-600 dark:text-blue-400">
               {lang === 'KR' ? '개인정보 보호정책' : lang === 'JP' ? 'プライバシーポリシー' : 'Privacy Policy'}

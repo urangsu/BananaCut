@@ -320,13 +320,15 @@ export default function LandingPage() {
       />
       {/* Header */}
       <header
+        data-testid="landing-header"
+        data-layout="landing"
         className={`relative z-50 flex items-center justify-between p-6 border-b ${isDark ? "bg-[#121212] border-white/10" : "bg-white border-gray-200"}`}
       >
-        <div className="flex flex-col">
+        <div data-testid="landing-logo" className="flex flex-col">
           <BrandLogo size="md" />
         </div>
         <div className="flex items-center gap-2 md:gap-4">
-          <div className="flex items-center gap-1 p-1 rounded-full border bg-white/50 dark:bg-black/50 backdrop-blur-md border-gray-200 dark:border-white/10">
+          <div data-testid="landing-language-switcher" className="flex items-center gap-1 p-1 rounded-full border bg-white/50 dark:bg-black/50 backdrop-blur-md border-gray-200 dark:border-white/10">
             {(["KR", "EN", "JP"] as const).map((l) => (
               <button
                 key={l}
@@ -377,10 +379,10 @@ export default function LandingPage() {
               className="px-3 md:px-6 py-1.5 md:py-2 rounded-full text-[9px] md:text-sm font-bold transition-all bg-black text-white hover:bg-gray-800 shadow-lg whitespace-nowrap"
             >
               <span className="md:hidden">
-                {lang === "KR" ? "스튜디오" : lang === "JP" ? "スタジオ" : "STUDIO"}
+                {lang === "KR" ? "스튜디오 열기" : lang === "JP" ? "スタジオを開く" : "Open Studio"}
               </span>
               <span className="hidden md:inline">
-                {lang === "KR" ? "스튜디오 들어하기" : lang === "JP" ? "スタジオに入る" : "ENTER STUDIO"}
+                {lang === "KR" ? "스튜디오 열기" : lang === "JP" ? "スタジオを開く" : "Open Studio"}
               </span>
             </button>
             <button
@@ -407,6 +409,7 @@ export default function LandingPage() {
       )}
 
       <main
+        data-testid="landing-main"
         className="flex-1 overflow-y-auto"
       >
         <div className="max-w-6xl mx-auto px-6 py-16 lg:py-24 space-y-24">
@@ -822,6 +825,8 @@ export default function LandingPage() {
 
         {/* Footer for Landing Page */}
         <footer
+          data-testid="landing-footer"
+          data-layout="landing"
           className={`w-full py-8 mt-12 border-t px-6 flex flex-col items-center justify-center gap-6 ${isDark ? "border-white/10 text-white/40" : "border-gray-200 text-gray-500"}`}
         >
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs font-medium max-w-2xl">

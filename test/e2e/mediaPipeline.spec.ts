@@ -4,6 +4,7 @@ import path from 'path';
 test.describe('BananaCut P0 E2E - Media Pipeline Gate', () => {
 
   test.beforeEach(async ({ page }) => {
+    page.on('console', msg => console.log('BROWSER CONSOLE:', msg.type(), msg.text()));
     await page.goto('/');
     const consentBtn = page.locator('[data-testid="consent-accept-all"]');
     if (await consentBtn.count() > 0 && await consentBtn.isVisible()) {
@@ -35,13 +36,25 @@ test.describe('BananaCut P0 E2E - Media Pipeline Gate', () => {
     const confirmBtn = page.locator('[data-testid="import-plan-confirm"]');
     await confirmBtn.click();
 
-    // Assert extraction progress is displayed
+    // Wait for either extraction progress, completion, or failure to appear
     const progressText = page.locator('[data-testid="extraction-progress"]');
-    await expect(progressText.first()).toBeAttached();
-
-    // Wait for frames ready status (up to 30 seconds for FFmpeg WASM startup and decoding)
     const completeText = page.locator('[data-testid="extraction-complete"]');
-    await expect(completeText.first()).toBeVisible({ timeout: 45000 });
+    const nativeDecoderFailureText = page.locator('text=/브라우저 추출 실패/i').filter({ visible: true });
+    const ffmpegFallbackBtn = page.locator('[data-testid="ffmpeg-fallback-btn"]');
+
+    const initialWaitLocator = progressText.or(completeText).or(nativeDecoderFailureText);
+    await expect(initialWaitLocator.first()).toBeVisible({ timeout: 15000 });
+
+    const combinedLocator = completeText.or(nativeDecoderFailureText);
+    await expect(combinedLocator.first()).toBeVisible({ timeout: 45000 });
+
+    if (await nativeDecoderFailureText.count() > 0) {
+      if (await ffmpegFallbackBtn.count() > 0 && await ffmpegFallbackBtn.first().isVisible()) {
+        await ffmpegFallbackBtn.first().click();
+      }
+    }
+
+    await expect(completeText.first()).toBeVisible({ timeout: 60000 });
 
     // Verify frames are loaded and frame-count shows 24 frames
     const frameCount = page.locator('[data-testid="frame-count"]');
