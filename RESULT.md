@@ -16,9 +16,9 @@ npm run check:release
 | :--- | :---: | :--- |
 | **Vite Production Build** | **PASS** | `npm run build` compiles without warnings or errors |
 | **TypeScript Static Linter** | **PASS** | `npm run lint` (`tsc --noEmit`) passes with zero type errors |
-| **Studio AdSense Isolation** | **PASS** | `test/e2e/studioAdIsolation.spec.ts` verifies zero active ad delivery/tracking requests and zero `ins.adsbygoogle` active components on `/remove`, `/recover`, and `/asset` |
-| **AdSense Public Connection** | **PASS** | `test/e2e/adsenseConnection.spec.ts` verifies presence of the static Google AdSense script on public routes (`/`, `/guides`, `/about`, `/privacy`, `/terms`) but zero active advertisements |
-| **Static Compliance Audit** | **PASS** | `npm run check:adsense` validates script injection, analytics-only consent, noindex headers on Studio pages, and sitemap state |
+| **Studio AdSense Isolation** | **PASS** | `test/e2e/studioAdIsolation.spec.ts` verifies zero active ad delivery/tracking requests and zero `ins.adsbygoogle` active components on `/remove`, `/recover`, `/asset`, and `/guide` |
+| **AdSense Public Connection** | **PASS** | `test/e2e/adsenseConnection.spec.ts` verifies presence of the `google-adsense-account` meta tag on public routes (`/`, `/guides`, `/about`, `/privacy`, `/terms`) but zero active advertisements or scripts |
+| **Static Compliance Audit** | **PASS** | `npm run check:adsense` validates verification meta tag, zero script injection, ads.txt exact content, analytics-only consent, noindex headers on Studio/Guide pages, and sitemap state |
 | **CMP / Consent Honesty** | **PASS** | `scripts/p0-ads-e2e-gate.mjs` audits `ConsentManager.tsx` and blocks false "Google-certified" claims |
 | **MP4 Pipeline E2E** | **PASS** | `test/e2e/mediaPipeline.spec.ts` uploads `green-screen-2s.mp4`, asserts frame extraction progress, processing, and download modal options |
 | **Recover Brush Controls** | **PASS** | `test/e2e/mediaPipeline.spec.ts` validates canvas interaction and brush size/opacity slider adjustments |
@@ -57,11 +57,20 @@ E2E tests use deterministic `data-testid` selectors to simulate complete, real-b
 - **Scenario H**: Uploads a text file to `/remove` and verifies that the application remains stable and displays an appropriate format warning modal.
 
 ### 2. `test/e2e/studioAdIsolation.spec.ts`
-- Intercepts outgoing network requests on `/remove`, `/recover`, and `/asset` routes to ensure no requests are made to DoubleClick or AdSense (excluding the static script fetch itself).
-- Verifies that the Google AdSense script (`googlesyndication.com/pagead/js/adsbygoogle.js`) exists exactly 1 time in the DOM on these routes (statically loaded).
-- Verifies that zero active Google ad slots (`.adsbygoogle`, `ins.adsbygoogle`) are present.
+- Intercepts outgoing network requests on `/remove`, `/recover`, `/asset`, and `/guide` routes to ensure no requests are made to DoubleClick or AdSense.
+- Verifies that the Google AdSense verification meta tag `google-adsense-account` exists exactly 1 time in the DOM on these routes.
+- Verifies that zero active Google ad slots (`.adsbygoogle`, `ins.adsbygoogle`) are present and no AdSense scripts are loaded.
 
 ### 3. `test/e2e/adsenseConnection.spec.ts`
-- Navigates to public-facing pages (`/`, `/guides`, `/about`, `/privacy`, `/terms`) and verifies the presence of the static Google AdSense script with publisher client ID `ca-pub-6406237368816995`.
-- Guarantees that zero active ad slots are rendered before approval, preventing policy violations.
+- Navigates to public-facing pages (`/`, `/guides`, `/about`, `/privacy`, `/terms`) and verifies the presence of the `google-adsense-account` meta tag with publisher ID `ca-pub-6406237368816995`.
+- Guarantees that zero active ad slots or scripts are rendered before approval, preventing policy violations.
+
+## 4. AdSense Site Verification
+
+- google-adsense-account meta tag: **PASS**
+- publisher ID match: **PASS**
+- ads.txt source: **PASS**
+- AdSense script before approval: **ABSENT**
+- active ad slots before approval: **ABSENT**
+- Studio ad network requests: **0**
 

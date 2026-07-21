@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTheme } from "../ThemeContext";
 import { useLanguage } from "../LanguageContext";
+import { SEO } from "../components/SEO";
 
 export default function GuidePage() {
   const { theme } = useTheme();
@@ -27,6 +28,11 @@ export default function GuidePage() {
     <div
       className={`h-full min-h-0 overflow-y-auto w-full ${isDark ? "bg-[#121212] text-white" : "bg-white text-gray-900"}`}
     >
+      <SEO
+        title={lang === "KR" ? "바나나컷 가이드" : lang === "EN" ? "BananaCut Guide" : "BananaCut ガイド"}
+        description={lang === "KR" ? "브라우저 기반 배경 제거 및 시퀀스 복구에 대한 가이드" : lang === "EN" ? "BananaCut Studio Workspace Guide" : "BananaCut ガ이드"}
+        noindex
+      />
       <div className="max-w-4xl mx-auto px-6 py-16 lg:py-24">
         <header className="mb-16 border-b pb-8 border-gray-200 dark:border-white/10">
           <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight mb-4">

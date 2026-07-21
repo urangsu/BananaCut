@@ -5,43 +5,27 @@ test.describe('BananaCut P0 E2E - AdSense Connection & Slot Absence Gate', () =>
   const publicRoutes = ['/', '/guides', '/about', '/privacy', '/terms'];
 
   for (const route of publicRoutes) {
-    test(`Verify AdSense static script presence and ad slot absence on ${route}`, async ({ page }) => {
-      // 1. Setup route interception to mock adsbygoogle.js and block actual ad-delivery / auto-ad configs
-      await page.route('**/*', (route) => {
-        const url = route.request().url();
-        if (url.includes('adsbygoogle.js')) {
-          // Fulfill with a simple mock that satisfies the script injection check but doesn't run dynamic ad insertion code
-          route.fulfill({
-            contentType: 'application/javascript',
-            body: 'window.adsbygoogle = window.adsbygoogle || [];'
-          });
-        } else if (
-          url.includes('googlesyndication.com') ||
-          url.includes('googleads') ||
-          url.includes('pagead') ||
-          url.includes('doubleclick.net')
-        ) {
-          route.abort();
-        } else {
-          route.continue();
-        }
-      });
-
-      // 2. Navigate to the public route
+    test(`Verify AdSense meta tag and slot/script absence on ${route}`, async ({ page }) => {
+      // 1. Navigate to the public route
       await page.goto(route);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
-      // 3. Assert that the static AdSense script is present in the DOM exactly 1 time (from index.html)
-      const adsenseScripts = page.locator('script[src*="googlesyndication.com/pagead/js/adsbygoogle.js"]');
-      await expect(adsenseScripts).toHaveCount(1);
+      // 2. Assert that google-adsense-account meta tag is exactly 1 and matches publisher ID
+      const accountMeta = page.locator('meta[name="google-adsense-account"]');
+      await expect(accountMeta).toHaveCount(1);
+      await expect(accountMeta).toHaveAttribute('content', 'ca-pub-6406237368816995');
 
-      // 4. Confirm that the script includes the correct publisher client ID
-      const scriptSrc = await adsenseScripts.getAttribute('src');
-      expect(scriptSrc).toContain('client=ca-pub-6406237368816995');
+      // 3. Assert that AdSense scripts are 0
+      const adsenseScripts = page.locator('script[src*="googlesyndication.com"], script[src*="adsbygoogle"]');
+      await expect(adsenseScripts).toHaveCount(0);
 
-      // 5. Assert that no active AdSlot components (ins.adsbygoogle or .adsbygoogle) are rendered on the page before approval
+      // 4. Assert that no active AdSlot components (ins.adsbygoogle or .adsbygoogle) are rendered
       const adSlots = page.locator('.adsbygoogle, ins.adsbygoogle');
       await expect(adSlots).toHaveCount(0);
+
+      // 5. Assert that no elements with data-ad-slot exist
+      const adSlotAttrs = page.locator('[data-ad-slot]');
+      await expect(adSlotAttrs).toHaveCount(0);
     });
   }
 });
