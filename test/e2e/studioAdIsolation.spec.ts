@@ -18,10 +18,6 @@ test.describe('BananaCut P0 E2E - Studio Ad Isolation Gate', () => {
           url.includes('pagead') ||
           url.includes('doubleclick.net')
         ) {
-          // Skip the main static script load itself as it is statically declared in index.html
-          if (url.includes('adsbygoogle.js')) {
-            return;
-          }
           adRequestDetected = true;
           adRequestUrl = url;
         }
@@ -34,11 +30,11 @@ test.describe('BananaCut P0 E2E - Studio Ad Isolation Gate', () => {
       // 3. Confirm that no active ad-delivery/tracking request was made
       expect(adRequestDetected, `AdSense/Ad network request was detected on Studio route ${route}: ${adRequestUrl}`).toBe(false);
 
-      // 4. Assert that the static AdSense script is present in the DOM exactly 1 time (from index.html)
+      // 4. Assert that no AdSense script is present on Studio routes
       const adsenseScripts = page.locator('script[src*="googlesyndication.com/pagead/js/adsbygoogle.js"]');
-      await expect(adsenseScripts).toHaveCount(1);
+      await expect(adsenseScripts).toHaveCount(0);
 
-      // 5. Assert that no active AdSlot components (e.g., .adsbygoogle) exist in the markup
+      // 5. Assert that no active AdSlot components exist in the markup
       const adSlots = page.locator('.adsbygoogle, ins.adsbygoogle');
       await expect(adSlots).toHaveCount(0);
     });
