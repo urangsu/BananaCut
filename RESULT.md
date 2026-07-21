@@ -1,76 +1,79 @@
-# BananaCut Release Gate Results (P0 Compliance)
+# RESULT
 
-This file tracks the verified results of the fail-safe automated release gate for BananaCut. Every status recorded here is backed by real, automated tests (Vitest unit tests and Playwright E2E tests) run via the release gate script.
+## 작업명
 
-## Automated Verification Command
-To run the full suite of static analysis, compiler checks, unit tests, and browser E2E tests locally:
-```bash
-npm run check:release
-```
+BananaCut AdSense Final GO Closure
 
----
+## 코드 판정
 
-## 1. Release Gate Summary
+PARTIAL (All Local Code Checks PASS, Live/Account settings pending verification)
 
-| Gate | Status | Verification Method |
-| :--- | :---: | :--- |
-| **Vite Production Build** | **PASS** | `npm run build` compiles without warnings or errors |
-| **TypeScript Static Linter** | **PASS** | `npm run lint` (`tsc --noEmit`) passes with zero type errors |
-| **Studio AdSense Isolation** | **PASS** | `test/e2e/studioAdIsolation.spec.ts` verifies zero active ad delivery/tracking requests and zero `ins.adsbygoogle` active components on `/remove`, `/recover`, `/asset`, and `/guide` |
-| **AdSense Public Connection** | **PASS** | `test/e2e/adsenseConnection.spec.ts` verifies presence of the `google-adsense-account` meta tag on public routes (`/`, `/guides`, `/about`, `/privacy`, `/terms`) but zero active advertisements or scripts |
-| **Static Compliance Audit** | **PASS** | `npm run check:adsense` validates verification meta tag, zero script injection, ads.txt exact content, analytics-only consent, noindex headers on Studio/Guide pages, and sitemap state |
-| **CMP / Consent Honesty** | **PASS** | `scripts/p0-ads-e2e-gate.mjs` audits `ConsentManager.tsx` and blocks false "Google-certified" claims |
-| **MP4 Pipeline E2E** | **PASS** | `test/e2e/mediaPipeline.spec.ts` uploads `green-screen-2s.mp4`, asserts frame extraction progress, processing, and download modal options |
-| **Recover Brush Controls** | **PASS** | `test/e2e/mediaPipeline.spec.ts` validates canvas interaction and brush size/opacity slider adjustments |
-| **Partial Export Blocking** | **PASS** | `test/finalResolver.test.ts` throws `FINAL_FRAME_UNAVAILABLE` when frames are dirty or unprocessed |
-| **Error Format Containment** | **PASS** | `test/e2e/mediaPipeline.spec.ts` verifies that uploading non-media (`invalid.txt`) triggers the warning modal gracefully without crashing the UI |
+## 사이트 인증
 
----
+- google-adsense-account meta tag: **PASS** (1 tag statically configured in index.html)
+- publisher ID: **PASS** (Matches ca-pub-6406237368816995 exactly)
+- AdSense script before approval: **ABSENT** (0 AdSense dynamic scripts injected or fetched)
+- active ad slot before approval: **ABSENT** (0 instances of `.adsbygoogle` or `ins.adsbygoogle` tags)
+- ads.txt source: **PASS** (Exactly 1 line seller entry matches publisher ca-pub-6406237368816995)
 
-## 2. Unit Test Suite (Vitest)
-Unit tests verify the core algorithmic invariants, state revisions, and pixel parity between main and worker threads.
+## SEO
 
-### 1. `test/finalResolver.test.ts` (7 / 7 Passed)
-- Correctly resolves recovered frame URL when revision hashes match and are clean.
-- Correctly returns chromakeyed frame URL when key parameters change but recovery mask is not dirty.
-- Safeguards partial exports by returning `null` when key states or recovery stroke layers are dirty.
-- Triggers `FINAL_FRAME_UNAVAILABLE` on invalid frames to block preflight.
+- /remove noindex: **PASS** (noindex attribute active)
+- /recover noindex: **PASS** (noindex attribute active)
+- /asset noindex: **PASS** (noindex attribute active)
+- /guide noindex: **PASS** (noindex attribute active)
+- public routes index,follow: **PASS** (index,follow explicitly configured)
+- sitemap Studio routes absent: **PASS** (Zero references to remove/recover/asset/guide in sitemap.xml)
+- robots SPA transition E2E: **PASS** (Verified with real DOM checking via seoRobots.spec.ts)
 
-### 2. `test/staleRecoverRevision.test.ts` (7 / 7 Passed)
-- Dynamically sets `keyDirty` and `recoverDirty` based on file mutations.
-- Generates fully deterministic and stable revision strings for chroma parameters and brush strokes.
-- Ensures identical inputs yield identical revisions across runs without relying on unsafe side effects (`Math.random` or `Date.now`).
+## Privacy
 
-### 3. `test/chromaCoreWrapperParity.test.ts` (7 / 7 Passed)
-- Validates the parameter contracts for `processKeyedFrame` and `KeyedFrameResult`.
-- Ensures memory safety by explicitly revoking outdated frame blob URLs.
-- Guarantees complete rendering pixel parity (0-pixel delta) between the main thread and background web workers.
+- 시행일: **PASS** (2026년 7월 21일 명시)
+- 최종 수정일: **PASS** (2026년 7월 21일 명시)
+- 문의 이메일: **PASS** (mailto:hello@bananacut.art 링크 제공)
+- Analytics 설명: **PASS** (완전 선택 제어 및 로컬 저장소 기록 방식 상세 설명)
+- Google AdSense 조건부 설명: **PASS** ("광고 서비스가 활성화되는 경우", "If advertising services are enabled", "広告サービスが有効になった場合" 조건부 번역 반영)
+- Google Privacy & messaging 설명: **PASS** (Google TCFv2 CMP와의 별개 규정 안내문 포함)
+- 사용자 설정 변경 방법: **PASS** (쿠키 변경, 구글 제어 메시지, 브라우저 수동 설정 방법 등 안내)
 
----
+## 자동검사
 
-## 3. Playwright Browser E2E Test Suite
-E2E tests use deterministic `data-testid` selectors to simulate complete, real-browser workflows on standard, clean routes.
+- npm run lint: **PASS** (tsc --noEmit passes completely)
+- npm run build: **PASS** (Compiles with zero errors or warnings)
+- npm run test:unit: **PASS** (All internal unit tests complete with zero errors)
+- npm run check:adsense: **PASS** (Custom static scanner validates all files)
+- npm run check:release: **PASS** (Local gate script validates and concludes clean local release state)
 
-### 1. `test/e2e/mediaPipeline.spec.ts`
-- **Scenario A & B**: Uploads `green-screen-2s.mp4`, verifies extraction progress, processes all 20 frames, and verifies that the Download modal opens with proper format options.
-- **Scenario C**: Navigates to `/recover`, verifies the presence of the drawing canvas, and modifies brush parameter sliders (size, opacity).
-- **Scenario H**: Uploads a text file to `/remove` and verifies that the application remains stable and displays an appropriate format warning modal.
+## 실배포
 
-### 2. `test/e2e/studioAdIsolation.spec.ts`
-- Intercepts outgoing network requests on `/remove`, `/recover`, `/asset`, and `/guide` routes to ensure no requests are made to DoubleClick or AdSense.
-- Verifies that the Google AdSense verification meta tag `google-adsense-account` exists exactly 1 time in the DOM on these routes.
-- Verifies that zero active Google ad slots (`.adsbygoogle`, `ins.adsbygoogle`) are present and no AdSense scripts are loaded.
+- npm run check:live:
+  **NOT RUN** (Pending deployment DNS propagation)
 
-### 3. `test/e2e/adsenseConnection.spec.ts`
-- Navigates to public-facing pages (`/`, `/guides`, `/about`, `/privacy`, `/terms`) and verifies the presence of the `google-adsense-account` meta tag with publisher ID `ca-pub-6406237368816995`.
-- Guarantees that zero active ad slots or scripts are rendered before approval, preventing policy violations.
+- root ads.txt:
+  **NOT VERIFIED** (Pending deployment verification)
 
-## 4. AdSense Site Verification
+- www ads.txt:
+  **NOT VERIFIED** (Pending deployment verification)
 
-- google-adsense-account meta tag: **PASS**
-- publisher ID match: **PASS**
-- ads.txt source: **PASS**
-- AdSense script before approval: **ABSENT**
-- active ad slots before approval: **ABSENT**
-- Studio ad network requests: **0**
+- live meta tag:
+  **NOT VERIFIED** (Pending deployment verification)
 
+## AdSense 계정 설정
+
+- Auto ads:
+  **ACCOUNT ACTION REQUIRED** (To be configured and checked manually by the user on the AdSense console)
+
+- Google Privacy & messaging:
+  **ACCOUNT ACTION REQUIRED** (To be configured and checked manually by the user on the AdSense console)
+
+## 최종 판정 규칙
+
+다음 중 하나라도 미확인이면 최종 판정은 PARTIAL이다.
+
+- check:live 미실행 (미실행 상태로 체크됨)
+- root ads.txt 미검증 (미검증 상태로 체크됨)
+- www ads.txt 미검증 (미검증 상태로 체크됨)
+- Auto ads 상태 미확인 (미확인 상태로 체크됨)
+- Google Privacy & messaging 미확인 (미확인 상태로 체크됨)
+
+코드 작업자는 계정 설정을 자의적으로 추측하여 PASS 처리하지 않고, 사용자가 직접 수동 확인한 경우에만 USER CONFIRMED로 변경 기록한다.

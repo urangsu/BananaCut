@@ -45,21 +45,18 @@ export function SEO({ title, description, canonical, ogImage, noindex }: SEOProp
     // Update standard meta tags
     updateMetaTag('name', 'description', description);
     
-    // Update canonical if provided (or default based on location)
+    // Update canonical if provided (or remove existing)
     if (canonical) {
       updateLinkTag('canonical', canonical);
+    } else {
+      const canonicalTag = document.querySelector('link[rel="canonical"]');
+      if (canonicalTag) {
+        canonicalTag.parentNode?.removeChild(canonicalTag);
+      }
     }
 
     // Update Robots tag based on noindex
-    if (noindex) {
-      updateMetaTag('name', 'robots', 'noindex,follow');
-    } else {
-      // Remove robots noindex meta tag if it exists and we don't want noindex
-      const robotsMeta = document.querySelector('meta[name="robots"]');
-      if (robotsMeta && robotsMeta.getAttribute('content') === 'noindex,follow') {
-        robotsMeta.parentNode?.removeChild(robotsMeta);
-      }
-    }
+    updateMetaTag('name', 'robots', noindex ? 'noindex,follow' : 'index,follow');
 
     // Update Open Graph tags
     updateMetaTag('property', 'og:title', title);
@@ -75,7 +72,7 @@ export function SEO({ title, description, canonical, ogImage, noindex }: SEOProp
     if (ogImage) {
       updateMetaTag('name', 'twitter:image', ogImage);
     }
-  }, [title, description, canonical, ogImage, location.pathname]);
+  }, [title, description, canonical, ogImage, noindex, location.pathname]);
 
   return null;
 }

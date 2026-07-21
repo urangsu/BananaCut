@@ -50,7 +50,8 @@ if (failure) {
   process.exit(1);
 } else {
   console.log('🎉 BANANACUT RELEASE GATE STATUS: PASSED (GO STATE)');
-  console.log('All compliance and functional pipelines are in absolute green!');
+  console.log('All automated local release checks passed.');
+  console.log('Live deployment and account-level AdSense settings require separate verification.');
   console.log('================================================================');
   process.exit(0);
 }
