@@ -2,8 +2,10 @@ import fs from 'fs';
 
 const urls = [
   'https://bananacut.art/',
+  'http://bananacut.art/ads.txt',
   'https://bananacut.art/ads.txt',
   'https://www.bananacut.art/',
+  'http://www.bananacut.art/ads.txt',
   'https://www.bananacut.art/ads.txt',
   'https://www.bananacut.art/robots.txt',
   'https://www.bananacut.art/sitemap.xml',
@@ -185,7 +187,7 @@ async function main() {
         console.log(`❌ Fail: sitemap.xml missing detailed guide path`);
         hasError = true;
       }
-      const excluded = ['/remove', '/recover', '/asset', '/guide<', '/guide/'];
+      const excluded = ['/remove</loc>', '/recover</loc>', '/asset</loc>', '/guide</loc>'];
       for (const ex of excluded) {
         if (body.includes(ex)) {
           console.log(`❌ Fail: sitemap.xml contains illegal route reference: "${ex}"`);

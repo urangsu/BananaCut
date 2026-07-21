@@ -53,8 +53,8 @@ export default function PrivacyPage() {
             <section>
               <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">1. 미디어 데이터 처리 (Media Data Processing)</h2>
               <p className="opacity-80">
-                BananaCut은 이미지와 비디오의 편집 처리를 사용자의 브라우저 안에서 완벽하게 수행합니다.
-                사용자의 원본 미디어 파일과 편집 결과물은 BananaCut 서버에 업로드하거나 절대 저장하지 않습니다.
+                BananaCut의 미디어 편집 처리는 사용자의 브라우저 안에서 진행됩니다.
+                원본 미디어 파일과 편집 결과물을 BananaCut 서버에 업로드하거나 저장하지 않습니다.
                 단, 분석, 광고, 피드백 폼, 후원 및 외부 링크 등 제3자 서비스는 사용자의 선택과 각 서비스의 정책에 따라 별도의 네트워크 통신을 수행할 수 있습니다.
               </p>
             </section>
@@ -63,9 +63,9 @@ export default function PrivacyPage() {
               <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">2. 구글 애널리틱스 (Google Analytics)</h2>
               <p className="opacity-80">
                 BananaCut은 사용자가 동의한 경우에만 서비스 이용 통계와 사용성 개선을 위해 Google Analytics를 사용할 수 있습니다.
-                분석 동의 여부는 전적으로 사용자의 선택 사항이며, 동의를 거부하더라도 BananaCut의 핵심 미디어 편집 기능은 아무런 제한 없이 무료로 사용하실 수 있습니다.
-                사용자의 동의 여부 상태는 브라우저의 로컬 저장소(localStorage)에 안전하게 기록되며, 하단의 ‘분석 및 개인정보 설정’ 메뉴를 통해 언제든지 자유롭게 설정을 변경하고 관리할 수 있습니다.
-                구글 애널리틱스로는 사용자의 원본 미디어나 프레임 바이너리 등의 데이터를 절대 전송하지 않습니다.
+                분석 기능에 동의하지 않아도 핵심 미디어 편집 기능을 사용할 수 있습니다.
+                분석 동의 상태는 사용자의 브라우저 로컬 저장소에 기록되며, 하단의 ‘분석 및 개인정보 설정’ 메뉴를 통해 언제든지 자유롭게 설정을 변경하고 관리할 수 있습니다.
+                BananaCut은 원본 미디어 파일이나 프레임 데이터를 Google Analytics 분석 이벤트로 전송하지 않습니다.
               </p>
             </section>
 
@@ -80,11 +80,10 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">4. Google Privacy & messaging 규정 준수</h2>
+              <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">4. Google Privacy & messaging 및 Google 인증 CMP 역할 구분</h2>
               <p className="opacity-80">
-                관련 법령이 적용되는 지역에서는 Google Privacy & messaging 시스템을 통해 광고 및 관련 쿠키 동의를 수집하기 위한 공식 선택 화면이 제공될 수 있습니다.
-                구글의 공식 광고 동의 화면과 BananaCut 내부의 분석 설정은 서로 완전히 독립된 기능입니다.
-                BananaCut 자체 분석 설정창은 Google의 공식 인증 CMP(동의 관리 플랫폼)를 대체하지 않습니다.
+                관련 법령이 적용되는 지역에서는 Google Privacy & messaging 시스템 및 Google 인증 동의 관리 플랫폼(CMP)을 통해 광고 및 관련 쿠키 동의를 수집하기 위한 공식 선택 화면이 제공될 수 있습니다.
+                구글의 공식 광고 동의 화면과 BananaCut Analytics 자체 설정은 서로 완전히 독립된 기능이며, 당사 자체의 분석 설정창은 Google의 공식 인증 CMP를 대체하지 않고 각각 독자적인 역할로 구분되어 작동합니다.
               </p>
             </section>
 
@@ -122,8 +121,8 @@ export default function PrivacyPage() {
             <section>
               <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">1. Media Data Processing</h2>
               <p className="opacity-80">
-                BananaCut processes images and videos entirely inside your web browser. 
-                Your original media files and editing outputs are never uploaded to or stored on BananaCut servers. 
+                BananaCut's media editing processing runs in your web browser. 
+                Your original media files and editing outputs are not uploaded to or stored on BananaCut servers. 
                 However, third-party services such as analytics, ads, feedback forms, sponsorships, and external links may perform separate network communications based on your choices and their respective policies.
               </p>
             </section>
@@ -132,9 +131,9 @@ export default function PrivacyPage() {
               <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">2. Google Analytics</h2>
               <p className="opacity-80">
                 BananaCut may use Google Analytics to gather service usage statistics and improve usability, only if you provide your consent.
-                Analytics consent is strictly optional, and you can still use the core video editing tools of BananaCut for free even if you decline.
-                Your consent state is stored securely in your browser's local storage (localStorage) and can be modified or withdrawn at any time via the "Analytics & Privacy Settings" link at the bottom of our page.
-                We never transmit your raw media files or editing frames to Google Analytics.
+                You can still use the core video editing tools of BananaCut for free even if you decline analytics.
+                Your consent state is recorded in your browser's local storage (localStorage) and can be modified or withdrawn at any time via the "Analytics & Privacy Settings" link at the bottom of our page.
+                BananaCut does not transmit your original media files or frame data as Google Analytics analysis events.
               </p>
             </section>
 
@@ -149,11 +148,10 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">4. Google Privacy & messaging Compliance</h2>
+              <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">4. Google Privacy & messaging & Google-certified CMP Role Distinction</h2>
               <p className="opacity-80">
-                In regions where relevant legal regulations apply, an official consent screen may be presented via Google Privacy & messaging to collect choices regarding advertisements and related cookies.
-                Google's official advertisement consent screen and BananaCut's local analytics preferences are completely separate.
-                BananaCut's local analytics settings modal does not replace or serve as a Google-certified Consent Management Platform (CMP).
+                In regions where relevant legal regulations apply, an official consent screen may be presented via Google Privacy & messaging and Google-certified Consent Management Platforms (CMP) to collect choices regarding advertisements and cookies.
+                Google's official advertisement consent screen and BananaCut Analytics settings are completely independent, and our local settings panel does not replace any Google-certified CMP, operating as distinct functionalities with separate roles.
               </p>
             </section>
 
@@ -191,8 +189,8 @@ export default function PrivacyPage() {
             <section>
               <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">1. メディアデータ処理</h2>
               <p className="opacity-80">
-                BananaCutは、画像および動画の編集処理を完全にユーザーのウェブブラウザ上で行います。
-                ユーザーの元のメディアファイルや編集した結果がBananaCutのサーバーに送信、保存されることは一切ありません。
+                BananaCutのメディア編集処理はユーザーのウェブブラウザ上で行われます。
+                ユーザーの元のメディアファイルや編集した結果がBananaCutのサーバーに送信、保存されることはありません。
                 ただし、分析、広告、フィードバックフォーム、スポンサーシップ、外部リンクなどの第三者サービスは、ユーザーの選択や各ポリシーに基づき、別途ネットワーク通信を行う場合があります。
               </p>
             </section>
@@ -201,9 +199,9 @@ export default function PrivacyPage() {
               <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">2. Google アナリティクス</h2>
               <p className="opacity-80">
                 BananaCutは、お客様が同意された場合に限り、サービス統計収集や改善のためにGoogleアナリティクスを使用することがあります。
-                アナリティクスへの同意は完全に任意であり、同意を拒否した場合でもBananaCutのコアな画像・動画編集機能は完全に無制限、かつ無料でご利用いただけます。
-                同意ステータスはブラウザのローカルストレージ(localStorage)に安全に記録され、フッターにある「分析および個人情報設定」からいつでも自由に変更できます。
-                元のメディアデータや画像フレームがGoogleアナリティクスに送信されることは一切ありません。
+                アナリティクスへの同意を行わない場合でも、BananaCutのコアな画像・動画編集機能は無料でご利用いただけます。
+                同意ステータスはブラウザのローカルストレージ(localStorage)に記録され、フッターにある「分析および個人情報設定」からいつでも自由に変更できます。
+                元のメディアファイルや画像フレームデータがGoogleアナリティクスの分析イベントとして送信されることはありません。
               </p>
             </section>
 
@@ -211,18 +209,17 @@ export default function PrivacyPage() {
               <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">3. Google アドセンスおよび広告設定</h2>
               <p className="opacity-80">
                 BananaCutは、サービス運営をサポートするためにGoogle AdSenseサイト所有権確認メタタグ機能を使用することがあります。
-                将来的に広告サービスが有効になった場合、Googleおよび第三者配信事業者は、広告配信、効果測定、不正防止のためにCookieや類似の技術を使用する場合があります。
+                広告サービスが有効になった場合、Googleおよび第三者配信事業者は、広告配信、効果測定、不正防止のためにCookieや類似の技術を使用する場合があります。
                 EEA、英国、スイスなどの規制対象地域での広告同意は、Google Privacy & messagingシステムまたはGoogle認定の同意管理プラットフォーム(CMP)を通じて収集および管理されます。
                 ユーザーは、<a href="https://myadcenter.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">Google 広告設定</a>、またはブラウザのCookie設定から、パーソナライズ広告とCookieの使用を制御またはオプトアウトできます。
               </p>
             </section>
 
             <section>
-              <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">4. Google Privacy & messagingの準拠</h2>
+              <h2 className="font-bold text-xl mb-3 text-blue-500 dark:text-blue-400">4. Google Privacy & messagingおよびGoogle認定CMPの役割区分</h2>
               <p className="opacity-80">
-                適用可能な法律が導入されている地域では、広告および関連Cookieに対する選択を提供する目的で、Google Privacy & messaging経由の公式同意画面が提供される場合があります。
-                Googleの公式広告同意画面と、BananaCutローカルの分析および個人情報設定は、完全に別の機能として独立しています。
-                BananaCutローカルの分析設定モーダルは、Google認定のCMP（同意管理プラットフォーム）を代替するものではありません。
+                関連規制が適用される地域では、広告やCookieに関する選択を提供するため、Google Privacy & messagingおよびGoogle認定の同意管理プラットフォーム（CMP）経由で公式な同意画面が表示される場合があります。
+                Googleの公式広告同意画面と、BananaCutのローカルAnalytics設定は完全に独立した別々の機能として動作し、独自の役割に区分して構成されています。
               </p>
             </section>
 

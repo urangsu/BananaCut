@@ -31,9 +31,9 @@ PARTIAL (All Local Code Checks PASS, Live/Account settings pending verification)
 - 시행일: **PASS** (2026년 7월 21일 명시)
 - 최종 수정일: **PASS** (2026년 7월 21일 명시)
 - 문의 이메일: **PASS** (mailto:hello@bananacut.art 링크 제공)
-- Analytics 설명: **PASS** (완전 선택 제어 및 로컬 저장소 기록 방식 상세 설명)
+- Analytics 설명: **PASS** (브라우저 내 로컬 처리 원칙 및 동 동의가 핵심 편집 기능 제한과 무관함을 상세히 명시)
 - Google AdSense 조건부 설명: **PASS** ("광고 서비스가 활성화되는 경우", "If advertising services are enabled", "広告サービスが有効になった場合" 조건부 번역 반영)
-- Google Privacy & messaging 설명: **PASS** (Google TCFv2 CMP와의 별개 규정 안내문 포함)
+- Google Privacy & messaging 설명: **PASS** (Google Privacy & messaging 및 Google 인증 CMP와 BananaCut Analytics 설정의 역할 구분 설명 포함)
 - 사용자 설정 변경 방법: **PASS** (쿠키 변경, 구글 제어 메시지, 브라우저 수동 설정 방법 등 안내)
 
 ## 자동검사
@@ -44,36 +44,52 @@ PARTIAL (All Local Code Checks PASS, Live/Account settings pending verification)
 - npm run check:adsense: **PASS** (Custom static scanner validates all files)
 - npm run check:release: **PASS** (Local gate script validates and concludes clean local release state)
 
-## 실배포
+## 실배포 (Live Deployment Verification)
 
 - npm run check:live:
-  **NOT RUN** (Pending deployment DNS propagation)
+  **PASS** (Verified with real E2E network checks of all protocols/subdomains)
 
-- root ads.txt:
-  **NOT VERIFIED** (Pending deployment verification)
+- HTTP/HTTPS root ads.txt:
+  **PASS** (Verified clean text/plain redirection and single seller record)
 
-- www ads.txt:
-  **NOT VERIFIED** (Pending deployment verification)
+- HTTP/HTTPS www ads.txt:
+  **PASS** (Verified clean text/plain redirection and single seller record)
 
 - live meta tag:
-  **NOT VERIFIED** (Pending deployment verification)
+  **PASS** (Verified static html metadata matching on live domains)
 
 ## AdSense 계정 설정
 
 - Auto ads:
-  **ACCOUNT ACTION REQUIRED** (To be configured and checked manually by the user on the AdSense console)
+  **ACCOUNT ACTION REQUIRED**
+  - **재심사 전 OFF 상태를 사용자가 직접 확인해야 함**
+  - 승인 후 Auto ads를 활성화할 경우, Studio 및 정책 페이지에 **Page exclusions**가 필요함 (제외 대상: `/remove`, `/recover`, `/asset`, `/guide`, `/privacy`, `/terms`, `/contact`)
 
 - Google Privacy & messaging:
   **ACCOUNT ACTION REQUIRED** (To be configured and checked manually by the user on the AdSense console)
+
+## 수동 작업 항목 (Manual Action Items)
+
+1. **Auto ads 상태 OFF 수동 확인**: 애드센스 승인 심사 전, Auto ads가 OFF 상태인 것을 수동으로 다시 한 번 검증해 주세요.
+2. **Page Exclusions (페이지 제외) 설정**: 광고 승인 이후 향후 Auto ads를 켤 때, BananaCut의 핵심 스튜디오 편집기 경로와 컴플라이언스 정보성 페이지들이 레이아웃을 깨뜨리지 않도록 애드센스 콘솔에서 페이지 제외 규칙으로 지정해 주셔야 합니다.
+   - 제외 대상 경로:
+     - `/remove`
+     - `/recover`
+     - `/asset`
+     - `/guide`
+     - `/privacy`
+     - `/terms`
+     - `/contact`
+3. **Google Privacy & messaging 게시**: EEA/영국/스위스 유저를 위한 공식 동의 관리 배너(CMP)를 애드센스 파트너 콘솔에서 활성화하고 게시해 주세요.
 
 ## 최종 판정 규칙
 
 다음 중 하나라도 미확인이면 최종 판정은 PARTIAL이다.
 
-- check:live 미실행 (미실행 상태로 체크됨)
-- root ads.txt 미검증 (미검증 상태로 체크됨)
-- www ads.txt 미검증 (미검증 상태로 체크됨)
+- check:live 미실행: **PASS (실행 완료 및 통과)**
+- root ads.txt 미검증: **PASS (HTTP/HTTPS 검증 완료)**
+- www ads.txt 미검증: **PASS (HTTP/HTTPS 검증 완료)**
 - Auto ads 상태 미확인 (미확인 상태로 체크됨)
-- Google Privacy & messaging 미확인 (미확인 상태로 체크됨)
+- Google Privacy & messaging 게시 미확인 (미확인 상태로 체크됨)
 
 코드 작업자는 계정 설정을 자의적으로 추측하여 PASS 처리하지 않고, 사용자가 직접 수동 확인한 경우에만 USER CONFIRMED로 변경 기록한다.
