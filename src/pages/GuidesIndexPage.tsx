@@ -4,7 +4,6 @@ import { useTheme } from '../ThemeContext';
 import { BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SEO } from '../components/SEO';
-import { AdSlot } from '../components/ads/AdSlot';
 
 export default function GuidesIndexPage() {
   const { lang } = useLanguage();
@@ -70,9 +69,6 @@ export default function GuidesIndexPage() {
             </p>
           </Link>
         </div>
-
-        <AdSlot slotId="4567890123" className="mt-12" />
-
       </div>
     </div>
   );

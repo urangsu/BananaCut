@@ -6,9 +6,10 @@ interface SEOProps {
   description: string;
   canonical?: string;
   ogImage?: string;
+  noindex?: boolean;
 }
 
-export function SEO({ title, description, canonical, ogImage }: SEOProps) {
+export function SEO({ title, description, canonical, ogImage, noindex }: SEOProps) {
   const location = useLocation();
 
   useEffect(() => {
@@ -47,6 +48,17 @@ export function SEO({ title, description, canonical, ogImage }: SEOProps) {
     // Update canonical if provided (or default based on location)
     if (canonical) {
       updateLinkTag('canonical', canonical);
+    }
+
+    // Update Robots tag based on noindex
+    if (noindex) {
+      updateMetaTag('name', 'robots', 'noindex,follow');
+    } else {
+      // Remove robots noindex meta tag if it exists and we don't want noindex
+      const robotsMeta = document.querySelector('meta[name="robots"]');
+      if (robotsMeta && robotsMeta.getAttribute('content') === 'noindex,follow') {
+        robotsMeta.parentNode?.removeChild(robotsMeta);
+      }
     }
 
     // Update Open Graph tags

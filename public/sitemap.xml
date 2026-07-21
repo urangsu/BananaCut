@@ -5,18 +5,6 @@
     <changefreq>weekly</changefreq>
   </url>
   <url>
-    <loc>https://www.bananacut.art/remove</loc>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
-    <loc>https://www.bananacut.art/recover</loc>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
-    <loc>https://www.bananacut.art/asset</loc>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
     <loc>https://www.bananacut.art/guide</loc>
     <changefreq>monthly</changefreq>
   </url>

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, Download, Loader2, ZoomIn, ZoomOut, Paintbrush, SquareDashed, Trash2, Eraser, Undo2, Redo2, Eye, ShieldAlert } from 'lucide-react';
 import JSZip from 'jszip';
 import { useLanguage } from '../LanguageContext';
+import { SEO } from '../components/SEO';
 import { useBatchJob } from '../hooks/useBatchJob';
 import { useTheme } from '../ThemeContext';
 import { useStudio, StudioFrame } from '../StudioContext';
@@ -827,6 +828,7 @@ export default function RecoverPage() {
 
   return (
     <div id="recover_page_root" className={`h-full min-h-0 overflow-y-auto w-full max-w-6xl mx-auto p-4 md:p-8 flex flex-col ${textPrimary}`}>
+      <SEO title="Precision Recovery | BananaCut" description="Precision Recovery Studio." noindex />
       
       {/* Header */}
       <header className={`hidden lg:flex mb-8 border-b pb-6 shrink-0 justify-between items-end ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>

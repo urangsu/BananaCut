@@ -11,7 +11,6 @@ export const ConsentManager: React.FC = () => {
 
   const [isManaging, setIsManaging] = useState(false);
   const [localAnalytics, setLocalAnalytics] = useState(consent.analytics);
-  const [localAds, setLocalAds] = useState(consent.ads);
 
   // If user has already responded and we aren't explicitly requested to show CMP, don't show it
   if (hasPrompted && !showCMP) {
@@ -20,8 +19,7 @@ export const ConsentManager: React.FC = () => {
 
   const handleSave = () => {
     saveConsent({
-      analytics: localAnalytics,
-      ads: localAds
+      analytics: localAnalytics
     });
     setIsManaging(false);
     setShowCMP(false);
@@ -29,14 +27,14 @@ export const ConsentManager: React.FC = () => {
 
   const texts = {
     title: {
-      KR: '쿠키 및 개인정보 설정',
-      EN: 'Cookie & Privacy Settings',
-      JP: 'Cookie・プライバシー設定'
+      KR: '분석 및 개인정보 설정',
+      EN: 'Analytics & Privacy Settings',
+      JP: '分析・プライバシー設定'
     },
     desc: {
-      KR: 'BananaCut은 미디어 파일을 서버에 업로드하거나 저장하지 않습니다. 분석 및 광고 기능은 선택한 동의 설정에 따라 활성화될 수 있습니다. 설정은 언제든 변경할 수 있습니다.',
-      EN: 'BananaCut does not upload or store your media files. Analytics and advertising features may be enabled based on your consent choices. You can change these settings at any time.',
-      JP: 'BananaCutは個人のメディアやデータをサーバーにアップロードしません。統計分析および広告表示のためにクッキーを使用する場合があります。設定はいつでも変更できます。'
+      KR: 'BananaCut은 원본 미디어 파일을 서버에 업로드하거나 저장하지 않습니다.\n선택적 분석 기능은 사용자의 설정에 따라 활성화됩니다.\n광고 관련 동의는 Google의 개인정보 메시지에서 별도로 관리됩니다.',
+      EN: 'BananaCut does not upload or store your original media files. Optional analytics functions are enabled based on your consent settings. Advertising-related consent is managed separately via Google\'s privacy message.',
+      JP: 'BananaCutは元のメディアファイルをサーバーにアップロードまたは保存しません。\nオプションの分析機能は、ユーザーの同意設定に基づいて有効になります。\n広告関連の同意は、Googleのプライバシーメッセージを介して別途管理されます。'
     },
     analyticsTitle: {
       KR: '분석용 쿠키 (Google Analytics)',
@@ -47,16 +45,6 @@ export const ConsentManager: React.FC = () => {
       KR: '방문 페이지 분석 및 사용성 개선 목적으로 데이터를 전송합니다.',
       EN: 'Anonymously tracks usage statistics to help us optimize performance and tools.',
       JP: '訪問データの統計的分析およびサービス改善の目的で使用されます。'
-    },
-    adsTitle: {
-      KR: '맞춤형 광고용 쿠키 (Google AdSense)',
-      EN: 'Advertising & Marketing (Google AdSense)',
-      JP: '広告用クッキー (Google AdSense)'
-    },
-    adsDesc: {
-      KR: '개인 맞춤형 또는 기본 광고 표시를 위해 쿠키를 활성화합니다.',
-      EN: 'Allows showing relevant or context-based Google ads to support free servers.',
-      JP: 'お客様に最適な広告を表示したり、無料サーバーを維持するための広告クッキー。'
     },
     acceptAllBtn: {
       KR: '모두 동의',
@@ -123,25 +111,6 @@ export const ConsentManager: React.FC = () => {
               >
                 <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                   localAnalytics ? 'translate-x-5' : 'translate-x-0'
-                }`} />
-              </button>
-            </div>
-
-            {/* Ads Toggle */}
-            <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-              <div className="flex-1">
-                <h4 className="text-xs font-bold">{t('adsTitle')}</h4>
-                <p className="text-[10px] opacity-60 mt-0.5">{t('adsDesc')}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setLocalAds(!localAds)}
-                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  localAds ? 'bg-blue-500' : 'bg-gray-300 dark:bg-white/10'
-                }`}
-              >
-                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  localAds ? 'translate-x-5' : 'translate-x-0'
                 }`} />
               </button>
             </div>

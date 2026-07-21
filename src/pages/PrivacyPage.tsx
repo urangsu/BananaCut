@@ -31,13 +31,12 @@ export default function PrivacyPage() {
             </section>
             
             <section>
-              <h2 className="font-bold text-xl mb-4">2. 쿠키 및 제3자 광고</h2>
+              <h2 className="font-bold text-xl mb-4">2. 쿠키 및 제3자 광고 (Google AdSense)</h2>
               <p className="opacity-80">
-                BananaCut은 서비스 운영, 통계 분석, 광고 송출을 위해 쿠키를 사용할 수 있습니다.<br/>
-                Google을 포함한 제3자 공급업체는 쿠키를 사용하여 본 웹사이트나 다른 웹사이트에서의 이전 방문 기록을 기반으로 광고를 게재할 수 있습니다.<br/>
-                Google은 광고 쿠키를 사용하여 사용자의 웹사이트 방문 기록을 바탕으로 맞춤 광고를 제공할 수 있습니다.<br/>
-                사용자는 <a href="https://myadcenter.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">Google 광고 설정</a>에서 맞춤 광고를 관리할 수 있습니다.<br/>
-                해당되는 경우, 다른 제3자 공급업체나 광고 네트워크 또한 쿠키를 사용할 수 있습니다.
+                BananaCut은 서비스 제공, 이용 통계 분석 및 맞춤형 광고 게재(Google AdSense 등)를 위해 쿠키를 사용합니다.<br/>
+                Google을 포함한 제3자 공급업체는 쿠키를 사용하여 사용자가 본 웹사이트 또는 다른 웹사이트를 이전 방문한 기록을 기반으로 광고를 게재합니다.<br/>
+                Google의 광고 쿠키 사용을 통해 Google 및 그 파트너는 사용자의 본 웹사이트 및/또는 인터넷상의 다른 웹사이트 방문 기록을 기반으로 맞춤형 광고를 제공할 수 있습니다.<br/>
+                사용자는 <a href="https://myadcenter.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">Google 광고 설정</a>을 방문하여 맞춤설정 광고를 관리하거나 거부할 수 있으며, <a href="https://www.aboutads.info/choices" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">www.aboutads.info</a>를 방문하여 제3자 공급업체의 맞춤형 광고 쿠키 사용을 거부할 수도 있습니다.
               </p>
             </section>
             
@@ -56,13 +55,12 @@ export default function PrivacyPage() {
             </section>
             
             <section>
-              <h2 className="font-bold text-xl mb-4">2. Cookies and Third-Party Ads</h2>
+              <h2 className="font-bold text-xl mb-4">2. Cookies and Third-Party Ads (Google AdSense)</h2>
               <p className="opacity-80">
-                BananaCut may use cookies or similar technologies for service operation, analytics, and advertising.<br/>
-                Third-party vendors, including Google, use cookies to serve ads based on a user's prior visits to this website or other websites.<br/>
-                Google's use of advertising cookies enables it and its partners to serve ads to users based on their visit to your sites and/or other sites on the Internet.<br/>
-                Users may opt out of personalized advertising by visiting <a href="https://myadcenter.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">Google Ads Settings</a>.<br/>
-                If applicable, other third-party vendors or ad networks may also use cookies to serve ads.
+                BananaCut uses cookies for service operation, usage analytics, and delivering personalized advertising through Google AdSense and other third-party networks.<br/>
+                Third-party vendors, including Google, use cookies to serve ads based on a user's prior visits to this website or other websites on the Internet.<br/>
+                Google's use of advertising cookies enables it and its partners to serve ads to users based on their visits to this site and/or other sites on the Internet.<br/>
+                Users may opt out of personalized advertising by visiting <a href="https://myadcenter.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">Google Ads Settings</a>. Alternatively, users can opt out of a third-party vendor's use of cookies for personalized advertising by visiting <a href="https://www.aboutads.info/choices" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">www.aboutads.info/choices</a>.
               </p>
             </section>
             
@@ -81,13 +79,12 @@ export default function PrivacyPage() {
             </section>
             
             <section>
-              <h2 className="font-bold text-xl mb-4">2. クッキーと第三者広告</h2>
+              <h2 className="font-bold text-xl mb-4">2. クッキーと第三者広告 (Google AdSense)</h2>
               <p className="opacity-80">
-                BananaCutは、サービスの運営、分析、および広告配信のためにクッキーを使用する場合があります。<br/>
+                BananaCutは、サービスの提供、統計分析、およびGoogle AdSenseなどのパーソナライズ広告の配信のためにクッキーを使用します。<br/>
                 Googleを含む第三者配信事業者は、ユーザーが過去に本ウェブサイトや他のウェブサイトにアクセスした際の情報に基づいて、クッキーを使用して広告を配信します。<br/>
                 Googleが広告クッキーを使用することにより、ユーザーがウェブサイトにアクセスした際の情報に基づいて、Googleやそのパートナーが適切な広告をユーザーに表示できます。<br/>
-                ユーザーは、<a href="https://myadcenter.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">Google 広告設定</a>にアクセスして、パーソナライズ広告を無効にできます。<br/>
-                該当する場合、他の第三者配信事業者や広告ネットワークもクッキーを使用する可能性があります。
+                ユーザーは、<a href="https://myadcenter.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">Google 広告設定</a>にアクセスしてパーソナライズ広告を無効にするか、または <a href="https://www.aboutads.info/choices" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">www.aboutads.info/choices</a> にアクセスして、第三者配信事業者がパーソナライズ広告にクッキーを使用することを無効にできます。
               </p>
             </section>
             

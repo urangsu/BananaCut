@@ -1,10 +1,9 @@
 import { execSync } from 'child_process';
-import { readFileSync, existsSync, readdirSync } from 'fs';
-import path from 'path';
+import { existsSync } from 'fs';
 
-console.log('==================================================');
-console.log('   BananaCut P0 Release Gate & Ad Isolation Audit ');
-console.log('==================================================\n');
+console.log('================================================================');
+console.log('       BananaCut P0 Release Gate & AdSense Review pipeline      ');
+console.log('================================================================\n');
 
 let failure = false;
 
@@ -17,99 +16,41 @@ function pass(msg) {
   console.log(`✅ PASS: ${msg}`);
 }
 
-// 1. Audit AdSense Isolation in Studio Pages
-console.log('--- Step 1: Auditing AdSense Studio Isolation ---');
-const studioPages = [
-  'RemovePage.tsx',
-  'RecoverPage.tsx',
-  'AssetPage.tsx',
-  'GuidePage.tsx'
-];
-
-for (const file of studioPages) {
-  const filePath = path.join('src/pages', file);
-  if (existsSync(filePath)) {
-    const content = readFileSync(filePath, 'utf8');
-    if (content.includes('adsbygoogle') || content.includes('googlesyndication.com') || content.includes('googleads')) {
-      fail(`AdSense references detected inside Studio route page: ${filePath}`);
-    } else {
-      pass(`No AdSense leaks found in ${file}`);
-    }
-  } else {
-    fail(`Studio page missing: ${filePath}`);
+function runStage(name, cmd) {
+  console.log(`\n--- Running Stage: ${name} (${cmd}) ---`);
+  try {
+    execSync(cmd, { stdio: 'inherit' });
+    pass(`${name} completed successfully.`);
+  } catch (e) {
+    fail(`${name} execution failed.`);
   }
 }
 
-// 2. Audit CMP / Cookie Consent Labels
-console.log('\n--- Step 2: Checking CMP / Consent Verification ---');
-const consentManagerPath = 'src/components/ConsentManager.tsx';
-if (existsSync(consentManagerPath)) {
-  const content = readFileSync(consentManagerPath, 'utf8');
-  if (content.includes('Google-certified') || content.includes('IAB TCF') || content.includes('IAB Certified')) {
-    fail(`Uncertified CMP marketing claims found in ${consentManagerPath}`);
-  } else {
-    pass(`ConsentManager displays honest labels and lacks uncertified CMP claims.`);
-  }
-} else {
-  fail(`ConsentManager component missing at ${consentManagerPath}`);
-}
+// 1. Lint checks
+runStage('TypeScript Linter', 'npm run lint');
 
-// 3. Verify Test Fixtures exist
-console.log('\n--- Step 3: Verifying Test Fixtures ---');
-const requiredFixtures = [
-  'test/fixtures/green-screen-2s.mp4',
-  'test/fixtures/green-screen.png',
-  'test/fixtures/FIXTURES.md'
-];
+// 2. Production compilation check
+runStage('Production Compilation', 'npm run build');
 
-for (const fix of requiredFixtures) {
-  if (existsSync(fix)) {
-    pass(`Fixture exists: ${fix}`);
-  } else {
-    fail(`Required test fixture missing: ${fix}`);
-  }
-}
+// 3. AdSense specific static auditing
+runStage('AdSense Compliance Audit', 'npm run check:adsense');
 
-// 4. Run TypeScript Compiler Checks (Linter)
-console.log('\n--- Step 4: Running TypeScript Linter ---');
-try {
-  console.log('Running: npm run lint...');
-  execSync('npm run lint', { stdio: 'inherit' });
-  pass('TypeScript compilation checks passed.');
-} catch (e) {
-  fail('TypeScript compiler errors detected.');
-}
+// 4. Unit tests
+runStage('Unit Tests', 'npm run test:unit');
 
-// 5. Run Vitest Unit Tests
-console.log('\n--- Step 5: Running Unit Tests ---');
-try {
-  console.log('Running: npm run test:unit...');
-  execSync('npm run test:unit', { stdio: 'inherit' });
-  pass('All Vitest unit tests passed.');
-} catch (e) {
-  fail('Unit tests failed.');
-}
+// 5. Playwright E2E Tests
+runStage('Playwright E2E Tests', 'npm run test:e2e');
 
-// 6. Run Playwright E2E Tests
-console.log('\n--- Step 6: Running Playwright E2E Tests ---');
-try {
-  console.log('Running: npm run test:e2e...');
-  execSync('npm run test:e2e', { stdio: 'inherit' });
-  pass('All Playwright E2E tests passed.');
-} catch (e) {
-  fail('Playwright E2E tests failed.');
-}
-
-// 7. Overall Evaluation
-console.log('\n==================================================');
+// 6. Overall Evaluation
+console.log('\n================================================================');
 if (failure) {
-  console.error('❌ RELEASE GATE STATUS: FAILED');
-  console.error('Please fix all outstanding issues before releasing.');
-  console.log('==================================================');
+  console.error('❌ BANANACUT RELEASE GATE STATUS: FAILED');
+  console.error('Please resolve any failing checks above before requesting final review.');
+  console.log('================================================================');
   process.exit(1);
 } else {
-  console.log('🎉 RELEASE GATE STATUS: PASSED');
-  console.log('The application is fully compliant for production release.');
-  console.log('==================================================');
+  console.log('🎉 BANANACUT RELEASE GATE STATUS: PASSED (GO STATE)');
+  console.log('All compliance and functional pipelines are in absolute green!');
+  console.log('================================================================');
   process.exit(0);
 }

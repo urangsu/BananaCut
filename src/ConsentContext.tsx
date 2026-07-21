@@ -3,7 +3,6 @@ import { initGA, setAnalyticsEnabled } from './lib/analytics';
 
 export type ConsentState = {
   analytics: boolean;
-  ads: boolean;
 };
 
 interface ConsentContextType {
@@ -18,32 +17,41 @@ interface ConsentContextType {
 
 const ConsentContext = createContext<ConsentContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = 'bananacut_consent_v1';
+const LOCAL_STORAGE_KEY = 'bananacut_analytics_consent_v2';
+const LEGACY_STORAGE_KEY = 'bananacut_consent_v1';
 
-function parseStoredConsent(value: string | null): ConsentState {
-  if (!value) {
-    return { analytics: false, ads: false };
+function parseStoredConsent(): ConsentState {
+  const storedV2 = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (storedV2) {
+    try {
+      const parsed = JSON.parse(storedV2);
+      return { analytics: parsed?.analytics === true };
+    } catch {
+      return { analytics: false };
+    }
   }
 
-  try {
-    const parsed = JSON.parse(value);
-    return {
-      analytics: parsed?.analytics === true,
-      ads: parsed?.ads === true
-    };
-  } catch {
-    return { analytics: false, ads: false };
+  // Migrate legacy
+  const storedV1 = localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (storedV1) {
+    try {
+      const parsed = JSON.parse(storedV1);
+      return { analytics: parsed?.analytics === true };
+    } catch {
+      return { analytics: false };
+    }
   }
+
+  return { analytics: false };
 }
 
 export function ConsentProvider({ children }: { children: React.ReactNode }) {
   const [consent, setConsentState] = useState<ConsentState>(() => {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    return parseStoredConsent(stored);
+    return parseStoredConsent();
   });
 
   const [hasPrompted, setHasPrompted] = useState<boolean>(() => {
-    return localStorage.getItem(LOCAL_STORAGE_KEY) !== null;
+    return localStorage.getItem(LOCAL_STORAGE_KEY) !== null || localStorage.getItem(LEGACY_STORAGE_KEY) !== null;
   });
 
   const [showCMP, setShowCMP] = useState(false);
@@ -54,10 +62,7 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
     const gtags = (window as any).gtag;
     if (gtags) {
       gtags('consent', 'update', {
-        ad_storage: consent.ads ? 'granted' : 'denied',
         analytics_storage: consent.analytics ? 'granted' : 'denied',
-        ad_user_data: consent.ads ? 'granted' : 'denied',
-        ad_personalization: consent.ads ? 'granted' : 'denied',
       });
     }
 
@@ -74,14 +79,14 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
   }, [consent]);
 
   const acceptAll = () => {
-    const newState = { analytics: true, ads: true };
+    const newState = { analytics: true };
     setConsentState(newState);
     setHasPrompted(true);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newState));
   };
 
   const denyAll = () => {
-    const newState = { analytics: false, ads: false };
+    const newState = { analytics: false };
     setConsentState(newState);
     setHasPrompted(true);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newState));

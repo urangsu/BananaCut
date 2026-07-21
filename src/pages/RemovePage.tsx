@@ -30,6 +30,7 @@ import { ExportPreflightResult } from "../types/exportPreflight";
 import { useBatchJob } from "../hooks/useBatchJob";
 import { useMediaImport } from "../hooks/useMediaImport";
 import { useLanguage } from "../LanguageContext";
+import { SEO } from "../components/SEO";
 import { useFFmpeg } from "../FFmpegContext";
 import { generateStrokeMask, applyChromaKeyAdvanced, processKeyedFrame, composeRecoveredFrame, commitKeyedFrameResult, KeyedFrameResult } from "../utils/chromaKey";
 import { normalizeChromaKeyParams, invalidateKeyedFramesByIds } from "../types/mediaPipeline";
@@ -1141,6 +1142,7 @@ export default function RemovePage() {
 
   return (
     <>
+      <SEO title="Remove Background | BananaCut" description="Remove background from video frames in browser." noindex />
       <div
         className={`h-full min-h-0 overflow-y-auto w-full max-w-6xl mx-auto p-4 md:p-8 flex flex-col ${isDark ? "text-white" : "text-gray-900"}`}
       >

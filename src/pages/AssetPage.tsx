@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLanguage } from "../LanguageContext";
+import { SEO } from "../components/SEO";
 import { useTheme } from "../ThemeContext";
 import { useStudio } from "../StudioContext";
 import { useFFmpeg } from "../FFmpegContext";
@@ -373,6 +374,7 @@ export default function AssetPage() {
     <div
       className={`h-full min-h-0 overflow-y-auto w-full p-4 lg:p-8 ${isDark ? "bg-[#121212] text-white" : "bg-gray-50 text-gray-900"}`}
     >
+      <SEO title="Export Assets | BananaCut" description="Export assets in various formats." noindex />
       <div className="max-w-5xl mx-auto space-y-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2">ASSET</h1>
