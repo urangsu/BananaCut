@@ -86,6 +86,12 @@ test.describe('BananaCut P0 E2E - Media Pipeline Gate', () => {
     // Navigate to clean recover route
     await page.goto('/recover');
 
+    // If empty state is rendered, click Try Sample button
+    const trySampleBtn = page.locator('[data-testid="recover-try-sample-btn"]');
+    if (await trySampleBtn.count() > 0 && await trySampleBtn.isVisible()) {
+      await trySampleBtn.click();
+    }
+
     // Check if recovery workspace canvas and controls are displayed
     const canvas = page.locator('[data-testid="recover-canvas"]');
     await expect(canvas).toBeAttached();

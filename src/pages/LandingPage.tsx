@@ -259,15 +259,9 @@ export default function LandingPage() {
   const [imgError, setImgError] = useState(false);
   const [demoState, setDemoState] = useState<"checking" | "local" | "youtube" | "error">("checking");
   const [localVideoSrc, setLocalVideoSrc] = useState<string | null>(null);
+  const [youtubeStartTime, setYoutubeStartTime] = useState<number>(0);
+  const [isPlayingYoutube, setIsPlayingYoutube] = useState<boolean>(false);
   const demoVideoRef = useRef<HTMLVideoElement | null>(null);
-
-  const openYouTubeAt = (seconds: number) => {
-    window.open(
-      `https://www.youtube.com/watch?v=rTOB6sX-zA8&t=${seconds}s`,
-      '_blank',
-      'noopener,noreferrer'
-    );
-  };
 
   const playDemoAt = async (seconds: number) => {
     trackEvent('Click_Demo_Timestamp', 'Landing Page Demo', `seconds_${seconds}`);
@@ -277,13 +271,15 @@ export default function LandingPage() {
       try {
         video.currentTime = seconds;
         await video.play();
+        return;
       } catch (err) {
-        openYouTubeAt(seconds);
+        // Fallback to inline YouTube embed
       }
-      return;
     }
 
-    openYouTubeAt(seconds);
+    setYoutubeStartTime(seconds);
+    setIsPlayingYoutube(true);
+    setDemoState("youtube");
   };
 
   useEffect(() => {
@@ -440,22 +436,14 @@ export default function LandingPage() {
                 <div className="flex flex-col items-center justify-center text-white/50 space-y-4">
                   <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
                 </div>
-              ) : demoState === "error" ? (
-                 <a
-                  href="https://www.youtube.com/watch?v=rTOB6sX-zA8"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-col items-center justify-center text-white/50 space-y-4 hover:text-white transition-colors"
-                >
-                  <img
-                    src="/images/demo-thumbnail.jpg"
-                    alt="BananaCut demo video thumbnail"
-                    className="w-full h-full object-cover rounded-3xl"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                    <PlaySquare className="w-12 h-12" />
-                  </div>
-                </a>
+              ) : (demoState === "youtube" || isPlayingYoutube) ? (
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/rTOB6sX-zA8?autoplay=${isPlayingYoutube ? 1 : 0}&rel=0&modestbranding=1&playsinline=1&start=${youtubeStartTime}`}
+                  title="BananaCut Demo Video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="w-full h-full rounded-3xl border-0"
+                />
               ) : demoState === "local" && localVideoSrc ? (
                 <video
                   ref={demoVideoRef}
@@ -521,9 +509,7 @@ export default function LandingPage() {
                     {item.description[lang === "KR" ? "KR" : lang === "JP" ? "JP" : "EN"]}
                   </p>
                   <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                    {demoState === 'local'
-                      ? lang === 'KR' ? '이 지점부터 재생' : lang === 'EN' ? 'Play from here' : 'ここから再生'
-                      : lang === 'KR' ? 'YouTube에서 이 지점부터 보기' : lang === 'EN' ? 'Watch from here on YouTube' : 'YouTubeでここから見る'}
+                    {lang === 'KR' ? '이 지점부터 재생' : lang === 'EN' ? 'Play from here' : 'ここから再生'}
                   </span>
                 </button>
               ))}

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, Download, Loader2, ZoomIn, ZoomOut, Paintbrush, SquareDashed, Trash2, Eraser, Undo2, Redo2, Eye, ShieldAlert } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Upload, Download, Loader2, ZoomIn, ZoomOut, Paintbrush, SquareDashed, Trash2, Eraser, Undo2, Redo2, Eye, ShieldAlert, Sparkles, ArrowLeft } from 'lucide-react';
 import JSZip from 'jszip';
 import { useLanguage } from '../LanguageContext';
 import { SEO } from '../components/SEO';
@@ -20,11 +21,18 @@ interface Point {
 
 type OperationType = 'restore' | 'fill' | 'erase' | 'clear_mask';
 type InputMethodType = 'brush' | 'lasso';
+type SourceType = 'user' | 'sample' | 'from-remove';
+type SessionStatus = 'empty' | 'loading' | 'ready' | 'invalid';
 
 export default function RecoverPage() {
   const { lang } = useLanguage();
   const { theme } = useTheme();
   const { frames, setFrames } = useStudio();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [sourceType, setSourceType] = useState<SourceType>('user');
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus>('empty');
   const [selectedFrames, setSelectedFrames] = useState<Set<string>>(new Set());
   const [currentFrameId, setCurrentFrameId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -121,14 +129,69 @@ export default function RecoverPage() {
     localStorage.setItem('recover_brushFeather', brushFeather.toString());
   }, [canvasWidth, canvasHeight, fillColor, brushSize, brushOpacity, brushHardness, brushFeather]);
 
-  // Autoload sample frames if the workspace is empty on mount
+  const handleLoadSample = useCallback(async () => {
+    setIsProcessing(true);
+    setSessionStatus('loading');
+    try {
+      const sampleFrames = await generateSampleFrames(16);
+      setFrames(sampleFrames);
+      setSourceType('sample');
+      setSessionStatus('ready');
+      if (sampleFrames.length > 0) {
+        setCurrentFrameId(sampleFrames[0].id);
+        setSelectedFrames(new Set([sampleFrames[0].id]));
+      }
+    } catch (e) {
+      console.error('Failed to load sample project:', e);
+      setSessionStatus('invalid');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [setFrames, setIsProcessing]);
+
+  // Validate session frames and sync status
   useEffect(() => {
     if (frames.length === 0) {
-      generateSampleFrames(16).then(sampleFrames => {
-        setFrames(sampleFrames);
-      });
+      if (location.state?.loadSample) {
+        handleLoadSample();
+      } else {
+        setSessionStatus('empty');
+      }
+      return;
     }
-  }, []);
+
+    let isMounted = true;
+    const validateAllFrames = async () => {
+      setSessionStatus('loading');
+      try {
+        const checks = frames.map(f => {
+          return new Promise<boolean>((resolve) => {
+            const url = getFrameDisplayUrl(f, 'final');
+            if (!url || typeof url !== 'string' || !url.trim()) return resolve(false);
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(true);
+            img.onerror = () => resolve(false);
+            img.src = url;
+          });
+        });
+
+        const results = await Promise.all(checks);
+        if (!isMounted) return;
+
+        if (results.length > 0 && results.every(Boolean)) {
+          setSessionStatus('ready');
+        } else {
+          setSessionStatus('invalid');
+        }
+      } catch {
+        if (isMounted) setSessionStatus('invalid');
+      }
+    };
+
+    validateAllFrames();
+    return () => { isMounted = false; };
+  }, [frames, location.state?.loadSample, handleLoadSample]);
 
   // Helper: auto-detect resolution
   useEffect(() => {
@@ -708,12 +771,14 @@ export default function RecoverPage() {
         if (loaded === fileList.length) {
           setFrames(prev => {
             const updated = [...prev, ...newFrames];
-            if (!currentFrameId) {
+            if (!currentFrameId && newFrames.length > 0) {
               setCurrentFrameId(newFrames[0].id);
               setSelectedFrames(new Set([newFrames[0].id]));
             }
             return updated;
           });
+          setSourceType('user');
+          setSessionStatus('ready');
           setIsProcessing(false);
         }
       };
@@ -833,16 +898,26 @@ export default function RecoverPage() {
       {/* Header */}
       <header className={`hidden lg:flex mb-8 border-b pb-6 shrink-0 justify-between items-end ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">RECOVER <span className={`${textMuted} text-xl font-normal`}>{lang === 'KR' ? '(정밀 복구)' : lang === 'EN' ? '(Precision Recovery)' : '(精密復旧)'}</span></h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-semibold tracking-tight">RECOVER <span className={`${textMuted} text-xl font-normal`}>{lang === 'KR' ? '(정밀 복구)' : lang === 'EN' ? '(Precision Recovery)' : '(精密復旧)'}</span></h1>
+            {sourceType === 'sample' && sessionStatus === 'ready' && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-sm">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{lang === 'KR' ? '샘플 프로젝트' : lang === 'EN' ? 'Sample Project' : 'サンプルプロジェクト'}</span>
+              </div>
+            )}
+          </div>
           <p className={`${textSecondary} mt-2 text-sm`}>{lang === 'KR' ? '비파괴 마스크 브러시로 크로마 왜곡 극복 및 원본 정밀 복원' : lang === 'EN' ? 'Defeat chroma distortions & restore original details with non-destructive paint masks' : '非破壊ペイントマスクによる精密ディテール復元'}</p>
-          {frames.length > 0 && (
+          {frames.length > 0 && sessionStatus === 'ready' && (
             <p className="mt-2 text-xs font-medium text-emerald-500">
-              {lang === 'KR' ? `Remove 탭에서 ${frames.length}개의 프레임이 공유되었습니다.` : `Linked with Remove: ${frames.length} frames imported.`}
+              {sourceType === 'sample' 
+                ? (lang === 'KR' ? '체험용 샘플 프레임 16개가 로드되었습니다.' : '16 sample frames loaded for testing.')
+                : (lang === 'KR' ? `Remove 탭에서 ${frames.length}개의 프레임이 공유되었습니다.` : `Linked with Remove: ${frames.length} frames imported.`)}
             </p>
           )}
         </div>
         
-        {frames.length > 0 && (
+        {frames.length > 0 && sessionStatus === 'ready' && (
           <div className="flex items-center gap-2">
             <div className={`flex items-center rounded-lg p-1 mr-4 ${theme === 'dark' ? 'bg-white/5 border border-white/10' : 'bg-gray-100 border border-gray-200'}`}>
               <button 
@@ -880,24 +955,40 @@ export default function RecoverPage() {
         )}
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 lg:gap-8 lg:min-h-0 relative">
-        
-        {/* Empty State / Upload Sequence */}
-        {frames.length === 0 && (
-          <div className="w-full flex flex-col items-center justify-center flex-1 lg:hidden">
-            <div className={`w-full max-w-md border rounded-2xl p-6 ${panelBg}`}>
-              <h2 className="text-lg font-medium mb-2 flex items-center gap-2">
-                <Upload className="w-5 h-5 text-blue-500" />
-                {lang === 'KR' ? '시퀀스 업로드' : 'Upload Sequence'}
-              </h2>
-              <p className="text-xs text-amber-500 mb-4 text-center">
-                {lang === 'KR' ? '새 이미지를 올리면 현재 데이터가 초기화됩니다.' : 'Uploading raw images resets current session.'}
-              </p>
-              
+      {/* Main Container */}
+      {sessionStatus !== 'ready' || frames.length === 0 ? (
+        <div className="w-full flex flex-col items-center justify-center flex-1 py-8 px-4">
+          <div className={`w-full max-w-xl border rounded-3xl p-8 md:p-10 text-center shadow-xl backdrop-blur-md ${panelBg}`}>
+            
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center mx-auto mb-6">
+              {sessionStatus === 'invalid' ? (
+                <ShieldAlert className="w-8 h-8 text-amber-500" />
+              ) : (
+                <Sparkles className="w-8 h-8 text-blue-500" />
+              )}
+            </div>
+
+            <h2 className="text-2xl font-bold tracking-tight mb-3">
+              {sessionStatus === 'invalid'
+                ? (lang === 'KR' ? '유효하지 않은 프레임 세션입니다' : lang === 'EN' ? 'Invalid Frame Session' : '無効なフレームセッション')
+                : (lang === 'KR' ? '프레임의 빈 부분을 복구하고 디테일을 다듬어보세요' : lang === 'EN' ? 'Recover details and restore missing parts' : 'フレームの空白部分を復元し、ディテールを調整')}
+            </h2>
+
+            <p className={`${textSecondary} text-sm max-w-md mx-auto mb-2 leading-relaxed`}>
+              {sessionStatus === 'invalid'
+                ? (lang === 'KR' ? '세션의 프레임 데이터가 유효하지 않거나 만료되었습니다. 아래 버튼을 눌러 새 파일로 시작해보세요.' : lang === 'EN' ? 'Frame URLs in this session are invalid or expired. Upload new frames or try a sample project.' : 'セッション内のフレームデータが無効か期限切れです。新しいファイルで開始してください。')
+                : (lang === 'KR' ? '파일을 업로드해 시작하거나, 샘플 프로젝트로 먼저 체험해보세요.' : lang === 'EN' ? 'Upload frames to start recovery, or try a sample project.' : 'ファイルをアップロードして開始するか、サンプルプロジェクトをお試しください。')}
+            </p>
+
+            <p className="text-xs text-blue-500 font-medium mb-8">
+              {lang === 'KR' ? 'Remove에서 작업한 프레임을 이어서 사용할 수도 있습니다.' : lang === 'EN' ? 'You can also continue with frames from Remove.' : 'Removeで作業したフレームを引き続き使用することもできます。'}
+            </p>
+
+            <div className="space-y-4 max-w-md mx-auto">
               <div 
-                className={`relative flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-xl transition-all ${
+                className={`relative flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-2xl transition-all ${
                   isDragging 
-                    ? 'border-blue-500 bg-blue-500/10' 
+                    ? 'border-blue-500 bg-blue-500/10 scale-[1.01]' 
                     : theme === 'dark'
                       ? 'border-white/20 hover:bg-white/5 hover:border-white/40'
                       : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400'
@@ -906,7 +997,7 @@ export default function RecoverPage() {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >
-                <label className="absolute inset-0 w-full h-full cursor-pointer">
+                <label className="absolute inset-0 w-full h-full cursor-pointer flex flex-col items-center justify-center">
                   <input 
                     type="file" 
                     className="hidden" 
@@ -914,18 +1005,61 @@ export default function RecoverPage() {
                     multiple 
                     onChange={(e) => handleFiles(e.target.files)} 
                   />
-                </label>
-                <div className="flex flex-col items-center justify-center pointer-events-none text-center">
                   <Upload className="w-8 h-8 mb-2 text-blue-500" />
-                  <p className="text-sm px-4">{lang === 'KR' ? '클릭하거나 이미지 시퀀스 드래그' : 'Click or drag sequences here'}</p>
-                </div>
+                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                    {lang === 'KR' ? '파일 선택하기' : lang === 'EN' ? 'Upload Frames' : 'ファイルを選択'}
+                  </span>
+                  <span className="text-xs text-gray-400 mt-1">
+                    {lang === 'KR' ? '또는 여기에 이미지 드래그앤드롭' : lang === 'EN' ? 'or drag & drop images here' : 'またはここに画像をドラッグ＆ドロップ'}
+                  </span>
+                </label>
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* Sidebar Controls */}
-        <div className={`order-2 w-full lg:w-80 shrink-0 lg:overflow-y-auto lg:pr-2 custom-scrollbar lg:order-1 ${frames.length === 0 ? 'hidden lg:flex lg:flex-col lg:space-y-6' : 'contents lg:flex lg:flex-col lg:space-y-6'}`}>
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                <button
+                  id="recover_try_sample_btn"
+                  data-testid="recover-try-sample-btn"
+                  onClick={handleLoadSample}
+                  disabled={isProcessing}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 disabled:opacity-50"
+                >
+                  {isProcessing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  {lang === 'KR' ? '샘플 프로젝트 체험하기' : lang === 'EN' ? 'Try Sample Project' : 'サンプルプロジェクトを試す'}
+                </button>
+
+                <button
+                  id="recover_open_remove_btn"
+                  onClick={() => navigate('/remove')}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-2 border-gray-300 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-700 dark:text-white/80"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  {lang === 'KR' ? 'Remove에서 작업 이어하기' : lang === 'EN' ? 'Open from Remove' : 'Removeから開く'}
+                </button>
+              </div>
+
+              {sessionStatus === 'invalid' && (
+                <div className="pt-2">
+                  <button
+                    onClick={clearFrames}
+                    className="text-xs text-red-500 hover:underline font-medium"
+                  >
+                    {lang === 'KR' ? '세션 데이터 초기화' : lang === 'EN' ? 'Clear Corrupted Session' : 'セッションをクリア'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col lg:flex-row gap-6 lg:gap-8 lg:min-h-0 relative">
+          
+          {/* Sidebar Controls */}
+          <div className="order-2 w-full lg:w-80 shrink-0 lg:overflow-y-auto lg:pr-2 custom-scrollbar lg:order-1 contents lg:flex lg:flex-col lg:space-y-6">
           
           {/* File Upload Trigger (Desktop only) */}
           <div className="hidden lg:block order-1">
@@ -1376,6 +1510,7 @@ export default function RecoverPage() {
           )}
         </div>
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
 }
