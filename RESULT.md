@@ -70,7 +70,13 @@ PARTIAL (All Local Code Checks PASS, Live/Account settings pending verification)
 
 ## Recover Runtime & Inline Demo UX Fix
 
-- Homepage Demo Video: **PASS** (Removed YouTube iframe fallback; local HTML5 video with poster fallback and external link)
+- Homepage Demo Video: **PASS** (Inline YouTube demo player restored with click-to-load poster flow, regular youtube.com embed, strict-origin-when-cross-origin referrer policy, and external fallback link/preparing message removed)
+  - inline YouTube playback: **PASS** (Plays directly within landing page video container)
+  - click-to-load: **PASS** (0 initial iframes on page load; 1 iframe generated upon Play button click)
+  - regular youtube.com embed: **PASS** (Uses `https://www.youtube.com/embed/rTOB6sX-zA8` with origin parameter)
+  - referrer policy: **PASS** (`referrerPolicy="strict-origin-when-cross-origin"`)
+  - external fallback removed: **PASS** (Removed external window.open fallback, ExternalLink button, and temporary "being prepared" message)
+  - YouTube account settings: **USER ACTION REQUIRED** (Verify video visibility is Public/Unlisted, embedding allowed, no age/copyright restrictions blocking external play)
 - Recover Empty-State Guidance: **PASS** (Clear state distinguishing Remove workflow vs Recover sample)
 - Recover Sample Generation: **PASS** (Generates keyed frames with chroma key green background; session status becomes ready)
 - Null URL & Broken Frame Protection: **PASS** (Guards against null/empty frame URLs in drawFrame, ZIP export, and filmstrip thumbnails)
