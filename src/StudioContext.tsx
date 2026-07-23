@@ -77,6 +77,9 @@ const DEFAULT_PRESETS: Preset[] = [
 interface StudioContextType {
   frames: StudioFrame[];
   setFrames: React.Dispatch<React.SetStateAction<StudioFrame[]>>;
+  projectSource: 'user' | 'sample';
+  setProjectSource: React.Dispatch<React.SetStateAction<'user' | 'sample'>>;
+  clearFrames: () => void;
   videoFile: File | null;
   setVideoFile: React.Dispatch<React.SetStateAction<File | null>>;
   charName: string;
@@ -97,8 +100,19 @@ const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
 export const StudioProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [frames, setFrames] = useState<StudioFrame[]>([]);
+  const [projectSource, setProjectSource] = useState<'user' | 'sample'>('user');
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [exclusionStrokes, setExclusionStrokes] = useState<BrushStroke[]>([]);
+
+  const clearFrames = () => {
+    frames.forEach(f => {
+      if (f.rawUrl?.startsWith('blob:')) URL.revokeObjectURL(f.rawUrl);
+      if (f.keyedUrl?.startsWith('blob:')) URL.revokeObjectURL(f.keyedUrl);
+      if (f.recoveredUrl?.startsWith('blob:')) URL.revokeObjectURL(f.recoveredUrl);
+    });
+    setFrames([]);
+    setProjectSource('user');
+  };
 
   // Persistent States
   const [charName, setCharName] = useState(() => localStorage.getItem('ck_charName') || 'sloth');
@@ -129,6 +143,8 @@ export const StudioProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   return (
     <StudioContext.Provider value={{
       frames, setFrames,
+      projectSource, setProjectSource,
+      clearFrames,
       videoFile, setVideoFile,
       charName, setCharName,
       segments, setSegments,

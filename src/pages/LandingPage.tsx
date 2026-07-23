@@ -14,6 +14,7 @@ import {
   Sun,
   Moon,
   HelpCircle,
+  ExternalLink,
 } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { BrandLogo } from "../components/BrandLogo";
@@ -257,10 +258,8 @@ export default function LandingPage() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [demoState, setDemoState] = useState<"checking" | "local" | "youtube" | "error">("checking");
+  const [demoState, setDemoState] = useState<"checking" | "local" | "no_video">("checking");
   const [localVideoSrc, setLocalVideoSrc] = useState<string | null>(null);
-  const [youtubeStartTime, setYoutubeStartTime] = useState<number>(0);
-  const [isPlayingYoutube, setIsPlayingYoutube] = useState<boolean>(false);
   const demoVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const playDemoAt = async (seconds: number) => {
@@ -273,13 +272,11 @@ export default function LandingPage() {
         await video.play();
         return;
       } catch (err) {
-        // Fallback to inline YouTube embed
+        console.warn('Local video play failed:', err);
       }
     }
 
-    setYoutubeStartTime(seconds);
-    setIsPlayingYoutube(true);
-    setDemoState("youtube");
+    window.open(`https://www.youtube.com/watch?v=rTOB6sX-zA8&t=${seconds}s`, '_blank', 'noopener,noreferrer');
   };
 
   useEffect(() => {
@@ -297,9 +294,9 @@ export default function LandingPage() {
           setDemoState("local");
           return;
         }
-        setDemoState("youtube");
+        setDemoState("no_video");
       } catch (err) {
-        setDemoState("youtube");
+        setDemoState("no_video");
       }
     };
     checkLocalVideo();
@@ -436,44 +433,52 @@ export default function LandingPage() {
                 <div className="flex flex-col items-center justify-center text-white/50 space-y-4">
                   <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
                 </div>
-              ) : (demoState === "youtube" || isPlayingYoutube) ? (
-                <iframe
-                  src={`https://www.youtube-nocookie.com/embed/rTOB6sX-zA8?autoplay=${isPlayingYoutube ? 1 : 0}&rel=0&modestbranding=1&playsinline=1&start=${youtubeStartTime}`}
-                  title="BananaCut Demo Video"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  className="w-full h-full rounded-3xl border-0"
-                />
               ) : demoState === "local" && localVideoSrc ? (
                 <video
                   ref={demoVideoRef}
-                  autoPlay
-                  muted
-                  loop
+                  src={localVideoSrc}
+                  controls
                   playsInline
                   preload="metadata"
-                  controls={false}
                   poster="/images/demo-thumbnail.jpg"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  onError={() => setDemoState("youtube")}
-                >
-                  <source src={localVideoSrc} type={localVideoSrc.endsWith(".webm") ? "video/webm" : "video/mp4"} />
-                </video>
+                  className="w-full h-full object-cover rounded-3xl"
+                  onError={() => setDemoState("no_video")}
+                />
               ) : (
-                <button
-                  type="button"
-                  onClick={() => playDemoAt(0)}
-                  className="relative w-full h-full flex items-center justify-center group"
-                >
+                <div className="relative w-full h-full flex flex-col items-center justify-center rounded-3xl overflow-hidden group">
                   <img
                     src="/images/demo-thumbnail.jpg"
                     alt="BananaCut demo video thumbnail"
-                    className="w-full h-full object-cover rounded-3xl"
+                    className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
-                    <PlaySquare className="w-16 h-16 text-white" />
+                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/90">
+                      <PlaySquare className="w-6 h-6" />
+                    </div>
+                    <p className="text-base font-semibold text-white">
+                      {lang === "KR"
+                        ? "데모 영상을 준비 중입니다."
+                        : lang === "JP"
+                          ? "デモ動画を準備中です。"
+                          : "The demo video is being prepared."}
+                    </p>
+                    <a
+                      href="https://www.youtube.com/watch?v=rTOB6sX-zA8"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-white/20 hover:bg-white/30 text-white transition-colors border border-white/20"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>
+                        {lang === "KR"
+                          ? "YouTube에서 보기"
+                          : lang === "JP"
+                            ? "YouTubeで見る"
+                            : "Watch on YouTube"}
+                      </span>
+                    </a>
                   </div>
-                </button>
+                </div>
               )}
             </div>
 

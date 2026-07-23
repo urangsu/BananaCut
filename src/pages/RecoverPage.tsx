@@ -10,9 +10,9 @@ import { useStudio, StudioFrame } from '../StudioContext';
 import { trackEvent } from '../lib/analytics';
 import { revokeUrlsSafely } from '../utils/urlUtils';
 import { getFrameDisplayUrl } from '../utils/frameUtils';
-import { composeRecoveredFrame } from '../utils/chromaKey';
+import { composeRecoveredFrame, processKeyedFrame, commitKeyedFrameResult, canonicalizeKeyParams } from '../utils/chromaKey';
 import { fetchPngBlobStrict } from '../utils/fetchBlobStrict';
-import { generateSampleFrames } from '../utils/sampleProject';
+import { generateSampleFrames, revokeSampleFrames } from '../utils/sampleProject';
 
 interface Point {
   x: number;
@@ -27,11 +27,11 @@ type SessionStatus = 'empty' | 'loading' | 'ready' | 'invalid';
 export default function RecoverPage() {
   const { lang } = useLanguage();
   const { theme } = useTheme();
-  const { frames, setFrames } = useStudio();
+  const { frames, setFrames, projectSource, setProjectSource } = useStudio();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [sourceType, setSourceType] = useState<SourceType>('user');
+  const sourceType: SourceType = projectSource === 'sample' ? 'sample' : 'from-remove';
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('empty');
   const [selectedFrames, setSelectedFrames] = useState<Set<string>>(new Set());
   const [currentFrameId, setCurrentFrameId] = useState<string | null>(null);
@@ -132,22 +132,70 @@ export default function RecoverPage() {
   const handleLoadSample = useCallback(async () => {
     setIsProcessing(true);
     setSessionStatus('loading');
+    let createdRawFrames: StudioFrame[] = [];
+    let processedKeyedFrames: StudioFrame[] = [];
+
     try {
-      const sampleFrames = await generateSampleFrames(16);
-      setFrames(sampleFrames);
-      setSourceType('sample');
+      createdRawFrames = await generateSampleFrames(16);
+
+      const defaultParams = canonicalizeKeyParams({
+        keyingMode: 'greenAdvanced',
+        chromaKeyColor: 'Green',
+        tolerance: 40,
+        softness: 20,
+      });
+
+      for (const frame of createdRawFrames) {
+        const keyedResult = await processKeyedFrame({
+          frame,
+          params: defaultParams,
+          strokes: [],
+        });
+
+        const updatedFrame = commitKeyedFrameResult({
+          previousFrame: frame,
+          keyedResult,
+        });
+
+        processedKeyedFrames.push(updatedFrame);
+      }
+
+      const preloadImage = (src: string) =>
+        new Promise<boolean>((resolve) => {
+          if (!src || typeof src !== 'string' || !src.trim()) return resolve(false);
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+          img.src = src;
+        });
+
+      const checks = processedKeyedFrames.flatMap((f) => [
+        preloadImage(f.rawUrl),
+        preloadImage(f.keyedUrl!),
+      ]);
+
+      const results = await Promise.all(checks);
+      if (results.length === 0 || !results.every(Boolean)) {
+        throw new Error('Failed to preload sample keyed images');
+      }
+
+      setProjectSource('sample');
+      setFrames(processedKeyedFrames);
       setSessionStatus('ready');
-      if (sampleFrames.length > 0) {
-        setCurrentFrameId(sampleFrames[0].id);
-        setSelectedFrames(new Set([sampleFrames[0].id]));
+      if (processedKeyedFrames.length > 0) {
+        setCurrentFrameId(processedKeyedFrames[0].id);
+        setSelectedFrames(new Set([processedKeyedFrames[0].id]));
       }
     } catch (e) {
-      console.error('Failed to load sample project:', e);
+      console.error('Failed to load keyed sample project:', e);
+      revokeSampleFrames([...createdRawFrames, ...processedKeyedFrames]);
+      setFrames([]);
       setSessionStatus('invalid');
     } finally {
       setIsProcessing(false);
     }
-  }, [setFrames, setIsProcessing]);
+  }, [setFrames, setIsProcessing, setProjectSource]);
 
   // Validate session frames and sync status
   useEffect(() => {
@@ -164,16 +212,34 @@ export default function RecoverPage() {
     const validateAllFrames = async () => {
       setSessionStatus('loading');
       try {
-        const checks = frames.map(f => {
-          return new Promise<boolean>((resolve) => {
-            const url = getFrameDisplayUrl(f, 'final');
-            if (!url || typeof url !== 'string' || !url.trim()) return resolve(false);
+        const preloadImage = (src: string | undefined) =>
+          new Promise<boolean>((resolve) => {
+            if (!src || typeof src !== 'string' || !src.trim()) return resolve(false);
             const img = new Image();
             img.crossOrigin = 'anonymous';
             img.onload = () => resolve(true);
             img.onerror = () => resolve(false);
-            img.src = url;
+            img.src = src;
           });
+
+        const checks = frames.map(async (f) => {
+          const rawUrl = f.rawUrl;
+          const keyedUrl = (!f.keyDirty && f.keyedUrl) ? f.keyedUrl : null;
+          const isValid = Boolean(
+            rawUrl &&
+            keyedUrl &&
+            !f.keyDirty &&
+            f.keyRevision
+          );
+
+          if (!isValid) return false;
+
+          const [rawOk, keyedOk] = await Promise.all([
+            preloadImage(rawUrl),
+            preloadImage(keyedUrl!)
+          ]);
+
+          return rawOk && keyedOk;
         });
 
         const results = await Promise.all(checks);
@@ -615,7 +681,12 @@ export default function RecoverPage() {
       }
     };
 
-    const sourceUrl = getFrameDisplayUrl(frame, 'final');
+    const sourceUrl = getFrameDisplayUrl(frame, 'final') ?? getFrameDisplayUrl(frame, 'keyed');
+
+    if (!sourceUrl || typeof sourceUrl !== 'string' || !sourceUrl.trim()) {
+      setSessionStatus('invalid');
+      return;
+    }
 
     if (imageCache.current.has(sourceUrl)) {
       drawImageToCanvas(imageCache.current.get(sourceUrl)!);
@@ -625,6 +696,9 @@ export default function RecoverPage() {
       img.onload = () => {
         imageCache.current.set(sourceUrl, img);
         drawImageToCanvas(img);
+      };
+      img.onerror = () => {
+        setSessionStatus('invalid');
       };
       img.src = sourceUrl;
     }
@@ -777,7 +851,7 @@ export default function RecoverPage() {
             }
             return updated;
           });
-          setSourceType('user');
+          setProjectSource('user');
           setSessionStatus('ready');
           setIsProcessing(false);
         }
@@ -853,7 +927,7 @@ export default function RecoverPage() {
       const zip = new JSZip();
 
       for (const frame of frames) {
-        const sourceUrl = getFrameDisplayUrl(frame, 'final');
+        const sourceUrl = getFrameDisplayUrl(frame, 'final') ?? getFrameDisplayUrl(frame, 'keyed');
         if (!sourceUrl) {
           throw new Error(`FINAL_FRAME_UNAVAILABLE:${frame.id}`);
         }
@@ -895,26 +969,24 @@ export default function RecoverPage() {
     <div id="recover_page_root" className={`h-full min-h-0 overflow-y-auto w-full max-w-6xl mx-auto p-4 md:p-8 flex flex-col ${textPrimary}`}>
       <SEO title="Precision Recovery | BananaCut" description="Precision Recovery Studio." noindex />
       
-      {/* Header */}
-      <header className={`hidden lg:flex mb-8 border-b pb-6 shrink-0 justify-between items-end ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
-        <div>
-          <div className="flex items-center gap-3">
+      {/* H          <div className="flex items-center gap-3">
             <h1 className="text-3xl font-semibold tracking-tight">RECOVER <span className={`${textMuted} text-xl font-normal`}>{lang === 'KR' ? '(정밀 복구)' : lang === 'EN' ? '(Precision Recovery)' : '(精密復旧)'}</span></h1>
-            {sourceType === 'sample' && sessionStatus === 'ready' && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-sm">
+            {sessionStatus === 'ready' && frames.length > 0 && (
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shadow-sm ${
+                sourceType === 'sample' 
+                  ? 'bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400' 
+                  : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+              }`}>
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{lang === 'KR' ? '샘플 프로젝트' : lang === 'EN' ? 'Sample Project' : 'サンプルプロジェクト'}</span>
+                <span>
+                  {sourceType === 'sample' 
+                    ? (lang === 'KR' ? '샘플 프로젝트' : lang === 'EN' ? 'Sample Project' : 'サンプルプロジェクト')
+                    : (lang === 'KR' ? `Remove 연동 (${frames.length} 프레임)` : lang === 'EN' ? `From Remove (${frames.length} frames)` : `Remove 連携 (${frames.length} フレーム)`)}
+                </span>
               </div>
             )}
           </div>
           <p className={`${textSecondary} mt-2 text-sm`}>{lang === 'KR' ? '비파괴 마스크 브러시로 크로마 왜곡 극복 및 원본 정밀 복원' : lang === 'EN' ? 'Defeat chroma distortions & restore original details with non-destructive paint masks' : '非破壊ペイントマスクによる精密ディテール復元'}</p>
-          {frames.length > 0 && sessionStatus === 'ready' && (
-            <p className="mt-2 text-xs font-medium text-emerald-500">
-              {sourceType === 'sample' 
-                ? (lang === 'KR' ? '체험용 샘플 프레임 16개가 로드되었습니다.' : '16 sample frames loaded for testing.')
-                : (lang === 'KR' ? `Remove 탭에서 ${frames.length}개의 프레임이 공유되었습니다.` : `Linked with Remove: ${frames.length} frames imported.`)}
-            </p>
-          )}
         </div>
         
         {frames.length > 0 && sessionStatus === 'ready' && (
@@ -957,7 +1029,7 @@ export default function RecoverPage() {
 
       {/* Main Container */}
       {sessionStatus !== 'ready' || frames.length === 0 ? (
-        <div className="w-full flex flex-col items-center justify-center flex-1 py-8 px-4">
+        <div className="w-full flex flex-col items-center justify-center flex-1 py-12 px-4">
           <div className={`w-full max-w-xl border rounded-3xl p-8 md:p-10 text-center shadow-xl backdrop-blur-md ${panelBg}`}>
             
             <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center mx-auto mb-6">
@@ -971,88 +1043,55 @@ export default function RecoverPage() {
             <h2 className="text-2xl font-bold tracking-tight mb-3">
               {sessionStatus === 'invalid'
                 ? (lang === 'KR' ? '유효하지 않은 프레임 세션입니다' : lang === 'EN' ? 'Invalid Frame Session' : '無効なフレームセッション')
-                : (lang === 'KR' ? '프레임의 빈 부분을 복구하고 디테일을 다듬어보세요' : lang === 'EN' ? 'Recover details and restore missing parts' : 'フレームの空白部分を復元し、ディテールを調整')}
+                : (lang === 'KR' ? 'Remove에서 배경 제거를 완료하셨나요?' : lang === 'EN' ? 'Ready to recover processed frames?' : 'Removeで背景除去を完了しましたか？')}
             </h2>
 
-            <p className={`${textSecondary} text-sm max-w-md mx-auto mb-2 leading-relaxed`}>
+            <p className={`${textSecondary} text-sm max-w-md mx-auto mb-6 leading-relaxed`}>
               {sessionStatus === 'invalid'
-                ? (lang === 'KR' ? '세션의 프레임 데이터가 유효하지 않거나 만료되었습니다. 아래 버튼을 눌러 새 파일로 시작해보세요.' : lang === 'EN' ? 'Frame URLs in this session are invalid or expired. Upload new frames or try a sample project.' : 'セッション内のフレームデータが無効か期限切れです。新しいファイルで開始してください。')
-                : (lang === 'KR' ? '파일을 업로드해 시작하거나, 샘플 프로젝트로 먼저 체험해보세요.' : lang === 'EN' ? 'Upload frames to start recovery, or try a sample project.' : 'ファイルをアップロードして開始するか、サンプルプロジェクトをお試しください。')}
+                ? (lang === 'KR' ? '세션의 프레임 데이터가 유효하지 않거나 만료되었습니다. Remove에서 새로 배경을 제거하거나 샘플 프로젝트로 시작해보세요.' : lang === 'EN' ? 'Frame URLs in this session are invalid or expired. Start in Remove or try a sample project.' : 'セッション内のフレームデータが無効か期限切れです。Removeで新しく開始するか、サンプルをお試しください。')
+                : (lang === 'KR' ? 'Recover는 Remove에서 배경을 제거한 프레임을 이어서 복구합니다. 먼저 Remove에서 영상을 불러오고 배경 제거를 완료하세요.' : lang === 'EN' ? 'Recover continues from frames processed in Remove. Start in Remove and complete background removal first.' : 'RecoverはRemoveで処理したフレームを引き継いで復元します。まずRemoveで背景除去を完了してください。')}
             </p>
 
-            <p className="text-xs text-blue-500 font-medium mb-8">
-              {lang === 'KR' ? 'Remove에서 작업한 프레임을 이어서 사용할 수도 있습니다.' : lang === 'EN' ? 'You can also continue with frames from Remove.' : 'Removeで作業したフレームを引き続き使用することもできます。'}
-            </p>
-
-            <div className="space-y-4 max-w-md mx-auto">
-              <div 
-                className={`relative flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-2xl transition-all ${
-                  isDragging 
-                    ? 'border-blue-500 bg-blue-500/10 scale-[1.01]' 
-                    : theme === 'dark'
-                      ? 'border-white/20 hover:bg-white/5 hover:border-white/40'
-                      : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400'
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 max-w-md mx-auto">
+              <button
+                id="recover_open_remove_btn"
+                onClick={() => navigate('/remove')}
+                className="w-full sm:flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20"
               >
-                <label className="absolute inset-0 w-full h-full cursor-pointer flex flex-col items-center justify-center">
-                  <input 
-                    type="file" 
-                    className="hidden" 
-                    accept="image/png,image/jpeg,image/jpg" 
-                    multiple 
-                    onChange={(e) => handleFiles(e.target.files)} 
-                  />
-                  <Upload className="w-8 h-8 mb-2 text-blue-500" />
-                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                    {lang === 'KR' ? '파일 선택하기' : lang === 'EN' ? 'Upload Frames' : 'ファイルを選択'}
-                  </span>
-                  <span className="text-xs text-gray-400 mt-1">
-                    {lang === 'KR' ? '또는 여기에 이미지 드래그앤드롭' : lang === 'EN' ? 'or drag & drop images here' : 'またはここに画像をドラッグ＆ドロップ'}
-                  </span>
-                </label>
-              </div>
+                <ArrowLeft className="w-4 h-4" />
+                {lang === 'KR' ? 'Remove에서 시작하기' : lang === 'EN' ? 'Start in Remove' : 'Removeから開始'}
+              </button>
 
-              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-                <button
-                  id="recover_try_sample_btn"
-                  data-testid="recover-try-sample-btn"
-                  onClick={handleLoadSample}
-                  disabled={isProcessing}
-                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 disabled:opacity-50"
-                >
-                  {isProcessing ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-4 h-4" />
-                  )}
-                  {lang === 'KR' ? '샘플 프로젝트 체험하기' : lang === 'EN' ? 'Try Sample Project' : 'サンプルプロジェクトを試す'}
-                </button>
-
-                <button
-                  id="recover_open_remove_btn"
-                  onClick={() => navigate('/remove')}
-                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-2 border-gray-300 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-700 dark:text-white/80"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  {lang === 'KR' ? 'Remove에서 작업 이어하기' : lang === 'EN' ? 'Open from Remove' : 'Removeから開く'}
-                </button>
-              </div>
-
-              {sessionStatus === 'invalid' && (
-                <div className="pt-2">
-                  <button
-                    onClick={clearFrames}
-                    className="text-xs text-red-500 hover:underline font-medium"
-                  >
-                    {lang === 'KR' ? '세션 데이터 초기화' : lang === 'EN' ? 'Clear Corrupted Session' : 'セッションをクリア'}
-                  </button>
-                </div>
-              )}
+              <button
+                id="recover_try_sample_btn"
+                data-testid="recover-try-sample-btn"
+                onClick={handleLoadSample}
+                disabled={isProcessing}
+                className={`w-full sm:flex-1 py-3 px-4 rounded-xl text-sm font-semibold border transition-all flex items-center justify-center gap-2 ${
+                  theme === 'dark'
+                    ? 'border-white/20 hover:bg-white/10 text-white'
+                    : 'border-gray-300 hover:bg-gray-100 text-gray-800'
+                } disabled:opacity-50`}
+              >
+                {isProcessing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                )}
+                {lang === 'KR' ? '복구 샘플 체험하기' : lang === 'EN' ? 'Try Sample Project' : 'サンプルプロジェクトを試す'}
+              </button>
             </div>
 
+            {sessionStatus === 'invalid' && (
+              <div className="pt-6">
+                <button
+                  onClick={clearFrames}
+                  className="text-xs text-red-500 hover:underline font-medium"
+                >
+                  {lang === 'KR' ? '세션 데이터 초기화' : lang === 'EN' ? 'Clear Corrupted Session' : 'セッションをクリア'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -1061,28 +1100,19 @@ export default function RecoverPage() {
           {/* Sidebar Controls */}
           <div className="order-2 w-full lg:w-80 shrink-0 lg:overflow-y-auto lg:pr-2 custom-scrollbar lg:order-1 contents lg:flex lg:flex-col lg:space-y-6">
           
-          {/* File Upload Trigger (Desktop only) */}
+          {/* Back to Remove Link */}
           <div className="hidden lg:block order-1">
-            <div 
-              className={`relative flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl transition-all ${
-                isDragging ? 'border-blue-500 bg-blue-500/10' : theme === 'dark' ? 'border-white/15 hover:bg-white/5' : 'border-gray-300 hover:bg-gray-50'
+            <button
+              onClick={() => navigate('/remove')}
+              className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                theme === 'dark' 
+                  ? 'border-white/10 hover:bg-white/5 text-white/80' 
+                  : 'border-gray-200 hover:bg-gray-50 text-gray-700'
               }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
             >
-              <label className="absolute inset-0 w-full h-full cursor-pointer">
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept="image/png,image/jpeg,image/jpg" 
-                  multiple 
-                  onChange={(e) => handleFiles(e.target.files)} 
-                />
-              </label>
-              <Upload className="w-6 h-6 mb-2 text-blue-500" />
-              <p className="text-xs px-2 text-center text-gray-500">{lang === 'KR' ? '클릭하여 이미지 파일 수동 업로드' : 'Click to manually upload raw sequence'}</p>
-            </div>
+              <ArrowLeft className="w-3.5 h-3.5 text-blue-500" />
+              <span>{lang === 'KR' ? 'Remove에서 배경 작업 더보기' : lang === 'EN' ? 'Manage Backgrounds in Remove' : 'Removeで背景を管理'}</span>
+            </button>
           </div>
 
           {/* Recover Action Select (P0-H) */}
@@ -1494,7 +1524,7 @@ export default function RecoverPage() {
                           : 'border-gray-200 hover:border-gray-400 opacity-75 hover:opacity-100'
                     }`}
                   >
-                    <img src={getFrameDisplayUrl(frame, 'final')} alt={frame.name} className="w-full h-full object-contain" />
+                    <img src={getFrameDisplayUrl(frame, 'final') ?? getFrameDisplayUrl(frame, 'keyed')} alt={frame.name} className="w-full h-full object-contain" />
                     {frame.recoverMaskUrl && (
                       <div className="absolute top-1 right-1 bg-blue-500/90 text-white rounded p-0.5" title="Mask active">
                         <Eye className="w-2.5 h-2.5" />

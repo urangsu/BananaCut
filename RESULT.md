@@ -68,6 +68,14 @@ PARTIAL (All Local Code Checks PASS, Live/Account settings pending verification)
 - Google Privacy & messaging:
   **ACCOUNT ACTION REQUIRED** (To be configured and checked manually by the user on the AdSense console)
 
+## Recover Runtime & Inline Demo UX Fix
+
+- Homepage Demo Video: **PASS** (Removed YouTube iframe fallback; local HTML5 video with poster fallback and external link)
+- Recover Empty-State Guidance: **PASS** (Clear state distinguishing Remove workflow vs Recover sample)
+- Recover Sample Generation: **PASS** (Generates keyed frames with chroma key green background; session status becomes ready)
+- Null URL & Broken Frame Protection: **PASS** (Guards against null/empty frame URLs in drawFrame, ZIP export, and filmstrip thumbnails)
+- Source Type Tracking: **PASS** (StudioContext tracks projectSource as 'sample' vs 'user')
+
 ## 수동 작업 항목 (Manual Action Items)
 
 1. **Auto ads 상태 OFF 수동 확인**: 애드센스 승인 심사 전, Auto ads가 OFF 상태인 것을 수동으로 다시 한 번 검증해 주세요.

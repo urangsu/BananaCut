@@ -215,6 +215,7 @@ export default function RemovePage() {
     setPresets,
     flaggedIndices,
     setFlaggedIndices,
+    setProjectSource,
   } = useStudio();
 
   const {
@@ -284,6 +285,7 @@ export default function RemovePage() {
       }
 
       const sampleFrames = await generateSampleFrames(16);
+      setProjectSource('sample');
       setFrames(sampleFrames);
       setCurrentFrame(0);
       setImgDims({ w: 400, h: 400 });
