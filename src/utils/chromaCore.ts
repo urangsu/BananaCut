@@ -305,7 +305,27 @@ export function processChromaCore(
     const factor = despill / 100;
     for (let i = 0; i < data.length; i += 4) {
       const idx = i / 4;
-      if (alphaMap[idx] < 1.0) {
+      const x = idx % width;
+      const y = Math.floor(idx / width);
+      let touchesTransparentEdge = false;
+      if (alphaMap[idx] >= 1.0) {
+        for (let dy = -1; dy <= 1 && !touchesTransparentEdge; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (
+              nx >= 0 && nx < width && ny >= 0 && ny < height &&
+              alphaMap[ny * width + nx] < 1.0
+            ) {
+              touchesTransparentEdge = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (alphaMap[idx] < 1.0 || touchesTransparentEdge) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];

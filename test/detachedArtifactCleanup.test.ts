@@ -157,3 +157,23 @@ describe('detached artifact cleanup', () => {
     expect(enabledRevision).not.toBe(disabledRevision);
   });
 });
+
+describe('edge-aware despill', () => {
+  it('despills an opaque green fringe pixel touching transparent background', () => {
+    const pixels = makeGreenFrame();
+    for (let y = 2; y <= 5; y++) {
+      for (let x = 2; x <= 5; x++) {
+        paintPixel(pixels, x, y, [170, 85, 35]);
+      }
+    }
+    paintPixel(pixels, 6, 3, [80, 120, 80]);
+
+    const result = processChromaCore(pixels, width, height, params({ despill: 100 }));
+    const offset = (3 * width + 6) * 4;
+
+    expect(result.alphaMap[3 * width + 6]).toBe(1);
+    expect(result.data[offset + 1]).toBeLessThan(120);
+    expect(result.data[offset]).toBe(80);
+    expect(result.data[offset + 2]).toBe(80);
+  });
+});
