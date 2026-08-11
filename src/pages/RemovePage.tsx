@@ -350,6 +350,10 @@ export default function RemovePage() {
       dilate,
       feather,
       alphaContrast,
+      removeDetachedArtifacts,
+      detachedArtifactMaxAreaRatio: 0.005,
+      detachedArtifactProximity: 12,
+      detachedArtifactAlphaThreshold: 0.05,
     });
 
     await startJob<number, void>({
@@ -468,6 +472,9 @@ export default function RemovePage() {
   const [alphaContrast, setAlphaContrast] = useState(
     () => Number(localStorage.getItem("ck_alphaContrast")) || 0,
   );
+  const [removeDetachedArtifacts, setRemoveDetachedArtifacts] = useState(
+    () => localStorage.getItem("ck_removeDetachedArtifacts") === "true",
+  );
 
   // UI State
   const [selectedPreset, setSelectedPreset] = useState<string>("");
@@ -507,6 +514,10 @@ export default function RemovePage() {
     localStorage.setItem("ck_dilate", dilate.toString());
     localStorage.setItem("ck_feather", feather.toString());
     localStorage.setItem("ck_alphaContrast", alphaContrast.toString());
+    localStorage.setItem(
+      "ck_removeDetachedArtifacts",
+      removeDetachedArtifacts.toString(),
+    );
     localStorage.setItem("ck_chromaKeyColor", chromaKeyColor);
     localStorage.setItem("ck_pickedColor", JSON.stringify(pickedColor));
 
@@ -529,6 +540,7 @@ export default function RemovePage() {
     dilate,
     feather,
     alphaContrast,
+    removeDetachedArtifacts,
   ]);
 
   useEffect(() => {
@@ -630,6 +642,10 @@ export default function RemovePage() {
         dilate,
         feather,
         alphaContrast,
+        removeDetachedArtifacts,
+        detachedArtifactMaxAreaRatio: 0.005,
+        detachedArtifactProximity: 12,
+        detachedArtifactAlphaThreshold: 0.05,
       }),
       exclusionMask,
     );
@@ -762,6 +778,7 @@ export default function RemovePage() {
     dilate,
     feather,
     alphaContrast,
+    removeDetachedArtifacts,
     isExtracting,
   ]);
 
@@ -2037,6 +2054,39 @@ export default function RemovePage() {
                           <option value="luma">Luma Base</option>
                         </select>
                       </div>
+
+                      <label
+                        className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer ${
+                          isDark
+                            ? "border-white/10 bg-white/[0.03]"
+                            : "border-gray-200 bg-gray-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={removeDetachedArtifacts}
+                          onChange={(event) =>
+                            setRemoveDetachedArtifacts(event.target.checked)
+                          }
+                          className={`mt-0.5 ${isDark ? "accent-blue-500" : "accent-black"}`}
+                        />
+                        <span className="min-w-0">
+                          <span className={`block text-sm font-medium ${isDark ? "text-white" : "text-gray-900"}`}>
+                            {lang === "KR"
+                              ? "외딴 아티팩트 자동 제거"
+                              : lang === "EN"
+                                ? "Remove detached artifacts"
+                                : "孤立したアーティファクトを除去"}
+                          </span>
+                          <span className={`mt-1 block text-xs leading-relaxed ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                            {lang === "KR"
+                              ? "주 피사체에서 떨어진 작은 마크·반짝이만 투명화합니다. 근처 잔털과 보호 브러시 영역은 유지합니다."
+                              : lang === "EN"
+                                ? "Makes small distant marks and sparkles transparent while preserving nearby fine details and protected brush areas."
+                                : "被写体から離れた小さなマークだけを透明化し、近くの細部と保護ブラシ領域は維持します。"}
+                          </span>
+                        </span>
+                      </label>
 
                       <div>
                         <div className="flex justify-between mb-1">

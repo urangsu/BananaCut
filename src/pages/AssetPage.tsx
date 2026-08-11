@@ -125,6 +125,11 @@ export default function AssetPage() {
       dilate: Number(localStorage.getItem("ck_dilate")) || 0,
       feather: Number(localStorage.getItem("ck_feather")) || 0,
       alphaContrast: Number(localStorage.getItem("ck_alphaContrast")) || 0,
+      removeDetachedArtifacts:
+        localStorage.getItem("ck_removeDetachedArtifacts") === "true",
+      detachedArtifactMaxAreaRatio: 0.005,
+      detachedArtifactProximity: 12,
+      detachedArtifactAlphaThreshold: 0.05,
     });
 
     return new Promise((resolve) => {
