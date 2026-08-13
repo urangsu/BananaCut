@@ -1,6 +1,11 @@
 import { ChromaKeyParams, StudioFrame, FrameQualityFlag } from '../types/mediaPipeline';
 import { BrushStroke } from '../StudioContext';
-import { processChromaCore, getChromaDistance, ChromaCoreParams } from './chromaCore';
+import {
+  cleanupDetachedAlphaArtifacts,
+  processChromaCore,
+  getChromaDistance,
+  ChromaCoreParams,
+} from './chromaCore';
 
 export interface KeyColorEstimate {
   rgb: { r: number; g: number; b: number };
@@ -34,7 +39,11 @@ export function canonicalizeKeyParams(params: any): any {
     dilate: params.dilate ?? 1,
     feather: params.feather ?? 1,
     alphaContrast: params.alphaContrast ?? 5,
-    removeEnclosed: !!params.removeEnclosed
+    removeEnclosed: !!params.removeEnclosed,
+    removeDetachedArtifacts: !!params.removeDetachedArtifacts,
+    detachedArtifactMaxAreaRatio: params.detachedArtifactMaxAreaRatio ?? 0.005,
+    detachedArtifactProximity: params.detachedArtifactProximity ?? 12,
+    detachedArtifactAlphaThreshold: params.detachedArtifactAlphaThreshold ?? 0.05,
   };
 }
 
@@ -241,6 +250,7 @@ export function generateStrokeMask(
 // 3. Web Worker Script for off-thread heavy chroma operations
 const workerCode = `
 ${getChromaDistance.toString()}
+${cleanupDetachedAlphaArtifacts.toString()}
 ${processChromaCore.toString()}
 
 self.onmessage = function(e) {
@@ -696,6 +706,10 @@ export function applyChromaKeyAdvanced(
     dilate: params.dilate || 0,
     feather: params.feather || 0,
     alphaContrast: params.alphaContrast || 0,
-    removeEnclosed: params.removeEnclosed
+    removeEnclosed: params.removeEnclosed,
+    removeDetachedArtifacts: params.removeDetachedArtifacts,
+    detachedArtifactMaxAreaRatio: params.detachedArtifactMaxAreaRatio,
+    detachedArtifactProximity: params.detachedArtifactProximity,
+    detachedArtifactAlphaThreshold: params.detachedArtifactAlphaThreshold,
   }, exclusionMask);
 }

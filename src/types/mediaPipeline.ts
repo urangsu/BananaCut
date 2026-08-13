@@ -99,6 +99,10 @@ export interface ChromaKeyParams {
   feather: number;
   alphaContrast: number;
   removeEnclosed?: boolean;
+  removeDetachedArtifacts?: boolean;
+  detachedArtifactMaxAreaRatio?: number;
+  detachedArtifactProximity?: number;
+  detachedArtifactAlphaThreshold?: number;
 }
 
 export interface VideoProbeResult {
@@ -186,6 +190,22 @@ export const normalizeChromaKeyParams = (params: Partial<ChromaKeyParams>): Chro
     feather: clamp(Number(params.feather || 0), 0, 100),
     alphaContrast: clamp(Number(params.alphaContrast || 0), -100, 100),
     removeEnclosed: !!params.removeEnclosed,
+    removeDetachedArtifacts: !!params.removeDetachedArtifacts,
+    detachedArtifactMaxAreaRatio: clamp(
+      Number(params.detachedArtifactMaxAreaRatio ?? 0.005),
+      0,
+      0.05,
+    ),
+    detachedArtifactProximity: clamp(
+      Number(params.detachedArtifactProximity ?? 12),
+      0,
+      100,
+    ),
+    detachedArtifactAlphaThreshold: clamp(
+      Number(params.detachedArtifactAlphaThreshold ?? 0.05),
+      0,
+      1,
+    ),
   };
 };
 
@@ -205,4 +225,3 @@ export function invalidateKeyedFramesByIds(
     return f;
   });
 }
-

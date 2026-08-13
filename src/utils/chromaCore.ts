@@ -12,6 +12,144 @@ export interface ChromaCoreParams {
   feather: number;
   alphaContrast: number;
   removeEnclosed?: boolean;
+  removeDetachedArtifacts?: boolean;
+  detachedArtifactMaxAreaRatio?: number;
+  detachedArtifactProximity?: number;
+  detachedArtifactAlphaThreshold?: number;
+}
+
+export interface DetachedArtifactCleanupResult {
+  removedComponents: number;
+  removedPixels: number;
+}
+
+interface AlphaComponent {
+  id: number;
+  size: number;
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  hasProtectedPixel: boolean;
+}
+
+/**
+ * Removes small foreground islands that are far from the dominant subject.
+ * Eight-neighbour connectivity and a proximity allowance preserve diagonal
+ * fur strands and other fine details close to the character silhouette.
+ */
+export function cleanupDetachedAlphaArtifacts(
+  alphaMap: Float32Array,
+  width: number,
+  height: number,
+  options: {
+    maxAreaRatio?: number;
+    proximity?: number;
+    alphaThreshold?: number;
+    protectedMask?: Uint8Array;
+  } = {},
+): DetachedArtifactCleanupResult {
+  const pixelCount = width * height;
+  if (width <= 0 || height <= 0 || alphaMap.length !== pixelCount) {
+    return { removedComponents: 0, removedPixels: 0 };
+  }
+
+  const maxAreaRatio = Math.max(0, Math.min(1, options.maxAreaRatio ?? 0.005));
+  const proximity = Math.max(0, Math.round(options.proximity ?? 8));
+  const alphaThreshold = Math.max(0, Math.min(1, options.alphaThreshold ?? 0.05));
+  const maxArtifactPixels = pixelCount * maxAreaRatio;
+  const labels = new Int32Array(pixelCount);
+  const queue = new Int32Array(pixelCount);
+  const components: AlphaComponent[] = [];
+  let nextId = 0;
+
+  for (let start = 0; start < pixelCount; start++) {
+    if (labels[start] !== 0 || alphaMap[start] <= alphaThreshold) continue;
+
+    const id = ++nextId;
+    let head = 0;
+    let tail = 0;
+    queue[tail++] = start;
+    labels[start] = id;
+
+    let size = 0;
+    let minX = width;
+    let maxX = 0;
+    let minY = height;
+    let maxY = 0;
+    let hasProtectedPixel = false;
+
+    while (head < tail) {
+      const index = queue[head++];
+      const x = index % width;
+      const y = Math.floor(index / width);
+      size++;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+      hasProtectedPixel ||= options.protectedMask?.[index] === 1;
+
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+          const neighbour = ny * width + nx;
+          if (labels[neighbour] !== 0 || alphaMap[neighbour] <= alphaThreshold) continue;
+          labels[neighbour] = id;
+          queue[tail++] = neighbour;
+        }
+      }
+    }
+
+    components.push({ id, size, minX, maxX, minY, maxY, hasProtectedPixel });
+  }
+
+  if (components.length <= 1) {
+    return { removedComponents: 0, removedPixels: 0 };
+  }
+
+  const primary = components.reduce((largest, component) =>
+    component.size > largest.size ? component : largest,
+  );
+  const removeLabels = new Uint8Array(nextId + 1);
+  let removedComponents = 0;
+
+  for (const component of components) {
+    if (component.id === primary.id) continue;
+
+    const gapX = component.maxX < primary.minX
+      ? primary.minX - component.maxX - 1
+      : primary.maxX < component.minX
+        ? component.minX - primary.maxX - 1
+        : 0;
+    const gapY = component.maxY < primary.minY
+      ? primary.minY - component.maxY - 1
+      : primary.maxY < component.minY
+        ? component.minY - primary.maxY - 1
+        : 0;
+    const isNearPrimary = Math.hypot(gapX, gapY) <= proximity;
+    const isLargeIndependentObject = component.size > maxArtifactPixels;
+
+    if (!component.hasProtectedPixel && !isNearPrimary && !isLargeIndependentObject) {
+      removeLabels[component.id] = 1;
+      removedComponents++;
+    }
+  }
+
+  let removedPixels = 0;
+  if (removedComponents > 0) {
+    for (let i = 0; i < labels.length; i++) {
+      if (removeLabels[labels[i]] === 1) {
+        alphaMap[i] = 0;
+        removedPixels++;
+      }
+    }
+  }
+
+  return { removedComponents, removedPixels };
 }
 
 export function getChromaDistance(
@@ -77,7 +215,11 @@ export function processChromaCore(
     alphaContrast,
     previewMode,
     chromaKeyColor,
-    pickedColor
+    pickedColor,
+    removeDetachedArtifacts,
+    detachedArtifactMaxAreaRatio,
+    detachedArtifactProximity,
+    detachedArtifactAlphaThreshold,
   } = params;
 
   const alphaMap = new Float32Array(width * height);
@@ -163,7 +305,27 @@ export function processChromaCore(
     const factor = despill / 100;
     for (let i = 0; i < data.length; i += 4) {
       const idx = i / 4;
-      if (alphaMap[idx] < 1.0) {
+      const x = idx % width;
+      const y = Math.floor(idx / width);
+      let touchesTransparentEdge = false;
+      if (alphaMap[idx] >= 1.0) {
+        for (let dy = -1; dy <= 1 && !touchesTransparentEdge; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (
+              nx >= 0 && nx < width && ny >= 0 && ny < height &&
+              alphaMap[ny * width + nx] < 1.0
+            ) {
+              touchesTransparentEdge = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (alphaMap[idx] < 1.0 || touchesTransparentEdge) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
@@ -273,6 +435,15 @@ export function processChromaCore(
         alphaMap[i] = Math.max(0, Math.min(1, a));
       }
     }
+  }
+
+  if (removeDetachedArtifacts) {
+    cleanupDetachedAlphaArtifacts(alphaMap, width, height, {
+      maxAreaRatio: detachedArtifactMaxAreaRatio,
+      proximity: detachedArtifactProximity,
+      alphaThreshold: detachedArtifactAlphaThreshold,
+      protectedMask: exclusionMask,
+    });
   }
 
   // Preview Mode Application
